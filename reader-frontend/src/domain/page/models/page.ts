@@ -36,4 +36,12 @@ export class Page {
         return this.parentPageId === null;
     }
 
+    get isEmpty(): boolean {
+        return this.content == null;
+    }
+
+    get hasChildren(): boolean {
+        return this.childrenCount > 0;
+    }
+
 }

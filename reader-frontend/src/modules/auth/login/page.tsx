@@ -2,6 +2,7 @@ import { pagesPageWithIdRouteValue, signupPageRoute } from '@boot/routes';
 import { AppBar } from '@modules/core/ui/components/appbar';
 import { Button } from '@modules/core/ui/primitives/button';
 import { FormError } from '@modules/core/ui/primitives/form-error';
+import { FormLabel } from '@modules/core/ui/primitives/form-label';
 import { Input } from '@modules/core/ui/primitives/input';
 import { Observer } from 'mobx-react-lite';
 import { useMemo } from 'react';
@@ -35,7 +36,7 @@ export default function LoginPage() {
                     <Observer>
                         {() => (
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-[var(--color-text-body)]">Username</label>
+                                <FormLabel>Username</FormLabel>
                                 <Input value={loginStore.username} onValueChange={(v) => loginStore.setUsername(v)} placeholder="Enter username" />
                             </div>
                         )}
@@ -43,7 +44,7 @@ export default function LoginPage() {
                     <Observer>
                         {() => (
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-[var(--color-text-body)]">Password</label>
+                                <FormLabel>Password</FormLabel>
                                 <Input type="password" value={loginStore.password} onValueChange={(v) => loginStore.setPassword(v)} placeholder="Enter password" />
                             </div>
                         )}

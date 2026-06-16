@@ -12,6 +12,7 @@ interface StoredSettings {
     colorSchemaId: string;
     fontFamiliesId: string;
     headingLevelId: string;
+    tocPanelOpen: boolean;
 }
 
 function findById<T extends { id: string }>(items: T[], id: string | undefined, fallback: T): T {
@@ -42,24 +43,29 @@ export class PageUiSettingsStore {
     colorSchema: PageColorSchema;
     fontFamilies: PageFontFamilies;
     headingLevel: PageHeadingLevel;
+    tocPanelOpen: boolean;
+    tocPanelWidth: number;
 
     constructor() {
         const stored = loadStored();
         this.fontSize = findById(PageFontSizes.VALUES, stored.fontSizeId, PageFontSizes.BASE);
         this.colorSchema = findById(PageColorSchema.VALUES, stored.colorSchemaId, PageColorSchema.LIGHT);
         this.fontFamilies = findById(PageFontFamilies.VALUES, stored.fontFamiliesId, PageFontFamilies.LEXEND);
-        this.headingLevel = findById(PageHeadingLevel.VALUES, stored.headingLevelId, PageHeadingLevel.AUTO);
+        this.headingLevel = findById(PageHeadingLevel.VALUES, stored.headingLevelId, PageHeadingLevel.H3);
+        this.tocPanelOpen = stored.tocPanelOpen ?? true;
         makeObservable(this, {
             fontSize: observable,
             colorSchema: observable,
             fontFamilies: observable,
             headingLevel: observable,
+            tocPanelOpen: observable,
             isFontSizeIncreasable: computed,
             isFontSizeDecreasable: computed,
             setFontSize: action,
             setColorSchema: action,
             setFontFamilies: action,
             setHeadingLevel: action,
+            setTocPanelOpen: action,
             increaseFontSize: action,
             decreaseFontSize: action,
         });
@@ -71,6 +77,7 @@ export class PageUiSettingsStore {
             colorSchemaId: this.colorSchema.id,
             fontFamiliesId: this.fontFamilies.id,
             headingLevelId: this.headingLevel.id,
+            tocPanelOpen: this.tocPanelOpen,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     }
@@ -107,6 +114,11 @@ export class PageUiSettingsStore {
         return index > 0;
     }
 
+    setTocPanelOpen(open: boolean) {
+        this.tocPanelOpen = open;
+        this.persist();
+    }
+
     increaseFontSize() {
         const index = PageFontSizes.VALUES.indexOf(this.fontSize);
         if (index === -1 || index >= PageFontSizes.VALUES.length - 1) return;
@@ -128,6 +140,8 @@ export class PageUiSettingsStore {
     getColorSchemas() { return PageColorSchema.VALUES; }
     getFontFamilies() { return PageFontFamilies.VALUES; }
     getHeadingLevels() { return PageHeadingLevel.VALUES; }
+
+    getDefaultTocPanelOpen() { return true; }
 
     getDefaultFontSize() { return PageFontSizes.BASE; }
     getDefaultColorSchema() { return PageColorSchema.LIGHT; }
