@@ -10,6 +10,7 @@ export class Page {
     readonly createdAt: Date;
     readonly updatedAt: Date;
     readonly sections: Section[];
+    readonly childrenCount: number;
 
     constructor(params: {
         id: string;
@@ -19,6 +20,7 @@ export class Page {
         createdAt: Date;
         updatedAt: Date;
         sections: Section[];
+        childrenCount: number;
     }) {
         this.id = params.id;
         this.parentPageId = params.parentPageId;
@@ -27,6 +29,11 @@ export class Page {
         this.createdAt = params.createdAt;
         this.updatedAt = params.updatedAt;
         this.sections = params.sections;
+        this.childrenCount = params.childrenCount;
+    }
+
+    get isRootPage(): boolean {
+        return this.parentPageId === null;
     }
 
 }

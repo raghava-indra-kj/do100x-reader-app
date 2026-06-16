@@ -1,8 +1,9 @@
 import type { Page } from '@domain/page/models/page';
 import { getPage } from '@domain/page/services/pages-service';
 import { DataState } from '@lib/utils/data-state';
-import { action, computed, makeObservable, observable, runInAction } from 'mobx';
+import { computed, makeObservable, observable, runInAction } from 'mobx';
 import { createContext, useContext } from 'react';
+import { PageUiSettingsStore } from './ui-settings-store';
 
 export const PageContext = createContext<PageStore | null>(null);
 
@@ -16,20 +17,18 @@ export class PageStore {
     readonly pageId: string;
     initDataState: DataState<void>;
     private _currentPage: Page | null;
+    uiSettingsStore: PageUiSettingsStore;
 
     constructor({ pageId }: { pageId: string }) {
         this.pageId = pageId;
         this.initDataState = DataState.init();
         this._currentPage = null;
+        this.uiSettingsStore = new PageUiSettingsStore();
         makeObservable<PageStore, "_currentPage">(this, {
             initDataState: observable.ref,
             _currentPage: observable.ref,
             currentPage: computed,
             optCurrentPage: computed,
-            isFontSizeIncreasable: computed,
-            isFontSizeDecreasable: computed,
-            increaseFontSize: action,
-            decreaseFontSize: action,
         });
     }
 
@@ -52,20 +51,6 @@ export class PageStore {
             throw new Error('currentPage is not loaded yet');
         }
         return this._currentPage;
-    }
-
-    get isFontSizeIncreasable(): boolean {
-        return false;
-    }
-
-    get isFontSizeDecreasable(): boolean {
-        return false;
-    }
-
-    increaseFontSize() {
-    }
-
-    decreaseFontSize() {
     }
 
     async loadPage() {

@@ -2,7 +2,7 @@ import { PageColorSchema } from '@modules/page/theme/page-color-schema';
 import { PageFontFamilies } from '@modules/page/theme/page-font-families';
 import { PageFontSizes } from '@modules/page/theme/page-font-sizes';
 import { PageHeadingLevel } from '@modules/page/theme/page-heading-level';
-import { action, makeObservable, observable } from 'mobx';
+import { action, computed, makeObservable, observable } from 'mobx';
 import { createContext, useContext } from 'react';
 
 const STORAGE_KEY = 'page_ui_settings';
@@ -54,10 +54,14 @@ export class PageUiSettingsStore {
             colorSchema: observable,
             fontFamilies: observable,
             headingLevel: observable,
+            isFontSizeIncreasable: computed,
+            isFontSizeDecreasable: computed,
             setFontSize: action,
             setColorSchema: action,
             setFontFamilies: action,
             setHeadingLevel: action,
+            increaseFontSize: action,
+            decreaseFontSize: action,
         });
     }
 
@@ -89,6 +93,30 @@ export class PageUiSettingsStore {
     setHeadingLevel(headingLevel: PageHeadingLevel) {
         this.headingLevel = headingLevel;
         this.persist();
+    }
+
+    get isFontSizeIncreasable(): boolean {
+        const index = PageFontSizes.VALUES.indexOf(this.fontSize);
+        if (index === -1) return false;
+        return index < PageFontSizes.VALUES.length - 1;
+    }
+
+    get isFontSizeDecreasable(): boolean {
+        const index = PageFontSizes.VALUES.indexOf(this.fontSize);
+        if (index === -1) return false;
+        return index > 0;
+    }
+
+    increaseFontSize() {
+        const index = PageFontSizes.VALUES.indexOf(this.fontSize);
+        if (index === -1 || index >= PageFontSizes.VALUES.length - 1) return;
+        this.setFontSize(PageFontSizes.VALUES[index + 1]);
+    }
+
+    decreaseFontSize() {
+        const index = PageFontSizes.VALUES.indexOf(this.fontSize);
+        if (index <= 0) return;
+        this.setFontSize(PageFontSizes.VALUES[index - 1]);
     }
 
     getCurrentFontSize() { return this.fontSize; }

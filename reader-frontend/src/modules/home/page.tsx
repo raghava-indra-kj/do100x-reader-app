@@ -1,6 +1,6 @@
 import { loginPageRoute, pagesPageWithIdRouteValue } from '@boot/routes';
 import { useAuthStore } from '@modules/auth/provider/store';
-import { AppBar, LogoutButton } from '@modules/core/ui/components/appbar';
+import { AppBar } from '@modules/core/ui/components/appbar';
 import { Button } from '@modules/core/ui/primitives/button';
 import { BookMarked, BookOpen, Brain, Eye, Lightbulb } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
@@ -103,7 +103,7 @@ function FeaturesSection() {
 export default function HomePage() {
     return (
         <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
-            <AppBar right={<LogoutButton />} />
+            <AppBar />
             <div className="flex flex-1 flex-col overflow-y-auto">
                 <HeroSection />
                 <FeaturesSection />
