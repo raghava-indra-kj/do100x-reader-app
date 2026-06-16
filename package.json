@@ -1,0 +1,12 @@
+{
+  "name": "reader",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:frontend": "cd reader-frontend && npm run build",
+    "build:backend": "cd reader-backend && npm run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start": "cd reader-backend && npm run start",
+    "prod": "npm run build && npm run start"
+  }
+}

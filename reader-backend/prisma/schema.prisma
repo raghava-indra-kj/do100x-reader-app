@@ -1,0 +1,28 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model appuser {
+  id         String  @id @default(uuid()) @db.VarChar(36)
+  username   String  @db.VarChar(15)
+  password   String  @db.VarChar(4)
+  homepageId String? @db.VarChar(36)
+}
+
+model page {
+  id            String    @id @default(uuid()) @db.VarChar(36)
+  userId        String    @db.VarChar(36)
+  parentId      String?   @db.VarChar(36)
+  title         String    @db.VarChar(1000)
+  content       String?   @db.LongText
+  sortOrder     Int
+  childrenCount Int
+  createdAt     DateTime  @db.DateTime(6)
+  updatedAt     DateTime  @db.DateTime(6)
+  deletedAt     DateTime? @db.DateTime(6)
+}

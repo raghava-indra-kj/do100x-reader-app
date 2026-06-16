@@ -1,0 +1,112 @@
+:root {
+    /* Brand — primary interactive */
+    --color-brand: var(--coral-500);
+    --color-brand-hover: var(--coral-600);
+    --color-brand-active: var(--coral-700);
+    --color-brand-soft: var(--coral-100);
+    --color-brand-on-soft: var(--coral-700);
+
+    /* Surfaces */
+    --color-surface: var(--sand-100);
+    --color-surface-canvas: var(--sand-100);
+    --color-surface-raised: var(--sand-50);
+    --color-surface-soft: var(--sand-200);
+    --color-surface-card: var(--sand-300);
+    --color-surface-card-strong: var(--sand-400);
+    --color-surface-inverse: var(--navy-700);
+    --color-surface-inverse-soft: var(--navy-800);
+    --color-surface-inverse-raised: var(--navy-600);
+
+    /* Text */
+    --color-text-strong: var(--stone-900);
+    --color-text-body: var(--stone-700);
+    --color-text-muted: var(--stone-500);
+    --color-text-subtle: var(--stone-400);
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: var(--sand-100);
+    --color-text-on-dark-muted: var(--navy-200);
+    --color-text-link: var(--coral-600);
+
+    /* Borders */
+    --color-border-subtle: var(--sand-400);
+    --color-border-default: var(--stone-200);
+    --color-border-strong: var(--stone-300);
+
+    /* Feedback — success / warning / error / info */
+    --color-success: var(--green-500);
+    --color-success-soft: var(--green-100);
+    --color-success-on-soft: var(--green-700);
+    --color-warning: var(--amber-500);
+    --color-warning-soft: var(--amber-100);
+    --color-warning-on-soft: var(--amber-700);
+    --color-error: var(--red-500);
+    --color-error-soft: var(--red-100);
+    --color-error-on-soft: var(--red-700);
+    --color-info: var(--teal-500);
+    --color-info-soft: var(--teal-100);
+    --color-info-on-soft: var(--teal-700);
+
+    /* Focus ring */
+    --focus-ring-color: var(--coral-500);
+    --focus-ring-width: 2px;
+    --focus-ring-offset: 2px;
+
+    /* Layout */
+    --container-max: 1200px;
+    --container-prose: 720px;
+    --nav-height: 64px;
+    --card-spacing: var(--space-8);
+    --band-spacing: var(--space-24);
+}
+
+.dark {
+    /* Brand — hover/active lighten on dark; soft inverts to a deep tint */
+    --color-brand: var(--coral-500);
+    --color-brand-hover: var(--coral-400);
+    --color-brand-active: var(--coral-300);
+    --color-brand-soft: var(--coral-950);
+    --color-brand-on-soft: var(--coral-200);
+
+    /* Surfaces */
+    --color-surface: var(--navy-900);
+    --color-surface-canvas: var(--navy-950);
+    --color-surface-raised: var(--navy-900);
+    --color-surface-soft: var(--navy-800);
+    --color-surface-card: var(--navy-700);
+    --color-surface-card-strong: var(--navy-600);
+    --color-surface-inverse: var(--sand-100);
+    --color-surface-inverse-soft: var(--sand-200);
+    --color-surface-inverse-raised: var(--sand-50);
+
+    /* Text */
+    --color-text-strong: var(--sand-50);
+    --color-text-body: var(--sand-200);
+    --color-text-muted: var(--stone-400);
+    --color-text-subtle: var(--stone-500);
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: var(--sand-100);
+    --color-text-on-dark-muted: var(--navy-200);
+    --color-text-link: var(--coral-300);
+
+    /* Borders */
+    --color-border-subtle: var(--navy-700);
+    --color-border-default: var(--navy-600);
+    --color-border-strong: var(--navy-500);
+
+    /* Feedback — base lightens for legibility; soft/on-soft invert */
+    --color-success: var(--green-400);
+    --color-success-soft: var(--green-950);
+    --color-success-on-soft: var(--green-200);
+    --color-warning: var(--amber-400);
+    --color-warning-soft: var(--amber-950);
+    --color-warning-on-soft: var(--amber-200);
+    --color-error: var(--red-400);
+    --color-error-soft: var(--red-950);
+    --color-error-on-soft: var(--red-200);
+    --color-info: var(--teal-400);
+    --color-info-soft: var(--teal-950);
+    --color-info-on-soft: var(--teal-200);
+
+    /* Focus ring */
+    --focus-ring-color: var(--coral-300);
+}

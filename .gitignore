@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+reader-frontend/node_modules/
+reader-backend/node_modules/
+
+# Build outputs
+reader-frontend/dist/
+reader-backend/dist/
+
+# Environment files
+.env
+reader-frontend/.env
+reader-backend/.env
+
+# TypeScript build info
+*.tsbuildinfo
+reader-frontend/node_modules/.tmp/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

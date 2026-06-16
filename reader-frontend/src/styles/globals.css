@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@100..900&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
+@import "./primitives.css";
+@import "./semantic.css";
+@import "./components.css";
+@import "tailwindcss";
+
+@keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@utility animate-fade-in {
+    animation: fade-in 140ms ease;
+}
+
+body {
+    background-color: var(--color-surface-canvas);
+    color: var(--color-text-body);
+    font-family: var(--font-sans);
+}
+
+:focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+}
+
+*:where(button, [role="button"], [role="switch"], a, input, textarea, select):focus {
+    outline: none;
+}
+
+*:where(button, [role="button"], [role="switch"], a, input, textarea, select):focus-visible {
+    outline: var(--focus-ring-width) solid var(--focus-ring-color);
+    outline-offset: var(--focus-ring-offset);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+    width: var(--scrollbar-width);
+    height: var(--scrollbar-width);
+}
+
+*::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: var(--scrollbar-radius);
+}
+
+*::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--scrollbar-radius);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}

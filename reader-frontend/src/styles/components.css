@@ -1,0 +1,83 @@
+:root {
+    --button-primary-bg: var(--color-brand);
+    --button-primary-text: var(--color-text-on-brand);
+    --button-primary-font: var(--font-sans);
+    --button-primary-font-size: 14px;
+    --button-primary-font-weight: 600;
+    --button-primary-line-height: 1;
+    --button-primary-padding: 0 var(--space-5);
+    --button-primary-height: 40px;
+    --button-primary-radius: var(--radius-md);
+    --button-primary-hover-bg: var(--color-brand-hover);
+    --button-primary-active-bg: var(--color-brand-active);
+
+    --button-secondary-bg: var(--color-surface-canvas);
+    --button-secondary-text: var(--color-text-strong);
+    --button-secondary-font: var(--font-sans);
+    --button-secondary-font-size: 14px;
+    --button-secondary-font-weight: 600;
+    --button-secondary-line-height: 1;
+    --button-secondary-padding: 0 var(--space-5);
+    --button-secondary-height: 40px;
+    --button-secondary-radius: var(--radius-md);
+    --button-secondary-hover-bg: var(--color-surface-soft);
+
+    --button-ghost-text: var(--color-text-body);
+    --button-ghost-font: var(--font-sans);
+    --button-ghost-font-size: 14px;
+    --button-ghost-font-weight: 600;
+    --button-ghost-line-height: 1;
+    --button-ghost-padding: 0 var(--space-5);
+    --button-ghost-height: 40px;
+    --button-ghost-radius: var(--radius-md);
+    --button-ghost-hover-bg: var(--color-surface-soft);
+
+    --input-bg: var(--color-surface-raised);
+    --input-text: var(--color-text-strong);
+    --input-font: var(--font-sans);
+    --input-font-size: 16px;
+    --input-font-weight: 400;
+    --input-line-height: 1.62;
+    --input-padding: 0 var(--space-4);
+    --input-height: 40px;
+    --input-radius: var(--radius-md);
+
+    --card-bg: var(--color-surface-card);
+    --card-radius: var(--radius-lg);
+    --card-padding: var(--space-8);
+    --card-plain-bg: var(--color-surface-raised);
+    --card-dark-bg: var(--color-surface-inverse);
+    --card-dark-text: var(--color-text-on-dark);
+
+    --badge-bg: var(--color-brand-soft);
+    --badge-text: var(--color-brand-on-soft);
+    --badge-font: var(--font-sans);
+    --badge-font-size: 13px;
+    --badge-font-weight: 500;
+    --badge-line-height: 1.4;
+    --badge-radius: var(--radius-pill);
+    --badge-padding: 0 var(--space-3);
+
+    --tab-active-bg: var(--color-surface-card);
+    --tab-active-text: var(--color-text-strong);
+    --tab-active-radius: var(--radius-md);
+
+    --tooltip-bg: var(--navy-800);
+    --tooltip-text: var(--color-text-on-dark);
+    --tooltip-font: var(--font-sans);
+    --tooltip-font-size: 13px;
+    --tooltip-font-weight: 500;
+    --tooltip-line-height: 1.4;
+    --tooltip-radius: var(--radius-sm);
+    --tooltip-padding: var(--space-3);
+
+    --dialog-bg: var(--color-surface-raised);
+    --dialog-radius: var(--radius-xl);
+    --dialog-padding: var(--space-8);
+
+    --scrollbar-width: 8px;
+    --scrollbar-track: var(--sand-200);
+    --scrollbar-thumb: var(--sand-400);
+    --scrollbar-thumb-hover: var(--sand-500);
+    --scrollbar-radius: var(--radius-pill);
+}
