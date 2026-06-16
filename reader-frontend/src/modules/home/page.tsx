@@ -5,6 +5,7 @@ import { Button } from '@modules/core/ui/primitives/button';
 import { BookMarked, BookOpen, Brain, Eye, Lightbulb } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
+import { useCallback } from 'react';
 
 const features = [
     {
@@ -100,10 +101,28 @@ function FeaturesSection() {
     );
 }
 
+function LogoutButton() {
+    const authStore = useAuthStore();
+    const navigate = useNavigate();
+
+    const handleLogout = useCallback(() => {
+        authStore.logout();
+        navigate(loginPageRoute, { replace: true });
+    }, [authStore, navigate]);
+
+    return (
+        <Observer>
+            {() => authStore.isAuthenticated
+                ? <Button variant="ghost" size="sm" onClick={handleLogout}>Logout</Button>
+                : null}
+        </Observer>
+    );
+}
+
 export default function HomePage() {
     return (
         <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
-            <AppBar />
+            <AppBar right={<LogoutButton />} />
             <div className="flex flex-1 flex-col overflow-y-auto">
                 <HeroSection />
                 <FeaturesSection />

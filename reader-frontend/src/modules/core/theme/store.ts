@@ -25,6 +25,9 @@ export class ThemeStore {
 
     constructor() {
         this.theme = getInitialTheme();
+        if (typeof window !== 'undefined') {
+            document.documentElement.classList.add(this.theme.value);
+        }
         makeObservable(this, {
             theme: observable,
             changeTheme: action,
