@@ -7,12 +7,15 @@ import { createContext, useContext } from 'react';
 
 const STORAGE_KEY = 'page_ui_settings';
 
+export type SidebarPanelId = 'contents' | 'subpages';
+
 interface StoredSettings {
     fontSizeId: string;
     colorSchemaId: string;
     fontFamiliesId: string;
     headingLevelId: string;
-    tocPanelOpen: boolean;
+    sidebarPanelOpen: boolean;
+    sidebarPanelId: string;
 }
 
 function findById<T extends { id: string }>(items: T[], id: string | undefined, fallback: T): T {
@@ -43,8 +46,8 @@ export class PageUiSettingsStore {
     colorSchema: PageColorSchema;
     fontFamilies: PageFontFamilies;
     headingLevel: PageHeadingLevel;
-    tocPanelOpen: boolean;
-    tocPanelWidth: number;
+    sidebarPanelOpen: boolean;
+    sidebarPanel: SidebarPanelId;
 
     constructor() {
         const stored = loadStored();
@@ -52,20 +55,23 @@ export class PageUiSettingsStore {
         this.colorSchema = findById(PageColorSchema.VALUES, stored.colorSchemaId, PageColorSchema.LIGHT);
         this.fontFamilies = findById(PageFontFamilies.VALUES, stored.fontFamiliesId, PageFontFamilies.LEXEND);
         this.headingLevel = findById(PageHeadingLevel.VALUES, stored.headingLevelId, PageHeadingLevel.H3);
-        this.tocPanelOpen = stored.tocPanelOpen ?? true;
+        this.sidebarPanelOpen = stored.sidebarPanelOpen ?? true;
+        this.sidebarPanel = stored.sidebarPanelId === 'subpages' ? 'subpages' : 'contents';
         makeObservable(this, {
             fontSize: observable,
             colorSchema: observable,
             fontFamilies: observable,
             headingLevel: observable,
-            tocPanelOpen: observable,
+            sidebarPanelOpen: observable,
+            sidebarPanel: observable,
             isFontSizeIncreasable: computed,
             isFontSizeDecreasable: computed,
             setFontSize: action,
             setColorSchema: action,
             setFontFamilies: action,
             setHeadingLevel: action,
-            setTocPanelOpen: action,
+            setSidebarPanelOpen: action,
+            setSidebarPanel: action,
             increaseFontSize: action,
             decreaseFontSize: action,
         });
@@ -77,7 +83,8 @@ export class PageUiSettingsStore {
             colorSchemaId: this.colorSchema.id,
             fontFamiliesId: this.fontFamilies.id,
             headingLevelId: this.headingLevel.id,
-            tocPanelOpen: this.tocPanelOpen,
+            sidebarPanelOpen: this.sidebarPanelOpen,
+            sidebarPanelId: this.sidebarPanel,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     }
@@ -114,8 +121,16 @@ export class PageUiSettingsStore {
         return index > 0;
     }
 
-    setTocPanelOpen(open: boolean) {
-        this.tocPanelOpen = open;
+    setSidebarPanelOpen(open: boolean) {
+        this.sidebarPanelOpen = open;
+        this.persist();
+    }
+
+    setSidebarPanel(panel: SidebarPanelId) {
+        this.sidebarPanel = panel;
+        if (!this.sidebarPanelOpen) {
+            this.sidebarPanelOpen = true;
+        }
         this.persist();
     }
 
@@ -130,21 +145,4 @@ export class PageUiSettingsStore {
         if (index <= 0) return;
         this.setFontSize(PageFontSizes.VALUES[index - 1]);
     }
-
-    getCurrentFontSize() { return this.fontSize; }
-    getCurrentColorSchema() { return this.colorSchema; }
-    getCurrentFontFamilies() { return this.fontFamilies; }
-    getCurrentHeadingLevel() { return this.headingLevel; }
-
-    getFontSizes() { return PageFontSizes.VALUES; }
-    getColorSchemas() { return PageColorSchema.VALUES; }
-    getFontFamilies() { return PageFontFamilies.VALUES; }
-    getHeadingLevels() { return PageHeadingLevel.VALUES; }
-
-    getDefaultTocPanelOpen() { return true; }
-
-    getDefaultFontSize() { return PageFontSizes.BASE; }
-    getDefaultColorSchema() { return PageColorSchema.LIGHT; }
-    getDefaultFontFamilies() { return PageFontFamilies.LEXEND; }
-    getDefaultHeadingLevel() { return PageHeadingLevel.AUTO; }
 }

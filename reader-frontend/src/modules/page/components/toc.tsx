@@ -50,24 +50,18 @@ export const PageToc = observer(function PageToc() {
     const maxLevel = store.uiSettingsStore.headingLevel.value ?? 6;
     const baseLevel = page.sections[0]?.level ?? 1;
     const activeSectionId = store.currentSection?.id;
-    const flatSections = store.flatSections;
 
     function renderSections(sections: Section[]): React.ReactNode[] {
         const items: React.ReactNode[] = [];
         for (const section of sections) {
             if (section.level > maxLevel) continue;
-            const flatIndex = flatSections.indexOf(section);
             items.push(
                 <TocItem
                     key={section.id}
                     section={section}
                     baseLevel={baseLevel}
                     isActive={section.id === activeSectionId}
-                    onClick={() => {
-                        if (flatIndex !== -1) {
-                            store.setCurrentSectionIndex(flatIndex);
-                        }
-                    }}
+                    onClick={() => store.setCurrentSection(section)}
                 />
             );
             items.push(...renderSections(section.children));

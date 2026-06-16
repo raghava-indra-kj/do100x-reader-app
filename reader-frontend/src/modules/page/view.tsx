@@ -1,19 +1,21 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import { PageAppbar } from './components/appbar';
-import { StartPanel } from './components/start-panel';
+import { NavRail } from './components/nav-rail';
+import { PageSubpages } from './components/subpages';
+import { PageToc } from './components/toc';
 import { PageMain } from './components/main-content';
 import { PageContext, PageStore, usePageStore } from './store';
+
+const SCROLL_STEP = 80;
 
 function PageProvider({ pageId, children }: { pageId: string; children: React.ReactNode }) {
     const store = useMemo(() => new PageStore({ pageId }), [pageId]);
 
     useEffect(() => {
         store.mount();
-        return () => {
-            store.unmount();
-        };
     }, [store]);
 
     return (
@@ -31,14 +33,26 @@ export function PageView({ pageId }: { pageId: string }) {
     );
 }
 
+const SidebarPanel = observer(function SidebarPanel() {
+    const store = usePageStore();
+    const uiSettings = store.uiSettingsStore;
+
+    if (uiSettings.sidebarPanel === 'subpages') {
+        return <PageSubpages />;
+    }
+    return <PageToc />;
+});
+
 const PageContent = observer(function PageContent() {
     const store = usePageStore();
     const uiSettings = store.uiSettingsStore;
-    const tocPanelRef = usePanelRef();
-    const isOpen = uiSettings.tocPanelOpen;
+    const contentPanelRef = usePanelRef();
+    const scrollRef = useRef<HTMLElement>(null);
+    const isOpen = uiSettings.sidebarPanelOpen;
+    const currentSectionId = store.currentSection?.id;
 
     useEffect(() => {
-        const panel = tocPanelRef.current;
+        const panel = contentPanelRef.current;
         if (!panel) return;
         if (isOpen) {
             panel.expand();
@@ -47,33 +61,58 @@ const PageContent = observer(function PageContent() {
         }
     }, [isOpen]);
 
+    useEffect(() => {
+        scrollRef.current?.scrollTo({ top: 0 });
+    }, [currentSectionId]);
+
+    useHotkeys('ArrowUp', () => scrollRef.current?.scrollBy({ top: -SCROLL_STEP }), { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('ArrowDown', () => scrollRef.current?.scrollBy({ top: SCROLL_STEP }), { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('mod+\\', () => uiSettings.setSidebarPanelOpen(!uiSettings.sidebarPanelOpen), { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('alt+c', () => {
+        if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'contents') {
+            uiSettings.setSidebarPanelOpen(false);
+        } else {
+            uiSettings.setSidebarPanel('contents');
+        }
+    }, { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('alt+s', () => {
+        if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'subpages') {
+            uiSettings.setSidebarPanelOpen(false);
+        } else {
+            uiSettings.setSidebarPanel('subpages');
+        }
+    }, { preventDefault: true, enableOnFormTags: false });
+
     return (
         <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
             <PageAppbar />
             <div className="flex-1 overflow-hidden">
-                <Group orientation="horizontal">
-                    <Panel
-                        panelRef={tocPanelRef}
-                        defaultSize={260}
-                        minSize={260}
-                        maxSize={260}
-                        collapsible
-                        onResize={(size) => {
-                            uiSettings.setTocPanelOpen(size.asPercentage > 0);
-                        }}
-                        className="bg-[var(--color-surface-raised)]"
-                    >
-                        <StartPanel />
-                    </Panel>
-                    <Separator className="w-px bg-[var(--color-border-default)] hover:bg-[var(--color-brand)] active:bg-[var(--color-brand)] transition-colors cursor-col-resize relative">
-                        <div className="absolute inset-y-0 -left-1 -right-1" />
-                    </Separator>
-                    <Panel>
-                        <main className="h-full overflow-y-auto">
-                            <PageMain />
-                        </main>
-                    </Panel>
-                </Group>
+                <div className="flex h-full">
+                    <NavRail />
+                    <Group orientation="horizontal">
+                        <Panel
+                            panelRef={contentPanelRef}
+                            defaultSize={260}
+                            minSize={220}
+                            maxSize={360}
+                            collapsible
+                            onResize={(size) => {
+                                uiSettings.setSidebarPanelOpen(size.asPercentage > 0);
+                            }}
+                            className="bg-[var(--color-surface-raised)]"
+                        >
+                            <SidebarPanel />
+                        </Panel>
+                        <Separator className="w-px bg-[var(--color-border-default)] hover:bg-[var(--color-brand)] active:bg-[var(--color-brand)] transition-colors cursor-col-resize relative">
+                            <div className="absolute inset-y-0 -left-1 -right-1" />
+                        </Separator>
+                        <Panel>
+                            <main ref={scrollRef} className="h-full overflow-y-auto">
+                                <PageMain />
+                            </main>
+                        </Panel>
+                    </Group>
+                </div>
             </div>
         </div>
     );

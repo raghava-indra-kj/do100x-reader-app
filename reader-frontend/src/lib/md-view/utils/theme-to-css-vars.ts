@@ -14,7 +14,7 @@ export function propsToCssVars(
     }
 
     for (const [key, value] of Object.entries(fontSizes)) {
-        vars[`--md-font-size-${key}`] = `${value}rem`;
+        vars[`--md-font-size-${key}`] = `${value}px`;
     }
 
     vars["--md-font-family-heading"] = fonts.heading;

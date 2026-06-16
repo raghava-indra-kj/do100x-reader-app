@@ -2,7 +2,7 @@ import { pagesPageWithIdRouteValue, homePageRoute } from '@boot/routes';
 import { AppBarLogo } from '@modules/core/ui/components/appbar';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
-import { Minus, Plus, PanelLeftClose, PanelLeftOpen, Settings } from 'lucide-react';
+import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -32,31 +32,36 @@ export function PageAppbar() {
 
     useHotkeys('-', () => uiSettings.decreaseFontSize(), { useKey: true, preventDefault: true });
     useHotkeys('+', () => uiSettings.increaseFontSize(), { useKey: true, splitKey: '|', preventDefault: true });
+    useHotkeys('ArrowLeft', () => store.goToPrevSection(), { preventDefault: true });
+    useHotkeys('ArrowRight', () => store.goToNextSection(), { preventDefault: true });
 
     return (
         <header className="shrink-0 flex items-center justify-between border-b border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-4 py-2.5 sm:px-6">
             <div className="flex items-center gap-2.5 min-w-0">
                 <Observer>
-                    {() => (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            iconOnly
-                            onClick={() => uiSettings.setTocPanelOpen(!uiSettings.tocPanelOpen)}
-                            tooltip={uiSettings.tocPanelOpen ? 'Close sidebar' : 'Open sidebar'}
-                        >
-                            {uiSettings.tocPanelOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-                        </Button>
-                    )}
-                </Observer>
-                <Observer>
                     {() => {
                         const page = store.optCurrentPage;
                         if (page) {
+                            if (page.parentPageId) {
+                                return (
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            iconOnly
+                                            onClick={() => navigate(pagesPageWithIdRouteValue(page.parentPageId))}
+                                            tooltip="Back to parent page"
+                                        >
+                                            <ArrowLeft size={16} />
+                                        </Button>
+                                        <span className="truncate font-[family-name:var(--font-serif)] text-base font-semibold text-[var(--color-text-strong)]">{page.title}</span>
+                                    </div>
+                                );
+                            }
                             return (
                                 <div
                                     className="flex cursor-pointer items-center gap-2.5 min-w-0"
-                                    onClick={() => page.parentPageId ? navigate(pagesPageWithIdRouteValue(page.parentPageId)) : navigate(homePageRoute)}
+                                    onClick={() => navigate(homePageRoute)}
                                 >
                                     <img src="/logo.png" alt="" className="h-6 w-6 shrink-0" />
                                     <span className="truncate font-[family-name:var(--font-serif)] text-base font-semibold text-[var(--color-text-strong)]">{page.title}</span>
@@ -71,10 +76,22 @@ export function PageAppbar() {
                 <Observer>
                     {() => (
                         <>
-                            <Button variant="outlined" size="sm" iconOnly onClick={() => uiSettings.decreaseFontSize()} disabled={!uiSettings.isFontSizeDecreasable} tooltip="Decrease font size">
+                            <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToPrevSection()} disabled={!store.hasPrevSection} tooltip="Previous section (←)">
+                                <ChevronLeft size={16} />
+                            </Button>
+                            <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToNextSection()} disabled={!store.hasNextSection} tooltip="Next section (→)">
+                                <ChevronRight size={16} />
+                            </Button>
+                        </>
+                    )}
+                </Observer>
+                <Observer>
+                    {() => (
+                        <>
+                            <Button variant="outlined" size="sm" iconOnly onClick={() => uiSettings.decreaseFontSize()} disabled={!uiSettings.isFontSizeDecreasable} tooltip="Decrease font size (−)">
                                 <Minus size={16} />
                             </Button>
-                            <Button variant="outlined" size="sm" iconOnly onClick={() => uiSettings.increaseFontSize()} disabled={!uiSettings.isFontSizeIncreasable} tooltip="Increase font size">
+                            <Button variant="outlined" size="sm" iconOnly onClick={() => uiSettings.increaseFontSize()} disabled={!uiSettings.isFontSizeIncreasable} tooltip="Increase font size (+)">
                                 <Plus size={16} />
                             </Button>
                         </>

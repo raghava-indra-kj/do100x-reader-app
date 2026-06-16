@@ -54,6 +54,8 @@
     /* Layout */
     --container-max: 1200px;
     --container-prose: 720px;
+    --container-prose-wide: 960px;
+    --container-prose-2xwide: 1200px;
     --nav-height: 64px;
     --card-spacing: var(--space-8);
     --band-spacing: var(--space-24);

@@ -39,6 +39,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         createdAt: dbPage.createdAt,
         updatedAt: dbPage.updatedAt,
         sections: doc.sections.map((s) => toSection({ mdSection: s, pageId: dbPage.id })),
+        childrenCount: dbPage.childrenCount,
     });
     return ok(page);
 }
