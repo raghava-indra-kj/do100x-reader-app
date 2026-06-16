@@ -1,5 +1,5 @@
 import { observer } from 'mobx-react-lite';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
 import { PageAppbar } from './components/appbar';
@@ -7,6 +7,7 @@ import { NavRail } from './components/nav-rail';
 import { PageSubpages } from './components/subpages';
 import { PageToc } from './components/toc';
 import { PageMain } from './components/main-content';
+import { UpsertPageDialog } from './components/upsert-page';
 import { PageContext, PageStore, usePageStore } from './store';
 
 const SCROLL_STEP = 80;
@@ -83,6 +84,23 @@ const PageContent = observer(function PageContent() {
         }
     }, { preventDefault: true, enableOnFormTags: false });
 
+    const [createWithPaste, setCreateWithPaste] = useState<{ open: boolean; content: string }>({ open: false, content: '' });
+
+    const handlePaste = useCallback((e: ClipboardEvent) => {
+        if (!e.clipboardData) return;
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+        const text = e.clipboardData.getData('text/plain');
+        if (!text.trim()) return;
+        e.preventDefault();
+        setCreateWithPaste({ open: true, content: text });
+    }, []);
+
+    useEffect(() => {
+        document.addEventListener('paste', handlePaste);
+        return () => document.removeEventListener('paste', handlePaste);
+    }, [handlePaste]);
+
     return (
         <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
             <PageAppbar />
@@ -114,6 +132,12 @@ const PageContent = observer(function PageContent() {
                     </Group>
                 </div>
             </div>
+            <UpsertPageDialog
+                open={createWithPaste.open}
+                onOpenChange={(open) => setCreateWithPaste({ open, content: open ? createWithPaste.content : '' })}
+                parentPageId={store.pageId}
+                initialContent={createWithPaste.content}
+            />
         </div>
     );
 });

@@ -1,6 +1,9 @@
 import { observer } from 'mobx-react-lite';
 import { usePageStore } from '../store';
 import type { Section } from '@domain/page/models/section';
+import { List, Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { UpsertPageDialog } from './upsert-page';
 
 function TocItem({
     section,
@@ -38,11 +41,37 @@ function TocItem({
 export const PageToc = observer(function PageToc() {
     const store = usePageStore();
     const page = store.optCurrentPage;
+    const [editOpen, setEditOpen] = useState(false);
 
-    if (!page || page.sections.length === 0) {
+    if (!page) {
+        return null;
+    }
+
+    if (page.sections.length === 0) {
+        const isEmpty = page.isEmpty;
         return (
-            <div className="p-4 text-sm text-[var(--color-text-muted)]">
-                No headings in this page.
+            <div className="flex flex-col gap-3 h-full">
+                <div className="flex items-center justify-between shrink-0 px-3 pt-3 pb-0">
+                    <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">Contents</span>
+                    <button
+                        onClick={() => setEditOpen(true)}
+                        className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"
+                        title="Edit page"
+                    >
+                        <Pencil size={14} />
+                    </button>
+                </div>
+                <div className="flex flex-col items-center justify-center flex-1 gap-2 p-4 text-center">
+                    <List size={24} className="text-[var(--color-text-subtle)]" />
+                    <p className="text-sm text-[var(--color-text-muted)]">{isEmpty ? 'This page is empty' : 'No headings in this page'}</p>
+                </div>
+                <UpsertPageDialog
+                    open={editOpen}
+                    onOpenChange={setEditOpen}
+                    parentPageId={page.parentPageId}
+                    editPageId={page.id}
+                    initialTitle={page.title}
+                />
             </div>
         );
     }
@@ -70,8 +99,27 @@ export const PageToc = observer(function PageToc() {
     }
 
     return (
-        <nav className="flex flex-col gap-0.5 p-3">
-            {renderSections(page.sections)}
-        </nav>
+        <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between shrink-0 px-3 pt-3 pb-0">
+                <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">Contents</span>
+                <button
+                    onClick={() => setEditOpen(true)}
+                    className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"
+                    title="Edit page"
+                >
+                    <Pencil size={14} />
+                </button>
+            </div>
+            <nav className="flex flex-col gap-0.5 p-3 flex-1 overflow-y-auto">
+                {renderSections(page.sections)}
+            </nav>
+            <UpsertPageDialog
+                open={editOpen}
+                onOpenChange={setEditOpen}
+                parentPageId={page.parentPageId}
+                editPageId={page.id}
+                initialTitle={page.title}
+            />
+        </div>
     );
 });

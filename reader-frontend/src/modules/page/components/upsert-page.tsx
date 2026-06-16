@@ -1,4 +1,4 @@
-import { createPage, editPage } from '@domain/page/services/pages-service';
+import { createPage, editPage, getPage } from '@domain/page/services/pages-service';
 import type { Page } from '@domain/page/models/page';
 import { DataState } from '@lib/utils/data-state';
 import { useAuthStore } from '@modules/auth/provider';
@@ -8,7 +8,7 @@ import { FormLabel } from '@modules/core/ui/primitives/form-label';
 import { Input } from '@modules/core/ui/primitives/input';
 import { pagesPageWithIdRouteValue } from '@boot/routes';
 import { useNavigate } from 'react-router-dom';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 export interface UpsertPageDialogProps {
@@ -18,17 +18,40 @@ export interface UpsertPageDialogProps {
     page?: Page | null;
     editPageId?: string;
     initialTitle?: string;
+    initialContent?: string;
 }
 
-export function UpsertPageDialog({ open, onOpenChange, parentPageId, page, editPageId, initialTitle }: UpsertPageDialogProps) {
+export function UpsertPageDialog({ open, onOpenChange, parentPageId, page, editPageId, initialTitle, initialContent }: UpsertPageDialogProps) {
     const navigate = useNavigate();
     const authStore = useAuthStore();
     const editId = editPageId ?? page?.id;
     const isEdit = !!editId;
 
     const [title, setTitle] = useState(page?.title ?? initialTitle ?? '');
-    const [content, setContent] = useState(page?.content ?? '');
+    const [content, setContent] = useState(page?.content ?? initialContent ?? '');
     const [submitState, setSubmitState] = useState<DataState<void>>(DataState.init);
+
+    const loadingRef = useRef(false);
+
+    useEffect(() => {
+        if (!open) {
+            loadingRef.current = false;
+            setTitle(page?.title ?? initialTitle ?? '');
+            setContent(page?.content ?? initialContent ?? '');
+            setSubmitState(DataState.init());
+            return;
+        }
+        if (!isEdit || page) return;
+        if (loadingRef.current) return;
+        loadingRef.current = true;
+        getPage({ pageId: editId }).then((result) => {
+            loadingRef.current = false;
+            if (result.ok) {
+                setTitle(result.data.title);
+                setContent(result.data.content ?? '');
+            }
+        });
+    }, [open, isEdit, editId, page, initialTitle]);
 
     const handleSubmit = useCallback(async () => {
         if (!title.trim()) return;

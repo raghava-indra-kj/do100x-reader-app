@@ -21,11 +21,12 @@ export const PageMain = observer(function PageMain() {
     }
 
     const uiSettings = store.uiSettingsStore;
+    const maxLevel = uiSettings.headingLevel.value ?? 6;
 
     return (
         <div className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">
             <MarkdownRenderer
-                markdown={section.fullMarkdown}
+                markdown={section.chunkMarkdown(maxLevel)}
                 colors={uiSettings.colorSchema.value}
                 fontSizes={uiSettings.fontSize.value}
                 fonts={uiSettings.fontFamilies.value}

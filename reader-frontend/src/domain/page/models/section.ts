@@ -44,4 +44,22 @@ export class Section {
             .filter((part) => part.length > 0)
             .join('\n\n');
     }
+
+    /**
+     * This section's slice when reading at `maxLevel`: its own heading and body, plus the
+     * full subtree of descendants deeper than `maxLevel`. Descendants at or above `maxLevel`
+     * are separately navigable chunks and are excluded, so a heading shallower than
+     * `maxLevel` shows only the text down to its first sub-heading — e.g. at H2 an H1 shows
+     * just the content between it and the first H2. At the deepest level this equals
+     * `fullMarkdown` (and at H1 the H2s are deeper, so the whole page is shown).
+     */
+    chunkMarkdown(maxLevel: number): string {
+        const parts = [this.selfMarkdown];
+        for (const child of this.children) {
+            if (child.level > maxLevel) {
+                parts.push(child.fullMarkdown);
+            }
+        }
+        return parts.filter((part) => part.length > 0).join('\n\n');
+    }
 }

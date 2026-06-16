@@ -1,5 +1,4 @@
 import { pagesPageWithIdRouteValue, homePageRoute } from '@boot/routes';
-import { AppBarLogo } from '@modules/core/ui/components/appbar';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
 import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
@@ -41,34 +40,33 @@ export function PageAppbar() {
                 <Observer>
                     {() => {
                         const page = store.optCurrentPage;
-                        if (page) {
-                            if (page.parentPageId) {
-                                return (
-                                    <div className="flex items-center gap-2.5 min-w-0">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            iconOnly
-                                            onClick={() => navigate(pagesPageWithIdRouteValue(page.parentPageId))}
-                                            tooltip="Back to parent page"
-                                        >
-                                            <ArrowLeft size={16} />
-                                        </Button>
-                                        <span className="truncate font-[family-name:var(--font-serif)] text-base font-semibold text-[var(--color-text-strong)]">{page.title}</span>
-                                    </div>
-                                );
-                            }
+                        if (!page) return null;
+                        const parentPageId = page.parentPageId;
+                        if (parentPageId) {
                             return (
-                                <div
-                                    className="flex cursor-pointer items-center gap-2.5 min-w-0"
-                                    onClick={() => navigate(homePageRoute)}
-                                >
-                                    <img src="/logo.png" alt="" className="h-6 w-6 shrink-0" />
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        iconOnly
+                                        onClick={() => navigate(pagesPageWithIdRouteValue(parentPageId))}
+                                        tooltip="Back to parent page"
+                                    >
+                                        <ArrowLeft size={16} />
+                                    </Button>
                                     <span className="truncate font-[family-name:var(--font-serif)] text-base font-semibold text-[var(--color-text-strong)]">{page.title}</span>
                                 </div>
                             );
                         }
-                        return <AppBarLogo />;
+                        return (
+                            <div
+                                className="flex cursor-pointer items-center gap-2.5 min-w-0"
+                                onClick={() => navigate(homePageRoute)}
+                            >
+                                <img src="/logo.png" alt="" className="h-6 w-6 shrink-0" />
+                                <span className="truncate font-[family-name:var(--font-serif)] text-base font-semibold text-[var(--color-text-strong)]">{page.title}</span>
+                            </div>
+                        );
                     }}
                 </Observer>
             </div>

@@ -133,6 +133,9 @@ export class PageStore {
             if (result.ok) {
                 this._currentPage = result.data;
                 this._currentSectionId = null;
+                if (result.data.isEmpty && this.uiSettingsStore.sidebarPanel === 'contents') {
+                    this.uiSettingsStore.setSidebarPanel('subpages');
+                }
                 this.initDataState = DataState.data(undefined);
             } else {
                 this.initDataState = DataState.error(result.error);
