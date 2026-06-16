@@ -25,6 +25,7 @@ export const defaultColors: MdViewColors = {
     scrollbarThumb: "#ddcfb6",
     scrollbarTrack: "#f4ecdf",
     tableHeaderText: "#1c1a17",
+    tableRowBg: "#ffffff",
     errorColor: "#c6453f",
 };
 

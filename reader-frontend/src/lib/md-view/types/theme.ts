@@ -23,6 +23,7 @@ export type MdViewColors = {
     scrollbarThumb: string;
     scrollbarTrack: string;
     tableHeaderText: string;
+    tableRowBg: string;
     errorColor: string;
 };
 

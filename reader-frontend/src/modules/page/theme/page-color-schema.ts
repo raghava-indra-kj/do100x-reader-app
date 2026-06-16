@@ -35,6 +35,7 @@ export class PageColorSchema {
         scrollbarThumb: '#ddcfb6',
         scrollbarTrack: '#f4ecdf',
         tableHeaderText: '#1c1a17',
+        tableRowBg: '#ffffff',
         errorColor: '#c6453f',
     });
 
@@ -62,6 +63,7 @@ export class PageColorSchema {
         scrollbarThumb: '#213655',
         scrollbarTrack: '#101d31',
         tableHeaderText: '#fdfbf7',
+        tableRowBg: '#101d31',
         errorColor: '#dd675e',
     });
 

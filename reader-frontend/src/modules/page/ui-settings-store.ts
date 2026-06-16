@@ -1,4 +1,3 @@
-import { PageColorSchema } from '@modules/page/theme/page-color-schema';
 import { PageFontFamilies } from '@modules/page/theme/page-font-families';
 import { PageFontSizes } from '@modules/page/theme/page-font-sizes';
 import { PageHeadingLevel } from '@modules/page/theme/page-heading-level';
@@ -11,7 +10,6 @@ export type SidebarPanelId = 'contents' | 'subpages';
 
 interface StoredSettings {
     fontSizeId: string;
-    colorSchemaId: string;
     fontFamiliesId: string;
     headingLevelId: string;
     sidebarPanelOpen: boolean;
@@ -43,7 +41,6 @@ export const usePageUiSettingsStore = () => {
 
 export class PageUiSettingsStore {
     fontSize: PageFontSizes;
-    colorSchema: PageColorSchema;
     fontFamilies: PageFontFamilies;
     headingLevel: PageHeadingLevel;
     sidebarPanelOpen: boolean;
@@ -52,14 +49,12 @@ export class PageUiSettingsStore {
     constructor() {
         const stored = loadStored();
         this.fontSize = findById(PageFontSizes.VALUES, stored.fontSizeId, PageFontSizes.BASE);
-        this.colorSchema = findById(PageColorSchema.VALUES, stored.colorSchemaId, PageColorSchema.LIGHT);
         this.fontFamilies = findById(PageFontFamilies.VALUES, stored.fontFamiliesId, PageFontFamilies.LEXEND);
         this.headingLevel = findById(PageHeadingLevel.VALUES, stored.headingLevelId, PageHeadingLevel.H3);
         this.sidebarPanelOpen = stored.sidebarPanelOpen ?? true;
         this.sidebarPanel = stored.sidebarPanelId === 'subpages' ? 'subpages' : 'contents';
         makeObservable(this, {
             fontSize: observable,
-            colorSchema: observable,
             fontFamilies: observable,
             headingLevel: observable,
             sidebarPanelOpen: observable,
@@ -67,7 +62,6 @@ export class PageUiSettingsStore {
             isFontSizeIncreasable: computed,
             isFontSizeDecreasable: computed,
             setFontSize: action,
-            setColorSchema: action,
             setFontFamilies: action,
             setHeadingLevel: action,
             setSidebarPanelOpen: action,
@@ -80,7 +74,6 @@ export class PageUiSettingsStore {
     private persist() {
         const settings: StoredSettings = {
             fontSizeId: this.fontSize.id,
-            colorSchemaId: this.colorSchema.id,
             fontFamiliesId: this.fontFamilies.id,
             headingLevelId: this.headingLevel.id,
             sidebarPanelOpen: this.sidebarPanelOpen,
@@ -91,11 +84,6 @@ export class PageUiSettingsStore {
 
     setFontSize(fontSize: PageFontSizes) {
         this.fontSize = fontSize;
-        this.persist();
-    }
-
-    setColorSchema(colorSchema: PageColorSchema) {
-        this.colorSchema = colorSchema;
         this.persist();
     }
 
