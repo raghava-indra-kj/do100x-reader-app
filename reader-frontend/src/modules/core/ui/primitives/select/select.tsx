@@ -1,6 +1,7 @@
 import { Select as BaseSelect } from '@base-ui/react/select';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@lib/utils/cn';
+import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import type { CSSProperties, ReactNode } from 'react';
 
 export interface SelectProps<Value = string> {
@@ -14,6 +15,7 @@ export interface SelectProps<Value = string> {
     className?: string;
     style?: CSSProperties;
     popupClassName?: string;
+    tooltip?: ReactNode;
 }
 
 export function Select<Value = string>({
@@ -27,6 +29,7 @@ export function Select<Value = string>({
     className,
     style,
     popupClassName,
+    tooltip,
 }: SelectProps<Value>) {
     return (
         <BaseSelect.Root<Value>
@@ -38,18 +41,20 @@ export function Select<Value = string>({
             name={name}
             modal
         >
-            <BaseSelect.Trigger
-                className={cn(
-                    'inline-flex cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm text-[var(--color-text-strong)] outline-none transition-colors hover:bg-[var(--color-surface-soft)] focus-visible:ring-[var(--focus-ring-color)] focus-visible:ring-[var(--focus-ring-width)] focus-visible:ring-offset-[var(--focus-ring-offset)] data-placeholder:text-[var(--color-text-subtle)] disabled:cursor-not-allowed disabled:opacity-50',
-                    className
-                )}
-                style={style}
-            >
-                <BaseSelect.Value placeholder={placeholder} />
-                <BaseSelect.Icon>
-                    <ChevronDown size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-                </BaseSelect.Icon>
-            </BaseSelect.Trigger>
+            <Tooltip content={tooltip}>
+                <BaseSelect.Trigger
+                    className={cn(
+                        'inline-flex cursor-pointer items-center justify-between gap-2 rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm text-[var(--color-text-strong)] outline-none transition-colors hover:bg-[var(--color-surface-soft)] focus-visible:ring-[var(--focus-ring-color)] focus-visible:ring-[var(--focus-ring-width)] focus-visible:ring-offset-[var(--focus-ring-offset)] data-placeholder:text-[var(--color-text-subtle)] disabled:cursor-not-allowed disabled:opacity-50',
+                        className
+                    )}
+                    style={style}
+                >
+                    <BaseSelect.Value placeholder={placeholder} />
+                    <BaseSelect.Icon>
+                        <ChevronDown size={14} className="shrink-0 text-[var(--color-text-muted)]" />
+                    </BaseSelect.Icon>
+                </BaseSelect.Trigger>
+            </Tooltip>
             <BaseSelect.Portal>
                 <BaseSelect.Positioner sideOffset={4} className="z-50">
                     <BaseSelect.Popup

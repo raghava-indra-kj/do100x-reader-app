@@ -22,6 +22,7 @@ export function ThemeSelector({ className, style }: ThemeSelectorProps) {
                     placeholder="Theme"
                     className={className}
                     style={style}
+                    tooltip="Theme"
                 />
             )}
         </Observer>

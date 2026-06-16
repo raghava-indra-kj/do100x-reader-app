@@ -1,11 +1,10 @@
 import { loginPageRoute, pagesPageWithIdRouteValue } from '@boot/routes';
 import { useAuthStore } from '@modules/auth/provider/store';
-import { AppBar } from '@modules/core/ui/components/appbar';
+import { AppBar, LogoutButton } from '@modules/core/ui/components/appbar';
 import { Button } from '@modules/core/ui/primitives/button';
 import { BookMarked, BookOpen, Brain, Eye, Lightbulb } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
-import { useCallback } from 'react';
 
 const features = [
     {
@@ -98,24 +97,6 @@ function FeaturesSection() {
                 </div>
             </div>
         </section>
-    );
-}
-
-function LogoutButton() {
-    const authStore = useAuthStore();
-    const navigate = useNavigate();
-
-    const handleLogout = useCallback(() => {
-        authStore.logout();
-        navigate(loginPageRoute, { replace: true });
-    }, [authStore, navigate]);
-
-    return (
-        <Observer>
-            {() => authStore.isAuthenticated
-                ? <Button variant="ghost" size="sm" onClick={handleLogout}>Logout</Button>
-                : null}
-        </Observer>
     );
 }
 
