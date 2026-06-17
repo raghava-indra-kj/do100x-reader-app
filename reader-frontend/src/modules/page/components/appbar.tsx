@@ -2,7 +2,7 @@ import { pagesPageWithIdRouteValue, homePageRoute } from '@boot/routes';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
-import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings, ClipboardCopy } from 'lucide-react';
+import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings, Copy } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -85,7 +85,7 @@ export function PageAppbar() {
                                 </Button>
                                 {section && (
                                     <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(section.fullMarkdown); toast.success('Copied to clipboard'); }} tooltip="Copy section">
-                                        <ClipboardCopy size={16} />
+                                        <Copy size={16} />
                                     </Button>
                                 )}
                             </>
