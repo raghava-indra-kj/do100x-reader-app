@@ -111,4 +111,9 @@
 
     /* Focus ring */
     --focus-ring-color: var(--coral-300);
+
+    /* Scrollbar */
+    --scrollbar-track: var(--navy-800);
+    --scrollbar-thumb: var(--navy-600);
+    --scrollbar-thumb-hover: var(--navy-500);
 }

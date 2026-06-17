@@ -1,8 +1,8 @@
 import { observer } from 'mobx-react-lite';
 import { usePageStore } from '../store';
 import type { Section } from '@domain/page/models/section';
-import { List, Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { List, Pencil, Copy } from 'lucide-react';
+import { useState, useCallback } from 'react';
 import { UpsertPageDialog } from './upsert-page';
 
 function TocItem({
@@ -17,24 +17,33 @@ function TocItem({
     onClick: () => void;
 }) {
     const depth = section.level - baseLevel;
+
+    const handleCopy = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(section.fullMarkdown);
+    }, [section]);
+
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            className={`
-                flex w-full items-start gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-sm
-                transition-[background-color,color] duration-140 ease-out cursor-pointer
-                ${isActive
+        <div
+            className={`group flex items-start gap-2 rounded-[var(--radius-md)] px-2 py-1.5 text-left text-sm transition-[background-color,color] duration-140 ease-out cursor-pointer ${
+                isActive
                     ? 'bg-[var(--color-surface-card)] text-[var(--color-text-strong)] font-medium'
                     : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-body)]'
-                }
-            `}
+            }`}
             style={{ paddingLeft: `${depth * 12 + 8}px` }}
+            onClick={onClick}
         >
-            <span className="truncate leading-6">
+            <span className="truncate leading-6 flex-1 min-w-0">
                 {section.title ?? section.rawTitle ?? 'Untitled'}
             </span>
-        </button>
+            <button
+                onClick={handleCopy}
+                className="shrink-0 opacity-0 group-hover:opacity-100 p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-all cursor-pointer"
+                title="Copy section"
+            >
+                <Copy size={12} />
+            </button>
+        </div>
     );
 }
 

@@ -1,7 +1,8 @@
 import { pagesPageWithIdRouteValue, homePageRoute } from '@boot/routes';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
-import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { toast } from '@modules/core/ui/primitives/toast/toast';
+import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings, ClipboardCopy } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -72,16 +73,24 @@ export function PageAppbar() {
             </div>
             <div className="flex items-center gap-3">
                 <Observer>
-                    {() => (
-                        <>
-                            <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToPrevSection()} disabled={!store.hasPrevSection} tooltip="Previous section (←)">
-                                <ChevronLeft size={16} />
-                            </Button>
-                            <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToNextSection()} disabled={!store.hasNextSection} tooltip="Next section (→)">
-                                <ChevronRight size={16} />
-                            </Button>
-                        </>
-                    )}
+                    {() => {
+                        const section = store.currentSection;
+                        return (
+                            <>
+                                <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToPrevSection()} disabled={!store.hasPrevSection} tooltip="Previous section (←)">
+                                    <ChevronLeft size={16} />
+                                </Button>
+                                <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToNextSection()} disabled={!store.hasNextSection} tooltip="Next section (→)">
+                                    <ChevronRight size={16} />
+                                </Button>
+                                {section && (
+                                    <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(section.fullMarkdown); toast.success('Copied to clipboard'); }} tooltip="Copy section">
+                                        <ClipboardCopy size={16} />
+                                    </Button>
+                                )}
+                            </>
+                        );
+                    }}
                 </Observer>
                 <Observer>
                     {() => (
