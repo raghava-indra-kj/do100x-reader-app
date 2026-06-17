@@ -22,6 +22,7 @@ export interface UpsertPageDialogProps {
     editPageId?: string;
     initialTitle?: string;
     initialContent?: string;
+    initialCategory?: string | null;
 }
 
 export function UpsertPageDialog({
@@ -32,6 +33,7 @@ export function UpsertPageDialog({
     editPageId,
     initialTitle,
     initialContent,
+    initialCategory,
 }: UpsertPageDialogProps) {
     const navigate = useNavigate();
     const authStore = useAuthStore();
@@ -40,19 +42,19 @@ export function UpsertPageDialog({
 
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
+    const [category, setCategory] = useState<string | null>(null);
     const [submitState, setSubmitState] = useState<DataState<void>>(DataState.init);
 
     const loadingRef = useRef(false);
-    const initialAppliedRef = useRef(false);
 
     useEffect(() => {
         if (!open) {
             setDialogConsuming(false);
             setTitle("");
             setContent("");
+            setCategory(null);
             setSubmitState(DataState.init());
             loadingRef.current = false;
-            initialAppliedRef.current = false;
             return;
         }
 
@@ -61,14 +63,14 @@ export function UpsertPageDialog({
         if (page) {
             setTitle(page.title);
             setContent(page.content ?? "");
-            initialAppliedRef.current = true;
+            setCategory(page.category);
             return;
         }
 
-        if (initialTitle !== undefined || initialContent !== undefined) {
+        if (initialTitle !== undefined || initialContent !== undefined || initialCategory !== undefined) {
             setTitle(initialTitle ?? "");
             setContent(initialContent ?? "");
-            initialAppliedRef.current = true;
+            setCategory(initialCategory ?? null);
             return;
         }
 
@@ -81,16 +83,18 @@ export function UpsertPageDialog({
                 if (result.ok) {
                     setTitle(result.data.title);
                     setContent(result.data.content ?? "");
+                    setCategory(result.data.category);
                 }
             });
         }
-    }, [open, isEdit, editId, page, initialTitle, initialContent]);
+    }, [open, isEdit, editId, page, initialTitle, initialContent, initialCategory]);
 
     const applyPaste = useCallback(
         (extracted: ExtractedPaste) => {
             if (extracted.title) setTitle(extracted.title);
+            if (extracted.category) setCategory(extracted.category);
             setContent(extracted.content);
-            toast.success("Pasted content detected with frontmatter title");
+            toast.success("Pasted content detected with frontmatter");
         },
         [],
     );
@@ -101,7 +105,7 @@ export function UpsertPageDialog({
             if (!text.trim()) return;
 
             const extracted = extractFrontmatterTitle(text);
-            if (extracted.title) {
+            if (extracted.title || extracted.category) {
                 e.preventDefault();
                 applyPaste(extracted);
             }
@@ -112,8 +116,9 @@ export function UpsertPageDialog({
     const handleSubmit = useCallback(async () => {
         if (!title.trim()) return;
         setSubmitState(DataState.loading());
+        const trimmedCategory = category?.trim() || null;
         if (isEdit) {
-            const result = await editPage({ pageId: editId, title: title.trim(), content });
+            const result = await editPage({ pageId: editId, title: title.trim(), content, category: trimmedCategory });
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
                 onOpenChange(false);
@@ -126,6 +131,7 @@ export function UpsertPageDialog({
                 parentPageId,
                 title: title.trim(),
                 content,
+                category: trimmedCategory,
             });
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
@@ -135,13 +141,13 @@ export function UpsertPageDialog({
                 setSubmitState(DataState.error(result.error));
             }
         }
-    }, [title, content, isEdit, editId, parentPageId, authStore, navigate, onOpenChange]);
+    }, [title, content, category, isEdit, editId, parentPageId, authStore, navigate, onOpenChange]);
 
     return (
         <Dialog
             open={open}
             onOpenChange={onOpenChange}
-            className="flex flex-col max-h-[85vh] max-w-3xl p-0"
+            className="flex flex-col inset-0 h-full max-w-none rounded-none -translate-x-0 -translate-y-0 p-0"
         >
             <div className="flex items-center justify-between shrink-0 px-6 pt-6 pb-4">
                 <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
@@ -152,14 +158,24 @@ export function UpsertPageDialog({
                 </BaseDialog.Close>
             </div>
             <div className="flex flex-col gap-5 px-6 pb-4 min-h-0 flex-1">
-                <div className="flex flex-col gap-2 shrink-0">
-                    <FormLabel>Title</FormLabel>
-                    <Input
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Page title"
-                        autoFocus
-                    />
+                <div className="flex gap-4 shrink-0">
+                    <div className="flex flex-col gap-2 flex-1">
+                        <FormLabel>Title</FormLabel>
+                        <Input
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="Page title"
+                            autoFocus
+                        />
+                    </div>
+                    <div className="flex flex-col gap-2 w-48 shrink-0">
+                        <FormLabel>Category</FormLabel>
+                        <Input
+                            value={category ?? ""}
+                            onChange={(e) => setCategory(e.target.value || null)}
+                            placeholder="e.g. Recall, Note"
+                        />
+                    </div>
                 </div>
                 <div className="flex flex-col gap-2 min-h-0 flex-1">
                     <FormLabel>Content</FormLabel>

@@ -1,7 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
+import { Group, Panel, Separator, usePanelRef, useDefaultLayout } from 'react-resizable-panels';
 import type { ExtractedPaste } from '@lib/md-parser';
 import { PageAppbar } from './components/appbar';
 import { NavRail } from './components/nav-rail';
@@ -86,13 +86,14 @@ const PageContent = observer(function PageContent() {
         }
     }, { preventDefault: true, enableOnFormTags: false });
 
-    const [createWithPaste, setCreateWithPaste] = useState<{ open: boolean; title: string; content: string }>({ open: false, title: '', content: '' });
+    const [createWithPaste, setCreateWithPaste] = useState<{ open: boolean; title: string; content: string; category: string | null }>({ open: false, title: '', content: '', category: null });
 
     const handleGlobalPaste = useCallback((data: ExtractedPaste) => {
         setCreateWithPaste({
             open: true,
             title: data.title ?? '',
             content: data.content,
+            category: data.category,
         });
     }, []);
 
@@ -104,7 +105,7 @@ const PageContent = observer(function PageContent() {
             <div className="flex-1 overflow-hidden">
                 <div className="flex h-full">
                     <NavRail />
-                    <Group orientation="horizontal">
+                    <Group orientation="horizontal" {...useDefaultLayout({ id: "page-sidebar" })}>
                         <Panel
                             panelRef={contentPanelRef}
                             defaultSize={260}
@@ -131,10 +132,11 @@ const PageContent = observer(function PageContent() {
             </div>
             <UpsertPageDialog
                 open={createWithPaste.open}
-                onOpenChange={(open) => setCreateWithPaste({ open, title: open ? createWithPaste.title : '', content: open ? createWithPaste.content : '' })}
+                onOpenChange={(open) => setCreateWithPaste({ open, title: open ? createWithPaste.title : '', content: open ? createWithPaste.content : '', category: open ? createWithPaste.category : null })}
                 parentPageId={store.pageId}
                 initialTitle={createWithPaste.title}
                 initialContent={createWithPaste.content}
+                initialCategory={createWithPaste.category}
             />
         </div>
     );

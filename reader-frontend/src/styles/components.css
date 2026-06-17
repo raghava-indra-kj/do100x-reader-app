@@ -74,10 +74,4 @@
     --dialog-bg: var(--color-surface-raised);
     --dialog-radius: var(--radius-xl);
     --dialog-padding: var(--space-8);
-
-    --scrollbar-width: 8px;
-    --scrollbar-track: var(--sand-200);
-    --scrollbar-thumb: var(--sand-400);
-    --scrollbar-thumb-hover: var(--sand-500);
-    --scrollbar-radius: var(--radius-pill);
 }

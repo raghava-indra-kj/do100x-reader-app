@@ -12,9 +12,10 @@ export interface SubpageItemProps {
     page: PageListItem;
     onDeleted?: () => void;
     parentPageId: string | null;
+    hideDrag?: boolean;
 }
 
-export function SubpageItem({ page, onDeleted, parentPageId }: SubpageItemProps) {
+export function SubpageItem({ page, onDeleted, parentPageId, hideDrag }: SubpageItemProps) {
     const navigate = useNavigate();
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
@@ -41,19 +42,24 @@ export function SubpageItem({ page, onDeleted, parentPageId }: SubpageItemProps)
                 style={style}
                 className="group flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-1.5 hover:bg-[var(--color-surface-soft)] transition-colors"
             >
-                <button
-                    {...attributes}
-                    {...listeners}
-                    className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] cursor-grab active:cursor-grabbing"
-                    title="Drag to reorder"
-                >
-                    <GripVertical size={12} />
-                </button>
+                {!hideDrag && (
+                    <button
+                        {...attributes}
+                        {...listeners}
+                        className="shrink-0 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] cursor-grab active:cursor-grabbing"
+                        title="Drag to reorder"
+                    >
+                        <GripVertical size={12} />
+                    </button>
+                )}
                 <button
                     onClick={() => navigate(pagesPageWithIdRouteValue(page.id))}
-                    className="flex flex-1 text-left text-sm text-[var(--color-text-body)] hover:text-[var(--color-text-strong)] cursor-pointer min-w-0"
+                    className="flex flex-col flex-1 text-left cursor-pointer min-w-0"
                 >
-                    <span className="break-words">{page.title}</span>
+                    <span className="text-sm text-[var(--color-text-body)] hover:text-[var(--color-text-strong)] break-words">{page.title}</span>
+                    {page.category && (
+                        <span className="text-[11px] text-[var(--color-text-subtle)] leading-tight">{page.category}</span>
+                    )}
                 </button>
                 <button
                     onClick={() => setEditOpen(true)}
@@ -75,6 +81,7 @@ export function SubpageItem({ page, onDeleted, parentPageId }: SubpageItemProps)
                 parentPageId={parentPageId}
                 editPageId={page.id}
                 initialTitle={page.title}
+                initialCategory={page.category}
             />
             <DeletePageDialog
                 open={deleteOpen}

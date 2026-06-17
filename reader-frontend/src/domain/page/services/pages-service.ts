@@ -22,7 +22,7 @@ export async function getPage(
 }
 
 export async function createPage(
-    params: { userId: string; parentPageId: string | null; title: string; content: string }
+    params: { userId: string; parentPageId: string | null; title: string; content: string; category: string | null }
 ): AsyncResult<string, AppError> {
     if (!params.title.trim()) {
         return err(new AppError({ message: 'Title is required', errorCode: PAGE_TITLE_REQUIRED }));
@@ -34,7 +34,7 @@ export async function createPage(
 }
 
 export async function editPage(
-    params: { pageId: string; title: string; content: string }
+    params: { pageId: string; title: string; content: string; category: string | null }
 ): AsyncResult<void, AppError> {
     if (!params.title.trim()) {
         return err(new AppError({ message: 'Title is required', errorCode: PAGE_TITLE_REQUIRED }));

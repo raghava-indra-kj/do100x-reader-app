@@ -5,6 +5,7 @@ export const DbPageListItemSchema = z.object({
     userId: z.string(),
     parentPageId: z.string().nullable(),
     title: z.string(),
+    category: z.string().nullable(),
     sortOrder: z.number(),
     childrenCount: z.number(),
     createdAt: z.coerce.date(),

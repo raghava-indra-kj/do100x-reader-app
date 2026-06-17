@@ -14,6 +14,7 @@ export function toPageListItem(db: DbPageListItem): PageListItem {
         id: db.id,
         parentPageId: db.parentPageId,
         title: db.title,
+        category: db.category,
         sortOrder: db.sortOrder,
         createdAt: db.createdAt,
         updatedAt: db.updatedAt
@@ -36,6 +37,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         parentPageId: dbPage.parentPageId,
         title: dbPage.title,
         content: dbPage.content,
+        category: dbPage.category,
         createdAt: dbPage.createdAt,
         updatedAt: dbPage.updatedAt,
         sections: doc.sections.map((s) => toSection({ mdSection: s, pageId: dbPage.id })),

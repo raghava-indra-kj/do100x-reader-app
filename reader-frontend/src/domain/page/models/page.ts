@@ -7,6 +7,7 @@ export class Page {
     readonly parentPageId: string | null;
     readonly title: string;
     readonly content: string;
+    readonly category: string | null;
     readonly createdAt: Date;
     readonly updatedAt: Date;
     readonly sections: Section[];
@@ -17,6 +18,7 @@ export class Page {
         parentPageId: string | null;
         title: string;
         content: string;
+        category: string | null;
         createdAt: Date;
         updatedAt: Date;
         sections: Section[];
@@ -26,6 +28,7 @@ export class Page {
         this.parentPageId = params.parentPageId;
         this.title = params.title;
         this.content = params.content;
+        this.category = params.category;
         this.createdAt = params.createdAt;
         this.updatedAt = params.updatedAt;
         this.sections = params.sections;

@@ -46,6 +46,13 @@
     --color-info-soft: var(--teal-100);
     --color-info-on-soft: var(--teal-700);
 
+    /* Scrollbar */
+    --scrollbar-width: 8px;
+    --scrollbar-track: var(--sand-200);
+    --scrollbar-thumb: var(--sand-400);
+    --scrollbar-thumb-hover: var(--sand-500);
+    --scrollbar-radius: var(--radius-pill);
+
     /* Focus ring */
     --focus-ring-color: var(--coral-500);
     --focus-ring-width: 2px;

@@ -12,12 +12,14 @@ export interface IPagesRepo {
         parentPageId: string | null;
         title: string;
         content: string;
+        category: string | null;
     }): AsyncResult<string, AppError>;
 
     editPage(params: {
         pageId: string;
         title: string;
         content: string;
+        category: string | null;
     }): AsyncResult<void, AppError>;
 
     deletePage(params: { pageId: string }): AsyncResult<void, AppError>;

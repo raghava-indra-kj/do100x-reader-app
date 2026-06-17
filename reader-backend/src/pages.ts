@@ -15,6 +15,7 @@ router.get("/:pageId", async (req, res) => {
       parentId: true,
       title: true,
       content: true,
+      category: true,
       sortOrder: true,
       childrenCount: true,
       createdAt: true,
@@ -33,6 +34,7 @@ router.get("/:pageId", async (req, res) => {
     parentPageId: page.parentId,
     title: page.title,
     content: page.content ?? "",
+    category: page.category ?? null,
     sortOrder: page.sortOrder,
     childrenCount: page.childrenCount,
     createdAt: page.createdAt,
@@ -60,6 +62,7 @@ router.get("/", async (req, res) => {
       userId: true,
       parentId: true,
       title: true,
+      category: true,
       sortOrder: true,
       childrenCount: true,
       createdAt: true,
@@ -74,6 +77,7 @@ router.get("/", async (req, res) => {
       userId: p.userId,
       parentPageId: p.parentId,
       title: p.title,
+      category: p.category ?? null,
       sortOrder: p.sortOrder,
       childrenCount: p.childrenCount,
       createdAt: p.createdAt,
@@ -84,10 +88,11 @@ router.get("/", async (req, res) => {
 
 // POST /pages
 router.post("/", async (req, res) => {
-  const { parentPageId, title, content, userId } = req.body as {
+  const { parentPageId, title, content, category, userId } = req.body as {
     parentPageId: string | null;
     title: string;
     content: string;
+    category: string | null;
     userId: string;
   };
 
@@ -106,6 +111,7 @@ router.post("/", async (req, res) => {
       parentId: parentPageId ?? null,
       title,
       content,
+      category: category ?? null,
       sortOrder: nextSortOrder,
       childrenCount: 0,
       createdAt: now,
@@ -126,11 +132,11 @@ router.post("/", async (req, res) => {
 // PUT /pages/:pageId
 router.put("/:pageId", async (req, res) => {
   const { pageId } = req.params;
-  const { title, content } = req.body as { title: string; content: string };
+  const { title, content, category } = req.body as { title: string; content: string; category: string | null };
 
   await prisma.page.update({
     where: { id: pageId },
-    data: { title, content, updatedAt: new Date() },
+    data: { title, content, category: category ?? null, updatedAt: new Date() },
   });
 
   res.status(204).send();

@@ -6,6 +6,7 @@ export const DbPageSchema = z.object({
     parentPageId: z.string().nullable(),
     title: z.string(),
     content: z.string(),
+    category: z.string().nullable(),
     sortOrder: z.number(),
     childrenCount: z.number(),
     createdAt: z.coerce.date(),

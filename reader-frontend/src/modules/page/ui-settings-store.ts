@@ -1,6 +1,8 @@
 import { PageFontFamilies } from '@modules/page/theme/page-font-families';
 import { PageFontSizes } from '@modules/page/theme/page-font-sizes';
 import { PageHeadingLevel } from '@modules/page/theme/page-heading-level';
+import { PageSubpageSort } from '@modules/page/theme/page-subpage-sort';
+import { PageSubpageGroup } from '@modules/page/theme/page-subpage-group';
 import { action, computed, makeObservable, observable } from 'mobx';
 import { createContext, useContext } from 'react';
 
@@ -14,6 +16,8 @@ interface StoredSettings {
     headingLevelId: string;
     sidebarPanelOpen: boolean;
     sidebarPanelId: string;
+    subpageSortId: string;
+    subpageGroupId: string;
 }
 
 function findById<T extends { id: string }>(items: T[], id: string | undefined, fallback: T): T {
@@ -45,6 +49,8 @@ export class PageUiSettingsStore {
     headingLevel: PageHeadingLevel;
     sidebarPanelOpen: boolean;
     sidebarPanel: SidebarPanelId;
+    subpageSort: PageSubpageSort;
+    subpageGroup: PageSubpageGroup;
 
     constructor() {
         const stored = loadStored();
@@ -53,12 +59,16 @@ export class PageUiSettingsStore {
         this.headingLevel = findById(PageHeadingLevel.VALUES, stored.headingLevelId, PageHeadingLevel.H3);
         this.sidebarPanelOpen = stored.sidebarPanelOpen ?? true;
         this.sidebarPanel = stored.sidebarPanelId === 'subpages' ? 'subpages' : 'contents';
+        this.subpageSort = findById(PageSubpageSort.VALUES, stored.subpageSortId, PageSubpageSort.SORT_ORDER);
+        this.subpageGroup = findById(PageSubpageGroup.VALUES, stored.subpageGroupId, PageSubpageGroup.NONE);
         makeObservable(this, {
             fontSize: observable,
             fontFamilies: observable,
             headingLevel: observable,
             sidebarPanelOpen: observable,
             sidebarPanel: observable,
+            subpageSort: observable,
+            subpageGroup: observable,
             isFontSizeIncreasable: computed,
             isFontSizeDecreasable: computed,
             setFontSize: action,
@@ -66,6 +76,8 @@ export class PageUiSettingsStore {
             setHeadingLevel: action,
             setSidebarPanelOpen: action,
             setSidebarPanel: action,
+            setSubpageSort: action,
+            setSubpageGroup: action,
             increaseFontSize: action,
             decreaseFontSize: action,
         });
@@ -78,6 +90,8 @@ export class PageUiSettingsStore {
             headingLevelId: this.headingLevel.id,
             sidebarPanelOpen: this.sidebarPanelOpen,
             sidebarPanelId: this.sidebarPanel,
+            subpageSortId: this.subpageSort.id,
+            subpageGroupId: this.subpageGroup.id,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     }
@@ -119,6 +133,16 @@ export class PageUiSettingsStore {
         if (!this.sidebarPanelOpen) {
             this.sidebarPanelOpen = true;
         }
+        this.persist();
+    }
+
+    setSubpageSort(sort: PageSubpageSort) {
+        this.subpageSort = sort;
+        this.persist();
+    }
+
+    setSubpageGroup(group: PageSubpageGroup) {
+        this.subpageGroup = group;
         this.persist();
     }
 
