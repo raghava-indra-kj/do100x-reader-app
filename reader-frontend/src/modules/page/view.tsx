@@ -2,7 +2,7 @@ import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Group, Panel, Separator, usePanelRef } from 'react-resizable-panels';
-import { safeParseMarkdown } from '@lib/md-parser';
+import type { ExtractedPaste } from '@lib/md-parser';
 import { PageAppbar } from './components/appbar';
 import { NavRail } from './components/nav-rail';
 import { PageSubpages } from './components/subpages';
@@ -10,6 +10,7 @@ import { PageToc } from './components/toc';
 import { PageMain } from './components/main-content';
 import { UpsertPageDialog } from './components/upsert-page';
 import { PageContext, PageStore, usePageStore } from './store';
+import { useClipboardPaste } from './hooks/use-clipboard-paste';
 
 const SCROLL_STEP = 80;
 
@@ -87,34 +88,15 @@ const PageContent = observer(function PageContent() {
 
     const [createWithPaste, setCreateWithPaste] = useState<{ open: boolean; title: string; content: string }>({ open: false, title: '', content: '' });
 
-    const handlePaste = useCallback((e: ClipboardEvent) => {
-        if (!e.clipboardData) return;
-        const target = e.target as HTMLElement;
-        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
-        const text = e.clipboardData.getData('text/plain');
-        if (!text.trim()) return;
-        e.preventDefault();
-
-        let title = '';
-        let content = text;
-
-        const result = safeParseMarkdown(text);
-        if (result.ok) {
-            const fm = result.data.frontmatter;
-            if (fm && typeof fm.title === 'string') {
-                title = fm.title;
-                const bodyStart = text.indexOf('---', text.indexOf('---') + 3) + 3;
-                content = text.slice(bodyStart).trim();
-            }
-        }
-
-        setCreateWithPaste({ open: true, title, content });
+    const handleGlobalPaste = useCallback((data: ExtractedPaste) => {
+        setCreateWithPaste({
+            open: true,
+            title: data.title ?? '',
+            content: data.content,
+        });
     }, []);
 
-    useEffect(() => {
-        document.addEventListener('paste', handlePaste);
-        return () => document.removeEventListener('paste', handlePaste);
-    }, [handlePaste]);
+    useClipboardPaste(handleGlobalPaste);
 
     return (
         <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">

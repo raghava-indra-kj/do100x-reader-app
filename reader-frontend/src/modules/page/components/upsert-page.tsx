@@ -1,15 +1,18 @@
-import { createPage, editPage, getPage } from '@domain/page/services/pages-service';
-import type { Page } from '@domain/page/models/page';
-import { DataState } from '@lib/utils/data-state';
-import { useAuthStore } from '@modules/auth/provider';
-import { Button } from '@modules/core/ui/primitives/button';
-import { Dialog, BaseDialog } from '@modules/core/ui/primitives/dialog';
-import { FormLabel } from '@modules/core/ui/primitives/form-label';
-import { Input } from '@modules/core/ui/primitives/input';
-import { pagesPageWithIdRouteValue } from '@boot/routes';
-import { useNavigate } from 'react-router-dom';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { X } from 'lucide-react';
+import { createPage, editPage, getPage } from "@domain/page/services/pages-service";
+import type { Page } from "@domain/page/models/page";
+import { DataState } from "@lib/utils/data-state";
+import { extractFrontmatterTitle, type ExtractedPaste } from "@lib/md-parser";
+import { useAuthStore } from "@modules/auth/provider";
+import { Button } from "@modules/core/ui/primitives/button";
+import { Dialog, BaseDialog } from "@modules/core/ui/primitives/dialog";
+import { FormLabel } from "@modules/core/ui/primitives/form-label";
+import { Input } from "@modules/core/ui/primitives/input";
+import { toast } from "@modules/core/ui/primitives/toast/toast";
+import { pagesPageWithIdRouteValue } from "@boot/routes";
+import { setDialogConsuming } from "../clipboard-paste";
+import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { X } from "lucide-react";
 
 export interface UpsertPageDialogProps {
     open: boolean;
@@ -21,37 +24,90 @@ export interface UpsertPageDialogProps {
     initialContent?: string;
 }
 
-export function UpsertPageDialog({ open, onOpenChange, parentPageId, page, editPageId, initialTitle, initialContent }: UpsertPageDialogProps) {
+export function UpsertPageDialog({
+    open,
+    onOpenChange,
+    parentPageId,
+    page,
+    editPageId,
+    initialTitle,
+    initialContent,
+}: UpsertPageDialogProps) {
     const navigate = useNavigate();
     const authStore = useAuthStore();
     const editId = editPageId ?? page?.id;
     const isEdit = !!editId;
 
-    const [title, setTitle] = useState(page?.title ?? initialTitle ?? '');
-    const [content, setContent] = useState(page?.content ?? initialContent ?? '');
+    const [title, setTitle] = useState("");
+    const [content, setContent] = useState("");
     const [submitState, setSubmitState] = useState<DataState<void>>(DataState.init);
 
     const loadingRef = useRef(false);
+    const initialAppliedRef = useRef(false);
 
     useEffect(() => {
         if (!open) {
-            loadingRef.current = false;
-            setTitle(page?.title ?? initialTitle ?? '');
-            setContent(page?.content ?? initialContent ?? '');
+            setDialogConsuming(false);
+            setTitle("");
+            setContent("");
             setSubmitState(DataState.init());
+            loadingRef.current = false;
+            initialAppliedRef.current = false;
             return;
         }
-        if (!isEdit || page) return;
-        if (loadingRef.current) return;
-        loadingRef.current = true;
-        getPage({ pageId: editId }).then((result) => {
-            loadingRef.current = false;
-            if (result.ok) {
-                setTitle(result.data.title);
-                setContent(result.data.content ?? '');
+
+        setDialogConsuming(true);
+
+        if (page) {
+            setTitle(page.title);
+            setContent(page.content ?? "");
+            initialAppliedRef.current = true;
+            return;
+        }
+
+        if (initialTitle !== undefined || initialContent !== undefined) {
+            setTitle(initialTitle ?? "");
+            setContent(initialContent ?? "");
+            initialAppliedRef.current = true;
+            return;
+        }
+
+        if (isEdit && editId) {
+            if (loadingRef.current) return;
+            loadingRef.current = true;
+            getPage({ pageId: editId }).then((result) => {
+                if (!open) return;
+                loadingRef.current = false;
+                if (result.ok) {
+                    setTitle(result.data.title);
+                    setContent(result.data.content ?? "");
+                }
+            });
+        }
+    }, [open, isEdit, editId, page, initialTitle, initialContent]);
+
+    const applyPaste = useCallback(
+        (extracted: ExtractedPaste) => {
+            if (extracted.title) setTitle(extracted.title);
+            setContent(extracted.content);
+            toast.success("Pasted content detected with frontmatter title");
+        },
+        [],
+    );
+
+    const handleTextareaPaste = useCallback(
+        (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+            const text = e.clipboardData.getData("text/plain");
+            if (!text.trim()) return;
+
+            const extracted = extractFrontmatterTitle(text);
+            if (extracted.title) {
+                e.preventDefault();
+                applyPaste(extracted);
             }
-        });
-    }, [open, isEdit, editId, page, initialTitle]);
+        },
+        [applyPaste],
+    );
 
     const handleSubmit = useCallback(async () => {
         if (!title.trim()) return;
@@ -89,7 +145,7 @@ export function UpsertPageDialog({ open, onOpenChange, parentPageId, page, editP
         >
             <div className="flex items-center justify-between shrink-0 px-6 pt-6 pb-4">
                 <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
-                    {isEdit ? 'Edit Page' : 'New Page'}
+                    {isEdit ? "Edit Page" : "New Page"}
                 </h2>
                 <BaseDialog.Close className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
                     <X size={20} />
@@ -110,20 +166,31 @@ export function UpsertPageDialog({ open, onOpenChange, parentPageId, page, editP
                     <textarea
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
+                        onPaste={handleTextareaPaste}
                         placeholder="Write your content here…"
                         className="w-full flex-1 resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-4 py-2.5 text-sm rounded-[var(--radius-md)] transition-colors outline-none overflow-y-auto"
                     />
                 </div>
                 {submitState.isError && (
-                    <p className="text-sm shrink-0 text-[var(--color-error)]">{submitState.error.message}</p>
+                    <p className="text-sm shrink-0 text-[var(--color-error)]">
+                        {submitState.error.message}
+                    </p>
                 )}
             </div>
             <div className="flex justify-end gap-3 shrink-0 border-t border-[var(--color-border-default)] px-6 py-4">
-                <Button variant="outlined" onClick={() => onOpenChange(false)} disabled={submitState.isLoading}>
+                <Button
+                    variant="outlined"
+                    onClick={() => onOpenChange(false)}
+                    disabled={submitState.isLoading}
+                >
                     Cancel
                 </Button>
-                <Button onClick={handleSubmit} loading={submitState.isLoading} disabled={!title.trim()}>
-                    {isEdit ? 'Save' : 'Create'}
+                <Button
+                    onClick={handleSubmit}
+                    loading={submitState.isLoading}
+                    disabled={!title.trim()}
+                >
+                    {isEdit ? "Save" : "Create"}
                 </Button>
             </div>
         </Dialog>
