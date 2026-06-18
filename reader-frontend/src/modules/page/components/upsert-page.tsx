@@ -4,7 +4,7 @@ import { DataState } from "@lib/utils/data-state";
 import { extractFrontmatterTitle, type ExtractedPaste } from "@lib/md-parser";
 import { useAuthStore } from "@modules/auth/provider";
 import { Button } from "@modules/core/ui/primitives/button";
-import { Dialog, BaseDialog } from "@modules/core/ui/primitives/dialog";
+import { Dialog } from "@modules/core/ui/primitives/dialog";
 import { FormLabel } from "@modules/core/ui/primitives/form-label";
 import { Input } from "@modules/core/ui/primitives/input";
 import { toast } from "@modules/core/ui/primitives/toast/toast";
@@ -12,7 +12,11 @@ import { pagesPageWithIdRouteValue } from "@boot/routes";
 import { setDialogConsuming } from "../clipboard-paste";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { usePageStore } from "../store";
+import { useThemeStore } from "@modules/core/theme";
+import { PageColorSchema } from "../theme/page-color-schema";
+import { MarkdownRenderer } from "@lib/md-view";
+import { observer } from "mobx-react-lite";
 
 export interface UpsertPageDialogProps {
     open: boolean;
@@ -44,6 +48,7 @@ export function UpsertPageDialog({
     const [content, setContent] = useState("");
     const [category, setCategory] = useState<string | null>(null);
     const [submitState, setSubmitState] = useState<DataState<void>>(DataState.init);
+    const [readNowOpen, setReadNowOpen] = useState(false);
 
     const loadingRef = useRef(false);
 
@@ -154,9 +159,14 @@ export function UpsertPageDialog({
                 <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
                     {isEdit ? "Edit Page" : "New Page"}
                 </h2>
-                <BaseDialog.Close className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
-                    <X size={20} />
-                </BaseDialog.Close>
+                <Button
+                    variant="outlined"
+                    size="sm"
+                    onClick={() => setReadNowOpen(true)}
+                    disabled={!content.trim()}
+                >
+                    Read Now
+                </Button>
             </div>
             <div className="flex flex-col gap-5 px-6 pb-4 min-h-0 flex-1">
                 <div className="flex gap-4 shrink-0">
@@ -210,6 +220,88 @@ export function UpsertPageDialog({
                     {isEdit ? "Save" : "Create"}
                 </Button>
             </div>
+            {readNowOpen && (
+                <ReadNowDialog
+                    open={readNowOpen}
+                    onOpenChange={setReadNowOpen}
+                    onCloseAll={() => {
+                        setReadNowOpen(false);
+                        onOpenChange(false);
+                    }}
+                    title={title}
+                    content={content}
+                    category={category}
+                />
+            )}
         </Dialog>
     );
 }
+
+const ReadNowDialog = observer(function ReadNowDialog({
+    open,
+    onOpenChange,
+    onCloseAll,
+    title,
+    content,
+    category,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onCloseAll: () => void;
+    title: string;
+    content: string;
+    category: string | null;
+}) {
+    const store = usePageStore();
+    const themeStore = useThemeStore();
+    const uiSettings = store.uiSettingsStore;
+    const colors = themeStore.theme.value === 'dark' ? PageColorSchema.DARK.value : PageColorSchema.LIGHT.value;
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={onOpenChange}
+            className="flex flex-col inset-0 h-full max-w-none rounded-none -translate-x-0 -translate-y-0 p-0 bg-[var(--color-surface-canvas)] animate-fade-in"
+        >
+            <div className="flex items-center justify-between shrink-0 px-6 pt-6 pb-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-raised)]">
+                <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
+                    Preview Content
+                </h2>
+                <div className="flex items-center gap-3">
+                    <Button
+                        variant="outlined"
+                        size="sm"
+                        onClick={() => onOpenChange(false)}
+                    >
+                        Back to Edit
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        size="sm"
+                        onClick={onCloseAll}
+                    >
+                        Close
+                    </Button>
+                </div>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+                <div className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">
+                    <h1 className="text-3xl font-bold font-[family-name:var(--font-serif)] text-[var(--color-text-strong)] mb-2">
+                        {title || "Untitled"}
+                    </h1>
+                    {category && (
+                        <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-text-muted)] mb-6">
+                            {category}
+                        </div>
+                    )}
+                    <MarkdownRenderer
+                        markdown={content}
+                        colors={colors}
+                        fontSizes={uiSettings.fontSize.value}
+                        fonts={uiSettings.fontFamilies.value}
+                    />
+                </div>
+            </div>
+        </Dialog>
+    );
+});
