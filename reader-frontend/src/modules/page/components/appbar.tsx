@@ -76,11 +76,19 @@ export function PageAppbar() {
                     {() => {
                         const section = store.currentSection;
                         const page = store.optCurrentPage;
+                        const navigable = store.navigableSections;
+                        const total = navigable.length;
+                        const currentIndex = section ? navigable.indexOf(section) + 1 : 0;
                         return (
                             <>
                                 <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToPrevSection()} disabled={!store.hasPrevSection} tooltip="Previous section (←)">
                                     <ChevronLeft size={16} />
                                 </Button>
+                                {page && total > 0 && (
+                                    <span className="text-xs font-semibold text-[var(--color-text-muted)] min-w-[3rem] text-center select-none font-mono">
+                                        {currentIndex} / {total}
+                                    </span>
+                                )}
                                 <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToNextSection()} disabled={!store.hasNextSection} tooltip="Next section (→)">
                                     <ChevronRight size={16} />
                                 </Button>
