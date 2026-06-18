@@ -1,14 +1,17 @@
 import { observer } from 'mobx-react-lite';
+import { useRef } from 'react';
 import { usePageStore } from '../store';
 import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
 import { MarkdownRenderer } from '@lib/md-view';
+import { SelectionPopover } from './selection-popover';
 import '@lib/md-view/md-view.css';
 import '@lib/md-view/md-view-hljs.css';
 
 export const PageMain = observer(function PageMain() {
     const store = usePageStore();
     const themeStore = useThemeStore();
+    const contentRef = useRef<HTMLDivElement>(null);
 
     if (!store.optCurrentPage) {
         return (
@@ -18,6 +21,7 @@ export const PageMain = observer(function PageMain() {
         );
     }
 
+    const page = store.optCurrentPage;
     const section = store.currentSection;
     if (!section) {
         return null;
@@ -28,12 +32,17 @@ export const PageMain = observer(function PageMain() {
     const colors = themeStore.theme.value === 'dark' ? PageColorSchema.DARK.value : PageColorSchema.LIGHT.value;
 
     return (
-        <div className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">
+        <div ref={contentRef} className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">
             <MarkdownRenderer
                 markdown={section.chunkMarkdown(maxLevel)}
                 colors={colors}
                 fontSizes={uiSettings.fontSize.value}
                 fonts={uiSettings.fontFamilies.value}
+            />
+            <SelectionPopover
+                containerRef={contentRef}
+                page={page}
+                section={section}
             />
         </div>
     );

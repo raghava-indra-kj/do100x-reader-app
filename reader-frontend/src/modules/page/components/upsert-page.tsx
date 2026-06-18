@@ -118,6 +118,7 @@ export function UpsertPageDialog({
         setSubmitState(DataState.loading());
         const trimmedCategory = category?.trim() || null;
         if (isEdit) {
+            if (!editId) return;
             const result = await editPage({ pageId: editId, title: title.trim(), content, category: trimmedCategory });
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
