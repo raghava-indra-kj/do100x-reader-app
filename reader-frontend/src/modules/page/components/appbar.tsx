@@ -2,7 +2,7 @@ import { pagesPageWithIdRouteValue, homePageRoute } from '@boot/routes';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
-import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings, Copy, ClipboardList } from 'lucide-react';
+import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings, Copy, ClipboardList, BookOpen } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -140,6 +140,28 @@ export function PageAppbar() {
                                 className="h-8 py-0 text-xs"
                                 tooltip="Heading level"
                             />
+                        );
+                    }}
+                </Observer>
+                <Observer>
+                    {() => {
+                        const isOpen = store.dictionaryStore.isOpen;
+                        return (
+                            <Button
+                                variant={isOpen ? 'secondary' : 'outlined'}
+                                size="sm"
+                                iconOnly
+                                onClick={() => {
+                                    if (isOpen) {
+                                        store.dictionaryStore.close();
+                                    } else {
+                                        store.dictionaryStore.open();
+                                    }
+                                }}
+                                tooltip={isOpen ? 'Close Dictionary' : 'Open Dictionary'}
+                            >
+                                <BookOpen size={16} />
+                            </Button>
                         );
                     }}
                 </Observer>

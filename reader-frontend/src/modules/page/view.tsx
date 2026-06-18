@@ -2,12 +2,14 @@ import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { Group, Panel, Separator, usePanelRef, useDefaultLayout } from 'react-resizable-panels';
+import { Observer } from 'mobx-react-lite';
 import type { ExtractedPaste } from '@lib/md-parser';
 import { PageAppbar } from './components/appbar';
 import { NavRail } from './components/nav-rail';
 import { PageSubpages } from './components/subpages';
 import { PageToc } from './components/toc';
 import { PageMain } from './components/main-content';
+import { DictionaryPanel } from './components/dictionary-panel';
 import { UpsertPageDialog } from './components/upsert-page';
 import { PageContext, PageStore, usePageStore } from './store';
 import { useClipboardPaste } from './hooks/use-clipboard-paste';
@@ -128,6 +130,13 @@ const PageContent = observer(function PageContent() {
                             </main>
                         </Panel>
                     </Group>
+                    <Observer>
+                        {() => store.dictionaryStore.isOpen ? (
+                            <div className="w-80 shrink-0 border-l border-[var(--color-border-default)] bg-[var(--color-surface-raised)] h-full overflow-hidden">
+                                <DictionaryPanel />
+                            </div>
+                        ) : null}
+                    </Observer>
                 </div>
             </div>
             <UpsertPageDialog

@@ -5,6 +5,7 @@ import { DataState } from '@lib/utils/data-state';
 import { action, computed, makeObservable, observable, runInAction } from 'mobx';
 import { createContext, useContext } from 'react';
 import { PageUiSettingsStore } from './ui-settings-store';
+import { DictionaryStore } from './dictionary-store';
 
 export const PageContext = createContext<PageStore | null>(null);
 
@@ -30,6 +31,7 @@ export class PageStore {
     readonly pageId: string;
     initDataState: DataState<void>;
     uiSettingsStore: PageUiSettingsStore;
+    dictionaryStore: DictionaryStore;
     private _currentPage: Page | null;
     private _currentSectionId: string | null;
 
@@ -37,6 +39,7 @@ export class PageStore {
         this.pageId = pageId;
         this.initDataState = DataState.init();
         this.uiSettingsStore = new PageUiSettingsStore();
+        this.dictionaryStore = new DictionaryStore();
         this._currentPage = null;
         this._currentSectionId = null;
         makeObservable<PageStore, "_currentPage" | "_currentSectionId">(this, {
