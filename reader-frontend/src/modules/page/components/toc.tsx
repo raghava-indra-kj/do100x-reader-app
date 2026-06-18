@@ -80,6 +80,7 @@ export const PageToc = observer(function PageToc() {
                     parentPageId={page.parentPageId}
                     editPageId={page.id}
                     initialTitle={page.title}
+                    initialContent={page.content}
                     initialCategory={page.category}
                 />
             </div>
@@ -129,6 +130,7 @@ export const PageToc = observer(function PageToc() {
                 parentPageId={page.parentPageId}
                 editPageId={page.id}
                 initialTitle={page.title}
+                initialContent={page.content}
                 initialCategory={page.category}
             />
         </div>
