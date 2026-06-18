@@ -5,11 +5,13 @@ export interface TextSelection {
     text: string;
     /** Bounding rect of the selection range, for positioning */
     rect: DOMRect;
+    /** The actual selection range, to compute updated rects on scroll */
+    range: Range;
 }
 
 /**
  * Detects text selection within a container element.
- * Returns `{ text, rect }` when there is a non-empty selection inside the container, `null` otherwise.
+ * Returns `{ text, rect, range }` when there is a non-empty selection inside the container, `null` otherwise.
  * Automatically dismisses on Escape or click-outside. Repositions on scroll.
  *
  * @param containerRef  The element whose text can be selected.
@@ -50,7 +52,7 @@ export function useTextSelection(
             return;
         }
 
-        const range = sel.getRangeAt(0);
+        const range = sel.getRangeAt(0).cloneRange();
         const rect = range.getBoundingClientRect();
 
         // Guard against zero-size rects (can happen with collapsed or invisible ranges)
@@ -59,7 +61,7 @@ export function useTextSelection(
             return;
         }
 
-        setSelection({ text, rect });
+        setSelection({ text, rect, range });
     }, [containerRef]);
 
     useEffect(() => {
@@ -84,7 +86,16 @@ export function useTextSelection(
 
         // Reposition on scroll — re-read the selection rect so the popover follows
         const handleScroll = () => {
-            checkSelection();
+            if (selection) {
+                const rect = selection.range.getBoundingClientRect();
+                setSelection({
+                    text: selection.text,
+                    range: selection.range,
+                    rect,
+                });
+            } else {
+                checkSelection();
+            }
         };
 
         // Dismiss when clicking outside the container AND outside the popover
