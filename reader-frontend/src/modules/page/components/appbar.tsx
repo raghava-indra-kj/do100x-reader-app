@@ -2,7 +2,7 @@ import { pagesPageWithIdRouteValue, homePageRoute } from '@boot/routes';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
-import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings, Copy } from 'lucide-react';
+import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings, Copy, ClipboardList } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -75,6 +75,7 @@ export function PageAppbar() {
                 <Observer>
                     {() => {
                         const section = store.currentSection;
+                        const page = store.optCurrentPage;
                         return (
                             <>
                                 <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToPrevSection()} disabled={!store.hasPrevSection} tooltip="Previous section (←)">
@@ -86,6 +87,11 @@ export function PageAppbar() {
                                 {section && (
                                     <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(section.fullMarkdown); toast.success('Copied to clipboard'); }} tooltip="Copy section">
                                         <Copy size={16} />
+                                    </Button>
+                                )}
+                                {page && (
+                                    <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(page.content); toast.success('Full page copied to clipboard'); }} tooltip="Copy whole page">
+                                        <ClipboardList size={16} />
                                     </Button>
                                 )}
                             </>
