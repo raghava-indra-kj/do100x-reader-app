@@ -8,6 +8,7 @@ import { PageAppbar } from './components/appbar';
 import { NavRail } from './components/nav-rail';
 import { PageSubpages } from './components/subpages';
 import { PageToc } from './components/toc';
+import { PageComments } from './components/comments-panel';
 import { PageMain } from './components/main-content';
 import { DictionaryPanel } from './components/dictionary-panel';
 import { UpsertPageDialog } from './components/upsert-page';
@@ -44,6 +45,9 @@ const SidebarPanel = observer(function SidebarPanel() {
 
     if (uiSettings.sidebarPanel === 'subpages') {
         return <PageSubpages />;
+    }
+    if (uiSettings.sidebarPanel === 'comments') {
+        return <PageComments />;
     }
     return <PageToc />;
 });
@@ -85,6 +89,13 @@ const PageContent = observer(function PageContent() {
             uiSettings.setSidebarPanelOpen(false);
         } else {
             uiSettings.setSidebarPanel('subpages');
+        }
+    }, { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('alt+m', () => {
+        if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'comments') {
+            uiSettings.setSidebarPanelOpen(false);
+        } else {
+            uiSettings.setSidebarPanel('comments');
         }
     }, { preventDefault: true, enableOnFormTags: false });
 

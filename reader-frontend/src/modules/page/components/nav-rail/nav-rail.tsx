@@ -1,12 +1,13 @@
 import { usePageStore } from '../../store';
 import type { SidebarPanelId } from '../../ui-settings-store';
-import { List, FileText } from 'lucide-react';
+import { List, FileText, MessageSquare } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 
 const panels: { id: SidebarPanelId; label: string; shortcut: string; icon: typeof List }[] = [
     { id: 'contents', label: 'Contents', shortcut: 'Alt+C', icon: List },
     { id: 'subpages', label: 'Subpages', shortcut: 'Alt+S', icon: FileText },
+    { id: 'comments', label: 'Comments', shortcut: 'Alt+M', icon: MessageSquare },
 ];
 
 export function NavRail() {

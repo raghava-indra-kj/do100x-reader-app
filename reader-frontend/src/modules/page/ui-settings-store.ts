@@ -8,7 +8,7 @@ import { createContext, useContext } from 'react';
 
 const STORAGE_KEY = 'page_ui_settings';
 
-export type SidebarPanelId = 'contents' | 'subpages';
+export type SidebarPanelId = 'contents' | 'subpages' | 'comments';
 
 interface StoredSettings {
     fontSizeId: string;
@@ -58,7 +58,9 @@ export class PageUiSettingsStore {
         this.fontFamilies = findById(PageFontFamilies.VALUES, stored.fontFamiliesId, PageFontFamilies.LEXEND);
         this.headingLevel = findById(PageHeadingLevel.VALUES, stored.headingLevelId, PageHeadingLevel.H3);
         this.sidebarPanelOpen = stored.sidebarPanelOpen ?? true;
-        this.sidebarPanel = stored.sidebarPanelId === 'subpages' ? 'subpages' : 'contents';
+        this.sidebarPanel = (['contents', 'subpages', 'comments'] as SidebarPanelId[]).includes(stored.sidebarPanelId as SidebarPanelId)
+            ? (stored.sidebarPanelId as SidebarPanelId)
+            : 'contents';
         this.subpageSort = findById(PageSubpageSort.VALUES, stored.subpageSortId, PageSubpageSort.SORT_ORDER);
         this.subpageGroup = findById(PageSubpageGroup.VALUES, stored.subpageGroupId, PageSubpageGroup.NONE);
         makeObservable(this, {

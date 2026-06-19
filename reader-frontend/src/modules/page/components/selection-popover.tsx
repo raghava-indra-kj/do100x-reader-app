@@ -4,7 +4,8 @@ import type { Page } from '@domain/page/models/page';
 import type { Section } from '@domain/page/models/section';
 import { useTextSelection } from '../hooks/use-text-selection';
 import { usePageStore } from '../store';
-import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles } from 'lucide-react';
+import { createComment } from '@domain/comment/services/comments-service';
+import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote } from 'lucide-react';
 
 const POPOVER_OFFSET = 10;
 const GOOGLE_URL_MAX = 2048;
@@ -58,12 +59,15 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
     const store = usePageStore();
     const selection = useTextSelection(containerRef, popoverRef);
 
-    const [view, setView] = useState<'menu' | 'doubt'>('menu');
+    const [view, setView] = useState<'menu' | 'doubt' | 'comment'>('menu');
     const [doubt, setDoubt] = useState('');
+    const [commentBody, setCommentBody] = useState('');
+    const [isSavingComment, setIsSavingComment] = useState(false);
 
     useEffect(() => {
         setView('menu');
         setDoubt('');
+        setCommentBody('');
     }, [selection?.text]);
 
     if (!selection) return null;
@@ -148,6 +152,32 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
         }
     };
 
+    const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            handleCommentSubmit();
+        }
+    };
+
+    const handleCommentSubmit = async () => {
+        if (!commentBody.trim() || isSavingComment) return;
+        setIsSavingComment(true);
+        const result = await createComment({
+            pageId: page.id,
+            pageTitle: page.title,
+            sectionTitle: sectionTitle || null,
+            selectedText: trimmedText,
+            body: commentBody.trim(),
+        });
+        setIsSavingComment(false);
+        if (result.ok) {
+            setCommentBody('');
+            setView('menu');
+            // Switch sidebar to comments panel
+            store.uiSettingsStore.setSidebarPanel('comments');
+        }
+    };
+
     return createPortal(
         view === 'menu' ? (
             <div
@@ -205,8 +235,20 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                     <MessageSquare size={13} />
                     <span>Ask Doubt</span>
                 </button>
+
+                <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
+
+                {/* Add Comment */}
+                <button
+                    onClick={() => setView('comment')}
+                    className={`${btnBase} ${btnEnabled}`}
+                    title="Add a comment on this selection"
+                >
+                    <StickyNote size={13} />
+                    <span>Add Comment</span>
+                </button>
             </div>
-        ) : (
+        ) : view === 'doubt' ? (
             <div
                 ref={popoverRef}
                 style={style}
@@ -262,6 +304,47 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                             DuckAI
                         </button>
                     </div>
+                </div>
+            </div>
+        ) : (
+            <div
+                ref={popoverRef}
+                style={style}
+                className="flex flex-col gap-2 rounded-lg bg-[var(--color-surface-raised)] p-2 shadow-lg ring-1 ring-[var(--color-border-subtle)] w-64"
+                onMouseDown={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-1.5">
+                    <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase tracking-wider">Add Comment</span>
+                    <button
+                        onClick={() => setView('menu')}
+                        className="flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] cursor-pointer"
+                    >
+                        <ArrowLeft size={12} />
+                        <span>Back</span>
+                    </button>
+                </div>
+
+                <textarea
+                    value={commentBody}
+                    onChange={(e) => setCommentBody(e.target.value)}
+                    onKeyDown={handleCommentKeyDown}
+                    placeholder="Type your comment (Ctrl+Enter to save)..."
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] resize-none h-20"
+                    autoFocus
+                />
+
+                <div className="flex items-center justify-end mt-1">
+                    <button
+                        onClick={handleCommentSubmit}
+                        disabled={!commentBody.trim() || isSavingComment}
+                        className={`px-3 py-1.5 text-[10px] font-semibold rounded-md transition-colors ${
+                            commentBody.trim() && !isSavingComment
+                                ? 'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] cursor-pointer hover:bg-[var(--color-brand-hover)]'
+                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-body)] opacity-40 cursor-not-allowed'
+                        }`}
+                    >
+                        {isSavingComment ? 'Saving…' : 'Save Comment'}
+                    </button>
                 </div>
             </div>
         ),

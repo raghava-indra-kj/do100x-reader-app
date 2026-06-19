@@ -5,6 +5,7 @@ import path from "path";
 import meRouter from "./me";
 import signupRouter from "./signup";
 import pagesRouter from "./pages";
+import commentsRouter from "./comments";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -23,6 +24,7 @@ app.get("/backend-api/status", (_req, res) => {
 app.use("/backend-api/me", meRouter);
 app.use("/backend-api/signup", signupRouter);
 app.use("/backend-api/pages", pagesRouter);
+app.use("/backend-api/comments", commentsRouter);
 
 if (hasFrontend) {
   app.get("*splat", (_req, res) => {

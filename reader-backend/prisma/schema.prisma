@@ -27,3 +27,14 @@ model page {
   updatedAt     DateTime  @db.DateTime(6)
   deletedAt     DateTime? @db.DateTime(6)
 }
+
+model comment {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  pageId        String   @db.VarChar(36)
+  pageTitle     String   @db.VarChar(1000)
+  sectionTitle  String?  @db.VarChar(1000)
+  selectedText  String   @db.Text
+  body          String   @db.Text
+  createdAt     DateTime @db.DateTime(6)
+  updatedAt     DateTime @db.DateTime(6)
+}
