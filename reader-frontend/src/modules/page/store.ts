@@ -34,6 +34,7 @@ export class PageStore {
     dictionaryStore: DictionaryStore;
     private _currentPage: Page | null;
     private _currentSectionId: string | null;
+    commentsVersion: number;
 
     constructor({ pageId }: { pageId: string }) {
         this.pageId = pageId;
@@ -42,10 +43,12 @@ export class PageStore {
         this.dictionaryStore = new DictionaryStore();
         this._currentPage = null;
         this._currentSectionId = null;
+        this.commentsVersion = 0;
         makeObservable<PageStore, "_currentPage" | "_currentSectionId">(this, {
             initDataState: observable.ref,
             _currentPage: observable.ref,
             _currentSectionId: observable.ref,
+            commentsVersion: observable,
             optCurrentPage: computed,
             flatSections: computed,
             navigableSections: computed,
@@ -55,11 +58,16 @@ export class PageStore {
             setCurrentSection: action,
             goToPrevSection: action,
             goToNextSection: action,
+            bumpCommentsVersion: action,
         });
     }
 
     mount() {
         this.loadPage();
+    }
+
+    bumpCommentsVersion() {
+        this.commentsVersion++;
     }
 
     get optCurrentPage(): Page | null {

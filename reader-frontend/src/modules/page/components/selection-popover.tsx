@@ -5,6 +5,7 @@ import type { Section } from '@domain/page/models/section';
 import { useTextSelection } from '../hooks/use-text-selection';
 import { usePageStore } from '../store';
 import { createComment } from '@domain/comment/services/comments-service';
+import { toast } from '@modules/core/ui/primitives/toast/toast';
 import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote } from 'lucide-react';
 
 const POPOVER_OFFSET = 10;
@@ -173,8 +174,8 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
         if (result.ok) {
             setCommentBody('');
             setView('menu');
-            // Switch sidebar to comments panel
-            store.uiSettingsStore.setSidebarPanel('comments');
+            toast.success('Comment saved');
+            store.bumpCommentsVersion();
         }
     };
 

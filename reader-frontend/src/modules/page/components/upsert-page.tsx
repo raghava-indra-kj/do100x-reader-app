@@ -41,6 +41,7 @@ export function UpsertPageDialog({
 }: UpsertPageDialogProps) {
     const navigate = useNavigate();
     const authStore = useAuthStore();
+    const store = usePageStore();
     const editId = editPageId ?? page?.id;
     const isEdit = !!editId;
 
@@ -128,6 +129,7 @@ export function UpsertPageDialog({
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
                 onOpenChange(false);
+                store.loadPage();
             } else {
                 setSubmitState(DataState.error(result.error));
             }
@@ -147,7 +149,7 @@ export function UpsertPageDialog({
                 setSubmitState(DataState.error(result.error));
             }
         }
-    }, [title, content, category, isEdit, editId, parentPageId, authStore, navigate, onOpenChange]);
+    }, [title, content, category, isEdit, editId, parentPageId, authStore, navigate, onOpenChange, store]);
 
     return (
         <Dialog

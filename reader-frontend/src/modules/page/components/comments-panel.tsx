@@ -300,6 +300,8 @@ export const PageComments = observer(function PageComments() {
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [copyFeedback, setCopyFeedback] = useState(false);
 
+    const commentsVersion = store.commentsVersion;
+
     const load = useCallback(() => {
         setDataState(DataState.loading());
         getComments({ pageId: store.pageId }).then((result) => {
@@ -310,7 +312,7 @@ export const PageComments = observer(function PageComments() {
                 setDataState(DataState.error(result.error));
             }
         });
-    }, [store.pageId]);
+    }, [store.pageId, commentsVersion]);
 
     useEffect(() => {
         mountedRef.current = true;
