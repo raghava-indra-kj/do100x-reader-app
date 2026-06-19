@@ -35,6 +35,7 @@ model comment {
   sectionTitle  String?  @db.VarChar(1000)
   selectedText  String   @db.Text
   body          String   @db.Text
+  linkedPageId  String?  @db.VarChar(36)
   createdAt     DateTime @db.DateTime(6)
   updatedAt     DateTime @db.DateTime(6)
 }

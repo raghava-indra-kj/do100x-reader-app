@@ -7,6 +7,7 @@ export const DbCommentSchema = z.object({
     sectionTitle: z.string().nullable(),
     selectedText: z.string(),
     body: z.string(),
+    linkedPageId: z.string().nullable(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
 });

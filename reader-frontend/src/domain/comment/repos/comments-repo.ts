@@ -12,11 +12,13 @@ export interface ICommentsRepo {
         sectionTitle: string | null;
         selectedText: string;
         body: string;
+        linkedPageId: string | null;
     }): AsyncResult<string, AppError>;
 
     editComment(params: {
         commentId: string;
         body: string;
+        linkedPageId?: string | null;
     }): AsyncResult<void, AppError>;
 
     deleteComment(params: { commentId: string }): AsyncResult<void, AppError>;

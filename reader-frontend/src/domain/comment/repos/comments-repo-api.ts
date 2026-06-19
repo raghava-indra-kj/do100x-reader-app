@@ -20,6 +20,7 @@ export class CommentsRepoApi implements ICommentsRepo {
         sectionTitle: string | null;
         selectedText: string;
         body: string;
+        linkedPageId: string | null;
     }): AsyncResult<string, AppError> {
         try {
             const { data } = await apiClient.post('/comments', params);
@@ -29,12 +30,17 @@ export class CommentsRepoApi implements ICommentsRepo {
         }
     }
 
-    async editComment({ commentId, body }: {
+    async editComment({ commentId, body, linkedPageId }: {
         commentId: string;
         body: string;
+        linkedPageId?: string | null;
     }): AsyncResult<void, AppError> {
         try {
-            await apiClient.put(`/comments/${commentId}`, { body });
+            const payload: Record<string, unknown> = { body };
+            if (linkedPageId !== undefined) {
+                payload.linkedPageId = linkedPageId;
+            }
+            await apiClient.put(`/comments/${commentId}`, payload);
             return ok(undefined);
         } catch (error) {
             return err(new AppError({ message: getApiErrorMessage(error, 'Failed to edit comment'), cause: error }));

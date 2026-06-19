@@ -14,6 +14,7 @@ function toComment(db: import('../models/db-comment').DbComment): Comment {
         sectionTitle: db.sectionTitle,
         selectedText: db.selectedText,
         body: db.body,
+        linkedPageId: db.linkedPageId,
         createdAt: db.createdAt,
         updatedAt: db.updatedAt,
     });
@@ -29,16 +30,16 @@ export async function getComments(
 }
 
 export async function createComment(
-    params: { pageId: string; pageTitle: string; sectionTitle: string | null; selectedText: string; body: string }
+    params: { pageId: string; pageTitle: string; sectionTitle: string | null; selectedText: string; body: string; linkedPageId?: string | null }
 ): AsyncResult<string, AppError> {
     const repo = container.get<ICommentsRepo>(TYPES.ICommentsRepo);
-    const result = await repo.createComment(params);
+    const result = await repo.createComment({ ...params, linkedPageId: params.linkedPageId ?? null });
     if (!result.ok) return result;
     return ok(result.data);
 }
 
 export async function editComment(
-    params: { commentId: string; body: string }
+    params: { commentId: string; body: string; linkedPageId?: string | null }
 ): AsyncResult<void, AppError> {
     const repo = container.get<ICommentsRepo>(TYPES.ICommentsRepo);
     const result = await repo.editComment(params);
