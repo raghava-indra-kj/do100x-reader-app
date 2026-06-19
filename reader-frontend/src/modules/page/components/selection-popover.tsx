@@ -1,12 +1,12 @@
 import { createPortal } from 'react-dom';
-import { useRef, useState, useEffect, type RefObject } from 'react';
+import { useRef, useState, useEffect, useCallback, type RefObject } from 'react';
 import type { Page } from '@domain/page/models/page';
 import type { Section } from '@domain/page/models/section';
 import { useTextSelection } from '../hooks/use-text-selection';
 import { usePageStore } from '../store';
 import { createComment } from '@domain/comment/services/comments-service';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
-import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote } from 'lucide-react';
+import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote, Copy, Check } from 'lucide-react';
 
 const POPOVER_OFFSET = 10;
 const GOOGLE_URL_MAX = 2048;
@@ -60,27 +60,61 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
     const store = usePageStore();
     const selection = useTextSelection(containerRef, popoverRef);
 
+    const sectionTitle = section.title ?? section.rawTitle ?? '';
+    const trimmedText = selection?.text.trim() ?? '';
+
     const [view, setView] = useState<'menu' | 'doubt' | 'comment'>('menu');
     const [doubt, setDoubt] = useState('');
     const [commentBody, setCommentBody] = useState('');
     const [isSavingComment, setIsSavingComment] = useState(false);
+    const [doubtCopied, setDoubtCopied] = useState(false);
+    const [popoverHeight, setPopoverHeight] = useState(180);
 
     useEffect(() => {
         setView('menu');
         setDoubt('');
         setCommentBody('');
+        setDoubtCopied(false);
     }, [selection?.text]);
+
+    useEffect(() => {
+        const node = popoverRef.current;
+        if (!node) return;
+
+        setPopoverHeight(node.offsetHeight || 180);
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const height = entry.borderBoxSize?.[0]
+                    ? entry.borderBoxSize[0].blockSize
+                    : (entry.target as HTMLElement).offsetHeight;
+                if (height > 0) {
+                    setPopoverHeight(height);
+                }
+            }
+        });
+        resizeObserver.observe(node);
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [selection?.text, view]);
+
+    const handleCopyDoubt = useCallback(() => {
+        if (!doubt.trim()) return;
+        const prompt = `I am reading about "${page.title}" > "${sectionTitle}".\n\nHere is the passage I am studying:\n"""\n${trimmedText}\n"""\n\nMy doubt/question is:\n${doubt.trim()}\n\nPlease help me understand this and directly answer my doubt.`;
+        navigator.clipboard.writeText(prompt);
+        setDoubtCopied(true);
+        setTimeout(() => setDoubtCopied(false), 1500);
+    }, [doubt, page.title, sectionTitle, trimmedText]);
 
     if (!selection) return null;
 
-    const { text, rect } = selection;
-    const trimmedText = text.trim();
+    const { rect } = selection;
 
     // — Meaning: enabled only for a single word
     const canMeaning = isSingleWord(trimmedText);
 
     // — Explain with Google: enabled only if URL fits within limit
-    const sectionTitle = section.title ?? section.rawTitle ?? '';
     const googleUrl = buildGoogleExplainUrl(page.title, sectionTitle, trimmedText);
     const canGoogle = googleUrl.length <= GOOGLE_URL_MAX;
 
@@ -104,18 +138,22 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
     const canSubmitDuck = doubt.trim().length > 0 && remainingDuckChars >= 0;
 
     // Position above the selection by default; flip below if not enough space.
-    // The menu popover is roughly 180px tall (5 items + dividers + padding).
     const spaceAbove = rect.top;
-    const showAbove = spaceAbove > 180;
+    const showAbove = spaceAbove > popoverHeight + POPOVER_OFFSET;
+
+    const idealTop = showAbove
+        ? rect.top - POPOVER_OFFSET - popoverHeight
+        : rect.bottom + POPOVER_OFFSET;
+
+    // Constrain top to be within the window bounds, leaving at least 10px padding from the top/bottom.
+    const top = Math.max(10, Math.min(idealTop, window.innerHeight - popoverHeight - 10));
 
     const style: React.CSSProperties = {
         position: 'fixed',
         left: Math.max(80, Math.min(rect.left + rect.width / 2, window.innerWidth - 80)),
         transform: 'translateX(-50%)',
         zIndex: 9999,
-        ...(showAbove
-            ? { bottom: window.innerHeight - rect.top + POPOVER_OFFSET }
-            : { top: rect.bottom + POPOVER_OFFSET }),
+        top,
     };
 
     const handleMeaning = () => {
@@ -254,58 +292,93 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
             <div
                 ref={popoverRef}
                 style={style}
-                className="flex flex-col gap-2 rounded-lg bg-[var(--color-surface-raised)] p-2 shadow-lg ring-1 ring-[var(--color-border-subtle)] w-64"
+                className="flex flex-col gap-2.5 rounded-xl bg-[var(--color-surface-raised)] p-3 shadow-xl ring-1 ring-[var(--color-border-subtle)] w-80"
                 onMouseDown={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-1.5">
-                    <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase tracking-wider">Ask Doubt</span>
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                        <MessageSquare size={13} className="text-[var(--color-brand)]" />
+                        <span className="text-[11px] font-semibold text-[var(--color-text-strong)]">Ask Doubt</span>
+                    </div>
                     <button
                         onClick={() => setView('menu')}
-                        className="flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] cursor-pointer"
+                        className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
                     >
-                        <ArrowLeft size={12} />
+                        <ArrowLeft size={11} />
                         <span>Back</span>
                     </button>
                 </div>
 
+                {/* Textarea */}
                 <textarea
                     value={doubt}
                     onChange={(e) => setDoubt(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Type your doubt here (Ctrl+Enter to submit)..."
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] resize-none h-20"
+                    placeholder="What's your doubt? (Ctrl+Enter to send)"
+                    className="w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] px-3 py-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] focus:ring-1 focus:ring-[var(--color-brand)] resize-none h-20 transition-colors"
                     autoFocus
                 />
 
-                <div className="flex items-center justify-between mt-1.5">
-                    <div className="flex flex-col text-[9px] text-[var(--color-text-body)] opacity-70 leading-tight">
-                        <span>G: {remainingGoogleChars >= 0 ? `${remainingGoogleChars} left` : 'Too long'}</span>
-                        <span>D: {remainingDuckChars >= 0 ? `${remainingDuckChars} left` : 'Too long'}</span>
+                {/* Character Counter Row */}
+                <div className="flex justify-between items-center text-[10px] text-[var(--color-text-subtle)] tabular-nums px-0.5 -mt-1">
+                    <span>{doubt.length} chars typed</span>
+                    <div className="flex gap-2">
+                        <span className={remainingGoogleChars < 0 ? 'text-[var(--color-text-error)] font-medium' : ''}>
+                            Google: {remainingGoogleChars >= 0 ? `${remainingGoogleChars} left` : 'Too long'}
+                        </span>
+                        <span className={remainingDuckChars < 0 ? 'text-[var(--color-text-error)] font-medium' : ''}>
+                            DuckAI: {remainingDuckChars >= 0 ? `${remainingDuckChars} left` : 'Too long'}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                            onClick={handleGoogleSubmit}
-                            disabled={!canSubmitGoogle}
-                            className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-colors ${
-                                canSubmitGoogle
-                                    ? 'bg-[var(--color-surface-soft)] hover:bg-[var(--color-surface-card)] text-[var(--color-text-strong)] border border-[var(--color-border-strong)] cursor-pointer'
-                                    : 'bg-[var(--color-surface-soft)] text-[var(--color-text-body)] opacity-40 cursor-not-allowed border border-[var(--color-border-subtle)]'
-                            }`}
-                        >
-                            Google
-                        </button>
-                        <button
-                            onClick={handleDuckSubmit}
-                            disabled={!canSubmitDuck}
-                            className={`px-2.5 py-1 text-[10px] font-semibold rounded-md transition-colors ${
-                                canSubmitDuck
-                                    ? 'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] cursor-pointer hover:bg-[var(--color-brand-hover)]'
-                                    : 'bg-[var(--color-surface-soft)] text-[var(--color-text-body)] opacity-40 cursor-not-allowed'
-                            }`}
-                        >
-                            DuckAI
-                        </button>
-                    </div>
+                </div>
+
+                {/* Linear Action Buttons */}
+                <div className="flex items-center gap-1.5 w-full">
+                    {/* Google */}
+                    <button
+                        onClick={handleGoogleSubmit}
+                        disabled={!canSubmitGoogle}
+                        className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[10px] font-semibold transition-all border ${
+                            canSubmitGoogle
+                                ? 'bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:border-[var(--color-text-muted)] cursor-pointer active:scale-95'
+                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] border-transparent opacity-40 cursor-not-allowed'
+                        }`}
+                        title={canSubmitGoogle ? 'Search with Google' : 'Too long for Google'}
+                    >
+                        <Globe size={12} className="shrink-0" />
+                        <span>Search Google</span>
+                    </button>
+
+                    {/* DuckAI */}
+                    <button
+                        onClick={handleDuckSubmit}
+                        disabled={!canSubmitDuck}
+                        className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[10px] font-semibold transition-all border ${
+                            canSubmitDuck
+                                ? 'bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:border-[var(--color-text-muted)] cursor-pointer active:scale-95'
+                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] border-transparent opacity-40 cursor-not-allowed'
+                        }`}
+                        title={canSubmitDuck ? 'Search with DuckAI' : 'Too long for DuckAI'}
+                    >
+                        <Sparkles size={12} className="shrink-0" />
+                        <span>Search DuckAI</span>
+                    </button>
+
+                    {/* Copy doubt */}
+                    <button
+                        onClick={handleCopyDoubt}
+                        disabled={!doubt.trim()}
+                        className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[10px] font-semibold transition-all border ${
+                            doubt.trim()
+                                ? 'bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:border-[var(--color-text-muted)] cursor-pointer active:scale-95'
+                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] border-transparent opacity-40 cursor-not-allowed'
+                        }`}
+                        title="Copy doubt as prompt"
+                    >
+                        {doubtCopied ? <Check size={12} className="text-[var(--color-brand)] shrink-0" /> : <Copy size={12} className="shrink-0" />}
+                        <span>{doubtCopied ? 'Copied' : 'Copy'}</span>
+                    </button>
                 </div>
             </div>
         ) : (
