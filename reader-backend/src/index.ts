@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 const frontendDist = path.resolve(__dirname, "../../reader-frontend/dist");
 const hasFrontend = fs.existsSync(path.join(frontendDist, "index.html"));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 if (hasFrontend) {
   app.use(express.static(frontendDist));
