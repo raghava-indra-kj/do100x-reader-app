@@ -103,13 +103,14 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
     const remainingDuckChars = DUCK_URL_MAX - duckDoubtUrl.length;
     const canSubmitDuck = doubt.trim().length > 0 && remainingDuckChars >= 0;
 
-    // Position above the selection by default; flip below if not enough space
+    // Position above the selection by default; flip below if not enough space.
+    // The menu popover is roughly 180px tall (5 items + dividers + padding).
     const spaceAbove = rect.top;
-    const showAbove = spaceAbove > 60;
+    const showAbove = spaceAbove > 180;
 
     const style: React.CSSProperties = {
         position: 'fixed',
-        left: rect.left + rect.width / 2,
+        left: Math.max(80, Math.min(rect.left + rect.width / 2, window.innerWidth - 80)),
         transform: 'translateX(-50%)',
         zIndex: 9999,
         ...(showAbove
