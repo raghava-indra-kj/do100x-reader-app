@@ -29,7 +29,8 @@ export const PageMain = observer(function PageMain() {
 
     const uiSettings = store.uiSettingsStore;
     const maxLevel = uiSettings.headingLevel.value ?? 6;
-    const colors = themeStore.theme.value === 'dark' ? PageColorSchema.DARK.value : PageColorSchema.LIGHT.value;
+    const schema = PageColorSchema.VALUES.find(s => s.id === themeStore.theme.value) || PageColorSchema.LIGHT;
+    const colors = schema.value;
 
     return (
         <div ref={contentRef} className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">

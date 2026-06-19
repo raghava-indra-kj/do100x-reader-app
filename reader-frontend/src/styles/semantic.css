@@ -68,6 +68,179 @@
     --band-spacing: var(--space-24);
 }
 
+
+.light {
+    /* Brand — primary interactive */
+    --color-brand: var(--coral-500);
+    --color-brand-hover: var(--coral-600);
+    --color-brand-active: var(--coral-700);
+    --color-brand-soft: var(--coral-100);
+    --color-brand-on-soft: var(--coral-700);
+
+    /* Surfaces */
+    --color-surface: var(--sand-100);
+    --color-surface-canvas: var(--sand-100);
+    --color-surface-raised: var(--sand-50);
+    --color-surface-soft: var(--sand-200);
+    --color-surface-card: var(--sand-300);
+    --color-surface-card-strong: var(--sand-400);
+    --color-surface-inverse: var(--navy-700);
+    --color-surface-inverse-soft: var(--navy-800);
+    --color-surface-inverse-raised: var(--navy-600);
+
+    /* Text */
+    --color-text-strong: var(--stone-900);
+    --color-text-body: var(--stone-700);
+    --color-text-muted: var(--stone-500);
+    --color-text-subtle: var(--stone-400);
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: var(--sand-100);
+    --color-text-on-dark-muted: var(--navy-200);
+    --color-text-link: var(--coral-600);
+
+    /* Borders */
+    --color-border-subtle: var(--sand-400);
+    --color-border-default: var(--stone-200);
+    --color-border-strong: var(--stone-300);
+
+    /* Focus ring */
+    --focus-ring-color: var(--coral-500);
+
+    /* Scrollbar */
+    --scrollbar-track: var(--sand-200);
+    --scrollbar-thumb: var(--sand-400);
+    --scrollbar-thumb-hover: var(--sand-500);
+}
+
+.slate-light {
+    /* Brand — primary interactive */
+    --color-brand: var(--coral-500);
+    --color-brand-hover: var(--coral-600);
+    --color-brand-active: var(--coral-700);
+    --color-brand-soft: var(--coral-100);
+    --color-brand-on-soft: var(--coral-700);
+
+    /* Surfaces */
+    --color-surface: #ffffff;
+    --color-surface-canvas: #f8f9fa;
+    --color-surface-raised: #ffffff;
+    --color-surface-soft: #f1f3f5;
+    --color-surface-card: #e9ecef;
+    --color-surface-card-strong: #dee2e6;
+    --color-surface-inverse: var(--navy-700);
+    --color-surface-inverse-soft: var(--navy-800);
+    --color-surface-inverse-raised: var(--navy-600);
+
+    /* Text */
+    --color-text-strong: #111827;
+    --color-text-body: #374151;
+    --color-text-muted: #6b7280;
+    --color-text-subtle: #9ca3af;
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: var(--stone-50);
+    --color-text-on-dark-muted: var(--stone-300);
+    --color-text-link: var(--coral-600);
+
+    /* Borders */
+    --color-border-subtle: #e5e7eb;
+    --color-border-default: #d1d5db;
+    --color-border-strong: #9ca3af;
+
+    /* Focus ring */
+    --focus-ring-color: var(--coral-500);
+
+    /* Scrollbar */
+    --scrollbar-track: #f1f3f5;
+    --scrollbar-thumb: #dee2e6;
+    --scrollbar-thumb-hover: #ced4da;
+}
+
+.sepia {
+    /* Brand — primary interactive */
+    --color-brand: var(--coral-500);
+    --color-brand-hover: var(--coral-600);
+    --color-brand-active: var(--coral-700);
+    --color-brand-soft: var(--coral-100);
+    --color-brand-on-soft: var(--coral-700);
+
+    /* Surfaces */
+    --color-surface: var(--amber-50);
+    --color-surface-canvas: var(--amber-50);
+    --color-surface-raised: #fffbf3;
+    --color-surface-soft: var(--amber-100);
+    --color-surface-card: var(--amber-200);
+    --color-surface-card-strong: var(--amber-300);
+    --color-surface-inverse: var(--navy-700);
+    --color-surface-inverse-soft: var(--navy-800);
+    --color-surface-inverse-raised: var(--navy-600);
+
+    /* Text */
+    --color-text-strong: var(--amber-950);
+    --color-text-body: var(--amber-900);
+    --color-text-muted: var(--amber-700);
+    --color-text-subtle: var(--amber-600);
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: var(--amber-50);
+    --color-text-on-dark-muted: var(--amber-200);
+    --color-text-link: var(--coral-600);
+
+    /* Borders */
+    --color-border-subtle: var(--amber-100);
+    --color-border-default: var(--amber-200);
+    --color-border-strong: var(--amber-300);
+
+    /* Focus ring */
+    --focus-ring-color: var(--coral-500);
+
+    /* Scrollbar */
+    --scrollbar-track: var(--amber-100);
+    --scrollbar-thumb: var(--amber-300);
+    --scrollbar-thumb-hover: var(--amber-400);
+}
+
+.sage {
+    /* Brand — primary interactive */
+    --color-brand: var(--coral-500);
+    --color-brand-hover: var(--coral-600);
+    --color-brand-active: var(--coral-700);
+    --color-brand-soft: var(--coral-100);
+    --color-brand-on-soft: var(--coral-700);
+
+    /* Surfaces */
+    --color-surface: var(--green-50);
+    --color-surface-canvas: var(--green-50);
+    --color-surface-raised: #f2faf4;
+    --color-surface-soft: var(--green-100);
+    --color-surface-card: var(--green-200);
+    --color-surface-card-strong: var(--green-300);
+    --color-surface-inverse: var(--green-900);
+    --color-surface-inverse-soft: var(--green-950);
+    --color-surface-inverse-raised: var(--green-800);
+
+    /* Text */
+    --color-text-strong: var(--green-950);
+    --color-text-body: var(--green-900);
+    --color-text-muted: var(--green-700);
+    --color-text-subtle: var(--green-500);
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: var(--green-50);
+    --color-text-on-dark-muted: var(--green-200);
+    --color-text-link: var(--coral-600);
+
+    /* Borders */
+    --color-border-subtle: var(--green-200);
+    --color-border-default: var(--green-300);
+    --color-border-strong: var(--green-400);
+
+    /* Focus ring */
+    --focus-ring-color: var(--coral-500);
+
+    /* Scrollbar */
+    --scrollbar-track: var(--green-100);
+    --scrollbar-thumb: var(--green-300);
+    --scrollbar-thumb-hover: var(--green-400);
+}
+
 .dark {
     /* Brand — hover/active lighten on dark; soft inverts to a deep tint */
     --color-brand: var(--coral-500);
@@ -123,4 +296,133 @@
     --scrollbar-track: var(--navy-800);
     --scrollbar-thumb: var(--navy-600);
     --scrollbar-thumb-hover: var(--navy-500);
+}
+
+.forest-dark {
+    /* Brand — primary interactive */
+    --color-brand: var(--green-400);
+    --color-brand-hover: var(--green-300);
+    --color-brand-active: var(--green-200);
+    --color-brand-soft: var(--green-950);
+    --color-brand-on-soft: var(--green-200);
+
+    /* Surfaces */
+    --color-surface: var(--green-900);
+    --color-surface-canvas: var(--green-950);
+    --color-surface-raised: var(--green-900);
+    --color-surface-soft: var(--green-800);
+    --color-surface-card: var(--green-700);
+    --color-surface-card-strong: var(--green-600);
+    --color-surface-inverse: var(--green-50);
+    --color-surface-inverse-soft: var(--green-100);
+    --color-surface-inverse-raised: var(--green-200);
+
+    /* Text */
+    --color-text-strong: var(--green-50);
+    --color-text-body: var(--green-100);
+    --color-text-muted: var(--green-300);
+    --color-text-subtle: var(--green-400);
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: var(--green-50);
+    --color-text-on-dark-muted: var(--green-300);
+    --color-text-link: var(--green-300);
+
+    /* Borders */
+    --color-border-subtle: var(--green-800);
+    --color-border-default: var(--green-700);
+    --color-border-strong: var(--green-600);
+
+    /* Focus ring */
+    --focus-ring-color: var(--green-400);
+
+    /* Scrollbar */
+    --scrollbar-track: var(--green-800);
+    --scrollbar-thumb: var(--green-600);
+    --scrollbar-thumb-hover: var(--green-500);
+}
+
+.nova-dark {
+    /* Brand — primary interactive */
+    --color-brand: #06b6d4;
+    --color-brand-hover: #22d3ee;
+    --color-brand-active: #67e8f9;
+    --color-brand-soft: rgba(6, 182, 212, 0.15);
+    --color-brand-on-soft: #22d3ee;
+
+    /* Surfaces */
+    --color-surface: #1a1f29;
+    --color-surface-canvas: #12161f;
+    --color-surface-raised: #1a1f29;
+    --color-surface-soft: #2e384d;
+    --color-surface-card: #3b4861;
+    --color-surface-card-strong: #4b5c7c;
+    --color-surface-inverse: #f8fafc;
+    --color-surface-inverse-soft: #e2e8f0;
+    --color-surface-inverse-raised: #ffffff;
+
+    /* Text */
+    --color-text-strong: #f8fafc;
+    --color-text-body: #cbd5e1;
+    --color-text-muted: #94a3b8;
+    --color-text-subtle: #64748b;
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: #f8fafc;
+    --color-text-on-dark-muted: #94a3b8;
+    --color-text-link: #22d3ee;
+
+    /* Borders */
+    --color-border-subtle: #1f293d;
+    --color-border-default: #2e3a52;
+    --color-border-strong: #3f4f6e;
+
+    /* Focus ring */
+    --focus-ring-color: #06b6d4;
+
+    /* Scrollbar */
+    --scrollbar-track: #1a1f29;
+    --scrollbar-thumb: #2e3a52;
+    --scrollbar-thumb-hover: #3f4f6e;
+}
+
+.warm-dark {
+    /* Brand — primary interactive */
+    --color-brand: var(--coral-400);
+    --color-brand-hover: var(--coral-300);
+    --color-brand-active: var(--coral-200);
+    --color-brand-soft: var(--coral-950);
+    --color-brand-on-soft: var(--coral-200);
+
+    /* Surfaces */
+    --color-surface: var(--sand-900);
+    --color-surface-canvas: var(--sand-950);
+    --color-surface-raised: var(--sand-900);
+    --color-surface-soft: var(--sand-800);
+    --color-surface-card: var(--sand-700);
+    --color-surface-card-strong: var(--sand-600);
+    --color-surface-inverse: var(--sand-100);
+    --color-surface-inverse-soft: var(--sand-200);
+    --color-surface-inverse-raised: var(--sand-50);
+
+    /* Text */
+    --color-text-strong: var(--sand-50);
+    --color-text-body: var(--sand-200);
+    --color-text-muted: var(--sand-400);
+    --color-text-subtle: var(--sand-500);
+    --color-text-on-brand: #ffffff;
+    --color-text-on-dark: var(--sand-100);
+    --color-text-on-dark-muted: var(--sand-400);
+    --color-text-link: var(--coral-300);
+
+    /* Borders */
+    --color-border-subtle: var(--sand-800);
+    --color-border-default: var(--sand-700);
+    --color-border-strong: var(--sand-600);
+
+    /* Focus ring */
+    --focus-ring-color: var(--coral-400);
+
+    /* Scrollbar */
+    --scrollbar-track: var(--sand-800);
+    --scrollbar-thumb: var(--sand-600);
+    --scrollbar-thumb-hover: var(--sand-500);
 }

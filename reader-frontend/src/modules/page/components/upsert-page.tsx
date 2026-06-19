@@ -255,7 +255,8 @@ const ReadNowDialog = observer(function ReadNowDialog({
     const store = usePageStore();
     const themeStore = useThemeStore();
     const uiSettings = store.uiSettingsStore;
-    const colors = themeStore.theme.value === 'dark' ? PageColorSchema.DARK.value : PageColorSchema.LIGHT.value;
+    const schema = PageColorSchema.VALUES.find(s => s.id === themeStore.theme.value) || PageColorSchema.LIGHT;
+    const colors = schema.value;
 
     return (
         <Dialog

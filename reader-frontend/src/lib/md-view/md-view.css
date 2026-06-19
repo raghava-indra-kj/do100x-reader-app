@@ -238,7 +238,7 @@
   border-radius: 0.375rem;
   background-color: var(--md-color-calloutBg);
   color: var(--md-color-calloutText);
-  font-size: var(--md-font-size-callout);
+  font-size: var(--md-font-size-paragraph);
 }
 
 .md-view .md-callout-icon {
@@ -267,7 +267,7 @@
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--md-color-border);
   border-radius: 0.375rem;
-  font-size: var(--md-font-size-callout);
+  font-size: var(--md-font-size-paragraph);
 }
 
 .md-view .md-details[open] > .md-details-summary {
@@ -279,7 +279,7 @@
   user-select: none;
   font-weight: 500;
   color: var(--md-color-body);
-  font-size: var(--md-font-size-callout);
+  font-size: var(--md-font-size-paragraph);
 }
 
 /* Ensure content nested inside details or callouts inherits the font size of the container */
