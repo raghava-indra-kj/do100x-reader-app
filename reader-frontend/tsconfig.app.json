@@ -41,6 +41,15 @@
             ],
             "@reader/md-ast": [
                 "../packages/md-ast/src/index.ts"
+            ],
+            "@reader/md-view": [
+                "../packages/md-view/src/index.ts"
+            ],
+            "@reader/md-view/md-view.css": [
+                "../packages/md-view/src/md-view.css"
+            ],
+            "@reader/md-view/md-view-hljs.css": [
+                "../packages/md-view/src/md-view-hljs.css"
             ]
         },
         "noUnusedLocals": true,

@@ -1,4 +1,4 @@
-import type { MdViewFontSizes } from '@lib/md-view';
+import type { MdViewFontSizes } from '@reader/md-view';
 
 export class PageFontSizes {
     public readonly id: string;

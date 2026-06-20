@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageStore } from "../store";
 import { useThemeStore } from "@modules/core/theme";
 import { PageColorSchema } from "../theme/page-color-schema";
-import { MarkdownRenderer } from "@lib/md-view";
+import { MarkdownRenderer } from "@reader/md-view";
 import { observer } from "mobx-react-lite";
 
 export interface UpsertPageDialogProps {

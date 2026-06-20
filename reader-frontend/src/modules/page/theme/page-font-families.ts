@@ -1,4 +1,4 @@
-import type { MdViewFonts } from '@lib/md-view';
+import type { MdViewFonts } from '@reader/md-view';
 
 export class PageFontFamilies {
     public readonly id: string;

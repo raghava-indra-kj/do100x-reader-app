@@ -20,6 +20,9 @@ export default defineConfig({
             '@modules': resolve(__dirname, 'src/modules'),
             '@styles': resolve(__dirname, 'src/styles'),
             '@reader/md-ast': resolve(__dirname, '../packages/md-ast/src/index.ts'),
+            '@reader/md-view': resolve(__dirname, '../packages/md-view/src/index.ts'),
+            '@reader/md-view/md-view.css': resolve(__dirname, '../packages/md-view/src/md-view.css'),
+            '@reader/md-view/md-view-hljs.css': resolve(__dirname, '../packages/md-view/src/md-view-hljs.css'),
         },
     },
 })

@@ -1,0 +1,30 @@
+{
+    "name": "@reader/md-view",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts",
+        "./md-view.css": "./src/md-view.css",
+        "./md-view-hljs.css": "./src/md-view-hljs.css"
+    },
+    "dependencies": {
+        "mermaid": "^11.15.0",
+        "react-markdown": "^10.1.0",
+        "rehype-highlight": "^7.0.2",
+        "rehype-katex": "^7.0.1",
+        "rehype-raw": "^7.0.0",
+        "rehype-sanitize": "^6.0.0",
+        "remark-frontmatter": "^5.0.0",
+        "remark-gfm": "^4.0.1",
+        "remark-math": "^6.0.0",
+        "unist-util-visit": "^5.0.0"
+    },
+    "devDependencies": {
+        "@types/react": "^19.2.17",
+        "typescript": "^6.0.3"
+    },
+    "peerDependencies": {
+        "react": "^19.0.0"
+    }
+}

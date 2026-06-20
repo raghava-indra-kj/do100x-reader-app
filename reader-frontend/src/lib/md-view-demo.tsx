@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { MarkdownRenderer } from "./markdown-renderer";
-import type { LinkClickEvent } from "./types/link";
+import { MarkdownRenderer } from "@reader/md-view";
+import type { LinkClickEvent } from "@reader/md-view";
 import { defaultColors, defaultFontSizes, defaultFonts } from "@lib/md-parser/default-theme";
 import testFile from "@lib/md-parser/test-file.md?raw";
-import "./md-view.css";
-import "./md-view-hljs.css";
+import "@reader/md-view/md-view.css";
+import "@reader/md-view/md-view-hljs.css";
 
 // All URLs here are relative — they only load when baseUrl is provided.
 const BASE_URL = "https://images.unsplash.com/";

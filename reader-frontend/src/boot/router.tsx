@@ -4,7 +4,7 @@ import { AuthProvider } from '@modules/auth/provider';
 import { homePageRoute, loginPageRoute, mdParserLibDemoRoute, mdViewLibDemoRoute, pagesPageWithIdRoute, signupPageRoute } from './routes';
 
 const HomePage = lazy(() => import('../modules/home/page'));
-const MdViewLibDemoPage = lazy(() => import('../lib/md-view/demo-page'));
+const MdViewLibDemoPage = lazy(() => import('../lib/md-view-demo'));
 const MdParserLibDemoPage = lazy(() => import('../lib/md-parser/demo-page'));
 const LoginPage = lazy(() => import('../modules/auth/login/page'));
 const SignupPage = lazy(() => import('../modules/auth/signup/page'));

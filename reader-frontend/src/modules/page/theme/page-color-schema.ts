@@ -1,4 +1,4 @@
-import type { MdViewColors } from '@lib/md-view';
+import type { MdViewColors } from '@reader/md-view';
 
 export class PageColorSchema {
     public readonly id: string;

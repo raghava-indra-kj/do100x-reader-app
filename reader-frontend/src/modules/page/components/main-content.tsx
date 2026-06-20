@@ -3,10 +3,10 @@ import { useRef } from 'react';
 import { usePageStore } from '../store';
 import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
-import { MarkdownRenderer } from '@lib/md-view';
+import { MarkdownRenderer } from '@reader/md-view';
 import { SelectionPopover } from './selection-popover';
-import '@lib/md-view/md-view.css';
-import '@lib/md-view/md-view-hljs.css';
+import '@reader/md-view/md-view.css';
+import '@reader/md-view/md-view-hljs.css';
 
 export const PageMain = observer(function PageMain() {
     const store = usePageStore();
@@ -35,6 +35,7 @@ export const PageMain = observer(function PageMain() {
     return (
         <div ref={contentRef} className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">
             <MarkdownRenderer
+                key={section.id}
                 markdown={section.chunkMarkdown(maxLevel)}
                 colors={colors}
                 fontSizes={uiSettings.fontSize.value}

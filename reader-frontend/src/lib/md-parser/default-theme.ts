@@ -1,4 +1,4 @@
-import type { MdViewColors, MdViewFontSizes, MdViewFonts } from "@lib/md-view";
+import type { MdViewColors, MdViewFontSizes, MdViewFonts } from "@reader/md-view";
 
 /** Default light colors for demo and testing */
 export const defaultColors: MdViewColors = {
