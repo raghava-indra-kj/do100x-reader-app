@@ -38,6 +38,9 @@
             ],
             "@styles/*": [
                 "./src/styles/*"
+            ],
+            "@reader/md-ast": [
+                "../packages/md-ast/src/index.ts"
             ]
         },
         "noUnusedLocals": true,

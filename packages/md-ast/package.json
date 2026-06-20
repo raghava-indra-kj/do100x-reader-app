@@ -1,0 +1,29 @@
+{
+    "name": "@reader/md-ast",
+    "version": "1.0.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "scripts": {
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "dependencies": {
+        "js-yaml": "^4.2.0",
+        "mdast-util-to-string": "^4.0.0",
+        "remark-frontmatter": "^5.0.0",
+        "remark-gfm": "^4.0.1",
+        "remark-math": "^6.0.0",
+        "remark-parse": "^11.0.0",
+        "unified": "^11.0.5",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "@types/js-yaml": "^4.0.9",
+        "@types/mdast": "^4.0.0",
+        "typescript": "^6.0.3",
+        "vitest": "^4.1.9"
+    }
+}

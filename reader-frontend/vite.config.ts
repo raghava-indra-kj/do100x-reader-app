@@ -19,6 +19,7 @@ export default defineConfig({
             '@lib': resolve(__dirname, 'src/lib'),
             '@modules': resolve(__dirname, 'src/modules'),
             '@styles': resolve(__dirname, 'src/styles'),
+            '@reader/md-ast': resolve(__dirname, '../packages/md-ast/src/index.ts'),
         },
     },
 })
