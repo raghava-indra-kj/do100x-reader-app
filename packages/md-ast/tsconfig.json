@@ -11,7 +11,8 @@
         "noUnusedLocals": true,
         "noUnusedParameters": true,
         "erasableSyntaxOnly": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "types": ["node"]
     },
     "include": ["src"]
 }

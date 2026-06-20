@@ -229,14 +229,14 @@ describe("toMarkdown", () => {
         const src = "# Title\n\npara\n\n```js\ncode\n```\n\n- a\n- b";
         const shape = (blocks: Block[]) => blocks.map((b) => [b.type, b.markdown]);
         const first = parse(src);
-        const second = parse(toMarkdown(first));
+        const second = parse(toMarkdown(first)!);
         expect(shape(second.blocks)).toEqual(shape(first.blocks));
     });
 
     it("second round-trip is byte-identical (idempotent)", () => {
         const src = "---\ntitle: T\n---\n\n# A\n\nbody\n\n## B\n\nmore";
         const md1 = toMarkdown(parse(src));
-        const md2 = toMarkdown(parse(md1));
+        const md2 = toMarkdown(parse(md1!));
         expect(md2).toBe(md1);
     });
 });
