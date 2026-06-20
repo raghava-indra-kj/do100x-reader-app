@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { MermaidConfig } from "mermaid";
-import { useMdViewColors } from "../../context/md-view-context";
-import type { MdViewColors } from "../../types/theme";
+import { useMdViewColors, useMdViewMermaidTheme } from "../../context/md-view-context";
+import type { MdViewColors, MdViewMermaidTheme } from "../../types/theme";
 
 type MermaidModule = typeof import("mermaid").default;
 
-// Load the mermaid module once; initialization happens per-render with live colors.
 let mermaidModule: Promise<MermaidModule> | null = null;
 function loadMermaidModule(): Promise<MermaidModule> {
   if (!mermaidModule) {
@@ -14,8 +13,8 @@ function loadMermaidModule(): Promise<MermaidModule> {
   return mermaidModule;
 }
 
-/** Maps MdViewColors to mermaid base themeVariables so diagrams match the active palette. */
-function buildMermaidConfig(colors: MdViewColors | null): MermaidConfig {
+/** Builds the mermaid config, blending theme-derived structure colors with the accent palette. */
+function buildMermaidConfig({ colors, mermaidTheme }: { colors: MdViewColors | null; mermaidTheme: MdViewMermaidTheme }): MermaidConfig {
   const base: MermaidConfig = { startOnLoad: false, securityLevel: "strict" };
 
   if (!colors) {
@@ -27,22 +26,27 @@ function buildMermaidConfig(colors: MdViewColors | null): MermaidConfig {
     ...base,
     theme: "base",
     themeVariables: {
-      // shared
       background: colors.codeBlockBg,
-      primaryColor: colors.surfaceBg,
-      primaryTextColor: colors.body,
+      primaryColor: mermaidTheme.primaryColor,
+      primaryTextColor: mermaidTheme.primaryTextColor,
       primaryBorderColor: colors.borderStrong,
       lineColor: colors.body,
-      secondaryColor: colors.surfaceBg,
-      tertiaryColor: colors.surfaceBg,
+      secondaryColor: mermaidTheme.secondaryColor,
+      secondaryTextColor: mermaidTheme.secondaryTextColor,
+      tertiaryColor: mermaidTheme.tertiaryColor,
+      tertiaryTextColor: mermaidTheme.tertiaryTextColor,
       edgeLabelBackground: colors.codeBlockBg,
       titleColor: colors.h1,
+      cScale0: mermaidTheme.cScale0,
+      cScale1: mermaidTheme.cScale1,
+      cScale2: mermaidTheme.cScale2,
+      cScale3: mermaidTheme.cScale3,
+      cScale4: mermaidTheme.cScale4,
+      cScale5: mermaidTheme.cScale5,
 
-      // flowchart
       clusterBkg: colors.surfaceBg,
       clusterBorder: colors.border,
 
-      // sequence diagram
       actorBkg: colors.surfaceBg,
       actorBorder: colors.borderStrong,
       actorTextColor: colors.body,
@@ -65,8 +69,9 @@ function buildMermaidConfig(colors: MdViewColors | null): MermaidConfig {
 export function MermaidBlock({ children }: { children?: unknown }) {
   const source = String(children ?? "").trim();
   const colors = useMdViewColors();
-  // Serialize colors so the effect re-runs whenever the palette actually changes.
+  const mermaidTheme = useMdViewMermaidTheme();
   const colorsKey = JSON.stringify(colors);
+  const mermaidThemeKey = JSON.stringify(mermaidTheme);
 
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string | null>(null);
@@ -77,7 +82,6 @@ export function MermaidBlock({ children }: { children?: unknown }) {
     setSvg(null);
     setError(null);
 
-    // Empty source — nothing to render.
     if (!source) {
       setError("empty");
       return;
@@ -88,13 +92,8 @@ export function MermaidBlock({ children }: { children?: unknown }) {
     loadMermaidModule()
       .then(async (m) => {
         if (cancelled) return undefined;
-        m.initialize(buildMermaidConfig(colors));
-
-        // Pre-validate before render. mermaid.parse() throws on syntax errors
-        // without touching the DOM, so invalid diagrams never reach render()
-        // and can't append stray error SVGs to document.body.
+        m.initialize(buildMermaidConfig({ colors, mermaidTheme }));
         await m.parse(source);
-
         return m.render(id, source);
       })
       .then((result) => {
@@ -107,12 +106,11 @@ export function MermaidBlock({ children }: { children?: unknown }) {
     return () => {
       cancelled = true;
     };
-    // colorsKey is the stable serialized dep; `colors` object ref changes every render.
+    // colorsKey/mermaidThemeKey are stable serialized deps; object refs change every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [source, colorsKey]);
+  }, [source, colorsKey, mermaidThemeKey]);
 
   if (error) {
-    // Empty source — render nothing rather than an empty code block.
     if (error === "empty") return null;
     return (
       <pre className="md-code-block">

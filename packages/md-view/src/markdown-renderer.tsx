@@ -1,5 +1,6 @@
 import Markdown, { type Components } from "react-markdown";
-import type { MdViewColors, MdViewFontSizes, MdViewFonts } from "./types/theme";
+import type { MdViewColors, MdViewFontSizes, MdViewFonts, MdViewMermaidTheme } from "./types/theme";
+import { defaultMermaidTheme } from "./types/theme";
 import type { LinkClickEvent } from "./types/link";
 import { REMARK_PLUGINS } from "./pipeline/remark-plugins";
 import { getRehypePlugins } from "./pipeline/rehype-plugins";
@@ -7,7 +8,7 @@ import { buildComponentMap } from "./pipeline/component-map";
 import { strictUrlTransform, buildUrlTransform } from "./pipeline/url-transform";
 import { propsToCssVars } from "./utils/theme-to-css-vars";
 import ErrorBoundary from "./error-boundary";
-import { MdViewColorContext, MdViewLinkContext } from "./context/md-view-context";
+import { MdViewColorContext, MdViewLinkContext, MdViewMermaidContext } from "./context/md-view-context";
 
 /** Props for the markdown rendering component. */
 export interface MarkdownRendererProps {
@@ -15,6 +16,7 @@ export interface MarkdownRendererProps {
   colors: MdViewColors;
   fontSizes: MdViewFontSizes;
   fonts: MdViewFonts;
+  mermaidTheme?: MdViewMermaidTheme;
   className?: string;
   components?: Partial<Components>;
   onLinkClick?: (event: LinkClickEvent) => void;
@@ -27,6 +29,7 @@ export function MarkdownRenderer({
   colors,
   fontSizes,
   fonts,
+  mermaidTheme,
   className,
   components,
   onLinkClick,
@@ -38,20 +41,22 @@ export function MarkdownRenderer({
 
   return (
     <MdViewColorContext.Provider value={colors}>
-      <MdViewLinkContext.Provider value={onLinkClick ?? null}>
-        <div className={`md-view ${className ?? ""}`.trim()} style={style}>
-          <ErrorBoundary fallback={markdown}>
-            <Markdown
-              remarkPlugins={REMARK_PLUGINS}
-              rehypePlugins={getRehypePlugins(colors.errorColor, baseUrl)}
-              urlTransform={urlTransform}
-              components={mergedComponents}
-            >
-              {markdown}
-            </Markdown>
-          </ErrorBoundary>
-        </div>
-      </MdViewLinkContext.Provider>
+      <MdViewMermaidContext.Provider value={mermaidTheme ?? defaultMermaidTheme}>
+        <MdViewLinkContext.Provider value={onLinkClick ?? null}>
+          <div className={`md-view ${className ?? ""}`.trim()} style={style}>
+            <ErrorBoundary fallback={markdown}>
+              <Markdown
+                remarkPlugins={REMARK_PLUGINS}
+                rehypePlugins={getRehypePlugins(colors.errorColor, baseUrl)}
+                urlTransform={urlTransform}
+                components={mergedComponents}
+              >
+                {markdown}
+              </Markdown>
+            </ErrorBoundary>
+          </div>
+        </MdViewLinkContext.Provider>
+      </MdViewMermaidContext.Provider>
     </MdViewColorContext.Provider>
   );
 }

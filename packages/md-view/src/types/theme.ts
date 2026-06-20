@@ -50,3 +50,35 @@ export type MdViewFonts = {
     prose: string;
     code: string;
 };
+
+/** Accent colors for mermaid diagrams. Controls node fills and cScale slots. */
+export type MdViewMermaidTheme = {
+    primaryColor: string;
+    primaryTextColor: string;
+    secondaryColor: string;
+    secondaryTextColor: string;
+    tertiaryColor: string;
+    tertiaryTextColor: string;
+    cScale0: string;
+    cScale1: string;
+    cScale2: string;
+    cScale3: string;
+    cScale4: string;
+    cScale5: string;
+};
+
+/** Default mermaid accent palette. */
+export const defaultMermaidTheme: MdViewMermaidTheme = {
+    primaryColor:       "#4F6BED",
+    primaryTextColor:   "#ffffff",
+    secondaryColor:     "#2EAA74",
+    secondaryTextColor: "#ffffff",
+    tertiaryColor:      "#E07B3A",
+    tertiaryTextColor:  "#ffffff",
+    cScale0: "#4F6BED",
+    cScale1: "#2EAA74",
+    cScale2: "#E07B3A",
+    cScale3: "#9B5DE5",
+    cScale4: "#E84855",
+    cScale5: "#00B4D8",
+};
