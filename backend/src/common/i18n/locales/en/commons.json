@@ -1,0 +1,15 @@
+{
+  "common": {
+    "internalError": "Something went wrong. Please try again.",
+    "rateLimited": "Too many requests. Please try again later."
+  },
+  "validation": {
+    "failed": "{field}: {reason}",
+    "required": "{field} is required.",
+    "tooLong": "{field} must be at most {max} characters.",
+    "invalidEmail": "A valid email is required.",
+    "invalidId": "A valid id is required.",
+    "passwordTooShort": "Password must be at least {min} characters.",
+    "commentEmpty": "Comment can't be empty."
+  }
+}
