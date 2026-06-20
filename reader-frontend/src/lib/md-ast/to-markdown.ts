@@ -3,17 +3,20 @@ import { dumpFrontmatter } from "./internal/frontmatter";
 
 /**
  * Serializes an MdAstDocument back to a markdown string by joining each block's verbatim source.
+ * Returns null if the document has no frontmatter and no blocks — i.e. it is genuinely empty.
  * Throws MdAstError if the frontmatter cannot be dumped to YAML.
  */
-export function toMarkdown(doc: MdAstDocument): string {
+export function toMarkdown(doc: MdAstDocument): string | null {
     const parts: string[] = [];
 
     const fm = dumpFrontmatter(doc.frontmatter);
     if (fm) parts.push(fm);
 
     for (const block of doc.blocks) {
-        if (block.markdown) parts.push(block.markdown);
+        if (block.markdown.length > 0) parts.push(block.markdown);
     }
+
+    if (parts.length === 0) return null;
 
     return parts.join("\n\n") + "\n";
 }

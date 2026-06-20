@@ -1,7 +1,7 @@
-import { MdAstError, type MdAstDocument, type ParseOptions, type ParseResult } from "./types";
-import { processor } from "./internal/processor";
-import { extractFrontmatter } from "./internal/frontmatter";
 import { buildBlocks } from "./internal/blocks";
+import { extractFrontmatter } from "./internal/frontmatter";
+import { processor } from "./internal/processor";
+import { MdAstError, type MdAstDocument, type ParseOptions, type ParseResult } from "./types";
 
 /** Parses a markdown string into an MdAstDocument. Throws MdAstError on failure. */
 export function parseMarkdown({ source, options }: { source: string; options?: ParseOptions }): MdAstDocument {

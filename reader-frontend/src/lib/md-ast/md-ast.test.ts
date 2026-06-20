@@ -197,6 +197,10 @@ describe("safeParseMarkdown", () => {
 // ---------------------------------------------------------------------------
 
 describe("toMarkdown", () => {
+    it("returns null for an empty document", () => {
+        expect(toMarkdown(parse(""))).toBeNull();
+    });
+
     it("re-emits frontmatter and blocks", () => {
         const doc = parse("---\ntitle: My Post\n---\n\n# Hello\n\nbody");
         const out = toMarkdown(doc);
@@ -211,8 +215,8 @@ describe("toMarkdown", () => {
 
     it("ends with a single newline", () => {
         const out = toMarkdown(parse("# Hello"));
-        expect(out.endsWith("\n")).toBe(true);
-        expect(out.endsWith("\n\n")).toBe(false);
+        expect(out!.endsWith("\n")).toBe(true);
+        expect(out!.endsWith("\n\n")).toBe(false);
     });
 
     it("throws MdAstError on non-serializable frontmatter (Date)", () => {

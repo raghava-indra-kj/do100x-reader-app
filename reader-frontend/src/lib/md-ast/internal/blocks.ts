@@ -21,12 +21,14 @@ export function toBlock({ node, source, id }: { node: RootContent; source: strin
     return { id, type: "unknown", nodeType: node.type, markdown };
 }
 
-/** Walks the mdast root and returns one Block per top-level node, skipping the frontmatter node. */
+/** Walks the mdast root and returns one Block per top-level node, skipping the frontmatter node and any node with no position data. */
 export function buildBlocks({ tree, source, generateId }: { tree: Root; source: string; generateId: () => string }): Block[] {
     const blocks: Block[] = [];
     for (const node of tree.children) {
         if ((node as { type: string }).type === "yaml") continue;
-        blocks.push(toBlock({ node, source, id: generateId() }));
+        const block = toBlock({ node, source, id: generateId() });
+        if (block.markdown.length === 0) continue;
+        blocks.push(block);
     }
     return blocks;
 }

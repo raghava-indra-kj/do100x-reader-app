@@ -55,8 +55,8 @@ export type ParseErr = { ok: false; error: MdAstError };
 /** Result type for safeParseMarkdown and safeFromJson. */
 export type ParseResult = ParseOk | ParseErr;
 
-/** Returned when toMarkdown succeeds. */
-export type SerializeOk = { ok: true; data: string };
+/** Returned when toMarkdown succeeds. Null means the document had no content. */
+export type SerializeOk = { ok: true; data: string | null };
 
 /** Result type for safeToMarkdown. */
 export type SerializeResult = SerializeOk | ParseErr;
