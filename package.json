@@ -5,7 +5,8 @@
   "workspaces": [
     "packages/*",
     "reader-frontend",
-    "reader-backend"
+    "reader-backend",
+    "backend"
   ],
   "scripts": {
     "build:frontend": "cd reader-frontend && npm run build",
