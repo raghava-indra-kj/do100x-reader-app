@@ -402,3 +402,5 @@ Calm by mandate — same reason as cream: *easy on your eyes.* Durations run `80
 - **Sentence case** for headlines, buttons, and nav; UPPERCASE only for small 12px overlines.
 - **Gentle, low-pressure CTAs** — "Open Reader", "Share an idea" — never "Sign up free!!".
 - **"100×" is the brand verb** (use the `×` glyph, U+00D7); the wordmark keeps the literal "100x".
+
+
