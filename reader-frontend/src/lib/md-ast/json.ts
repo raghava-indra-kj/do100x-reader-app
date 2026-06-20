@@ -16,7 +16,7 @@ export function toJson(doc: MdAstDocument): MdAstDocument {
 export function fromJson(value: unknown): MdAstDocument {
     const result = documentSchema.safeParse(value);
     if (!result.success) {
-        throw new MdAstError(`Invalid md-ast document: ${result.error.message}`, { cause: result.error });
+        throw new MdAstError({ message: `Invalid md-ast document: ${result.error.message}`, options: { cause: result.error } });
     }
     return result.data as MdAstDocument;
 }

@@ -23,13 +23,13 @@ export function extractFrontmatter(tree: Root): MdAstFrontmatter | null {
     try {
         parsed = load(node.value, { schema: JSON_SCHEMA });
     } catch (error) {
-        throw new MdAstError("Invalid YAML in front matter", { cause: error });
+        throw new MdAstError({ message: "Invalid YAML in front matter", options: { cause: error } });
     }
 
     if (parsed == null) return null;
     if (typeof parsed !== "object" || Array.isArray(parsed)) {
         const kind = Array.isArray(parsed) ? "array" : typeof parsed;
-        throw new MdAstError(`Front matter must be a mapping, got ${kind}`);
+        throw new MdAstError({ message: `Front matter must be a mapping, got ${kind}` });
     }
     return parsed as MdAstFrontmatter;
 }
@@ -41,7 +41,7 @@ export function extractFrontmatter(tree: Root): MdAstFrontmatter | null {
 export function dumpFrontmatter(frontmatter: unknown): string {
     if (frontmatter == null) return "";
     if (typeof frontmatter !== "object" || Array.isArray(frontmatter)) {
-        throw new MdAstError("Front matter must be an object to serialize");
+        throw new MdAstError({ message: "Front matter must be an object to serialize" });
     }
     if (Object.keys(frontmatter).length === 0) return "";
 
@@ -49,7 +49,7 @@ export function dumpFrontmatter(frontmatter: unknown): string {
     try {
         body = dump(frontmatter, { schema: JSON_SCHEMA, lineWidth: -1 }).trimEnd();
     } catch (error) {
-        throw new MdAstError("Front matter contains values that cannot be serialized to YAML", { cause: error });
+        throw new MdAstError({ message: "Front matter contains values that cannot be serialized to YAML", options: { cause: error } });
     }
     return `---\n${body}\n---`;
 }

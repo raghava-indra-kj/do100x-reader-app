@@ -22,7 +22,7 @@ function seq(): () => string {
 }
 
 function parse(src: string) {
-    return parseMarkdown(src, { generateId: seq() });
+    return parseMarkdown({ source: src, options: { generateId: seq() } });
 }
 
 // ---------------------------------------------------------------------------
@@ -116,12 +116,12 @@ describe("parseMarkdown — block types", () => {
 
 describe("parseMarkdown — ids", () => {
     it("default ids are non-empty strings", () => {
-        const doc = parseMarkdown("# A\n\nbody");
+        const doc = parseMarkdown({ source: "# A\n\nbody" });
         expect(doc.blocks.every((b) => typeof b.id === "string" && b.id.length > 0)).toBe(true);
     });
 
     it("consecutive identical blocks get distinct ids", () => {
-        const doc = parseMarkdown("same\n\nsame");
+        const doc = parseMarkdown({ source: "same\n\nsame" });
         expect(doc.blocks[0].id).not.toBe(doc.blocks[1].id);
     });
 
@@ -176,19 +176,19 @@ describe("parseMarkdown — frontmatter", () => {
 
 describe("safeParseMarkdown", () => {
     it("returns ok:true with data on valid input", () => {
-        const result = safeParseMarkdown("# Hello");
+        const result = safeParseMarkdown({ source: "# Hello" });
         expect(result.ok).toBe(true);
         if (result.ok) expect(result.data.blocks[0]).toMatchObject({ type: "heading" });
     });
 
     it("returns ok:false with MdAstError on invalid YAML", () => {
-        const result = safeParseMarkdown("---\n- not: a: mapping\n---");
+        const result = safeParseMarkdown({ source: "---\n- not: a: mapping\n---" });
         expect(result.ok).toBe(false);
         if (!result.ok) expect(result.error).toBeInstanceOf(MdAstError);
     });
 
     it("never throws", () => {
-        expect(() => safeParseMarkdown("---\n: : :\n---")).not.toThrow();
+        expect(() => safeParseMarkdown({ source: "---\n: : :\n---" })).not.toThrow();
     });
 });
 
@@ -289,32 +289,32 @@ describe("toJson / fromJson", () => {
 
 describe("reuseIds", () => {
     it("carries ids onto unchanged blocks", () => {
-        const previous = parseMarkdown("# Title\n\nbody");
-        const next = parseMarkdown("# Title\n\nbody");
-        const merged = reuseIds(previous, next);
+        const previous = parseMarkdown({ source: "# Title\n\nbody" });
+        const next = parseMarkdown({ source: "# Title\n\nbody" });
+        const merged = reuseIds({ previous, next });
         expect(merged.blocks.map((b) => b.id)).toEqual(previous.blocks.map((b) => b.id));
     });
 
     it("an edited block keeps its freshly parsed id", () => {
-        const previous = parseMarkdown("# Title\n\nold body");
-        const next = parseMarkdown("# Title\n\nnew body");
-        const merged = reuseIds(previous, next);
+        const previous = parseMarkdown({ source: "# Title\n\nold body" });
+        const next = parseMarkdown({ source: "# Title\n\nnew body" });
+        const merged = reuseIds({ previous, next });
         expect(merged.blocks[0].id).toBe(previous.blocks[0].id);
         expect(merged.blocks[1].id).toBe(next.blocks[1].id);
     });
 
     it("pairs duplicate identical blocks in order", () => {
-        const previous = parseMarkdown("dup\n\ndup");
-        const next = parseMarkdown("dup\n\ndup");
-        const merged = reuseIds(previous, next);
+        const previous = parseMarkdown({ source: "dup\n\ndup" });
+        const next = parseMarkdown({ source: "dup\n\ndup" });
+        const merged = reuseIds({ previous, next });
         expect(merged.blocks.map((b) => b.id)).toEqual(previous.blocks.map((b) => b.id));
     });
 
     it("does not mutate its inputs", () => {
-        const previous = parseMarkdown("# Title");
-        const next = parseMarkdown("# Title");
+        const previous = parseMarkdown({ source: "# Title" });
+        const next = parseMarkdown({ source: "# Title" });
         const nextIdBefore = next.blocks[0].id;
-        reuseIds(previous, next);
+        reuseIds({ previous, next });
         expect(next.blocks[0].id).toBe(nextIdBefore);
     });
 });

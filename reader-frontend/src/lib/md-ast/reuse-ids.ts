@@ -10,7 +10,7 @@ function blockKey(block: Block): string {
  * Blocks with the same type and markdown keep their old id; changed blocks get a fresh id.
  * Returns a new document — neither input is mutated.
  */
-export function reuseIds(previous: MdAstDocument, next: MdAstDocument): MdAstDocument {
+export function reuseIds({ previous, next }: { previous: MdAstDocument; next: MdAstDocument }): MdAstDocument {
     const buckets = new Map<string, string[]>();
     for (const block of previous.blocks) {
         const key = blockKey(block);

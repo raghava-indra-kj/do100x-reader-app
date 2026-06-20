@@ -39,7 +39,7 @@ export interface ParseOptions {
 
 /** Error thrown or wrapped by every md-ast operation. */
 export class MdAstError extends Error {
-    constructor(message: string, options?: { cause?: unknown }) {
+    constructor({ message, options }: { message: string; options?: { cause?: unknown } }) {
         super(message, options);
         this.name = "MdAstError";
         Object.setPrototypeOf(this, MdAstError.prototype);
