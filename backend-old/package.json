@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon --exec tsx src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +20,9 @@
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^7.5.0",
-    "prisma": "^5.22.0"
+    "i18next": "^26.3.1",
+    "prisma": "^5.22.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -27,6 +30,7 @@
     "@types/node": "^25.9.3",
     "nodemon": "^3.1.14",
     "tsx": "^4.19.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }

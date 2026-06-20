@@ -1,5 +1,7 @@
 import { randomUUID } from "crypto";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../prisma";
+import { t } from "../i18n/i18n";
 
 /**
  * Ensures a user has a homepage. If `homepageId` is already set, returns it.
@@ -21,8 +23,8 @@ export async function ensureHomepage(userId: string): Promise<string> {
         id: pageId,
         userId,
         parentId: null,
-        title: "Home",
-        content: null,
+        title: t("page:defaultHomepageTitle"),
+        content: Prisma.DbNull,
         isPublic: false,
         sortOrder: 1,
         childrenCount: 0,
@@ -38,3 +40,4 @@ export async function ensureHomepage(userId: string): Promise<string> {
 
   return pageId;
 }
+
