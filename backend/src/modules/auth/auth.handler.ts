@@ -1,30 +1,43 @@
 import { Request, Response } from "express";
-import { SigninInput } from "./signin.models";
-import { SignoutInput } from "./signout.models";
-import { MeInput } from "./me.models";
+import { ApiError } from "@core/errors/api-error";
+import { AuthError } from "./errors/auth-error";
+import { AUTH_INVALID_CREDENTIALS } from "./errors/auth-error-codes";
+import { UserError } from "@modules/user/errors/user-error";
+import { USER_EMAIL_TAKEN } from "@modules/user/errors/user-error-codes";
 import { signupUser } from "./signup.service";
 import { signinUser } from "./signin.service";
 import { signoutUser } from "./signout.service";
-import { getMe } from "./me.service";
 
 export async function handleSignup(req: Request, res: Response): Promise<void> {
-  const result = await signupUser(req.body);
-  res.status(201).json(result);
+  try {
+    const result = await signupUser(req.body);
+    res.status(201).json(result);
+  } catch (err) {
+    if (err instanceof UserError && err.errorCode === USER_EMAIL_TAKEN) {
+      throw new ApiError({ statusCode: 409, message: "Email is already taken", errorCode: USER_EMAIL_TAKEN });
+    }
+    throw err;
+  }
 }
 
 export async function handleSignin(req: Request, res: Response): Promise<void> {
-  const result = await signinUser(req.body as SigninInput);
-  res.status(200).json(result);
+  try {
+    const result = await signinUser(req.body);
+    res.status(200).json(result);
+  } catch (err) {
+    if (err instanceof AuthError && err.errorCode === AUTH_INVALID_CREDENTIALS) {
+      throw new ApiError({ statusCode: 401, message: "Invalid credentials", errorCode: AUTH_INVALID_CREDENTIALS });
+    }
+    throw err;
+  }
 }
 
 export async function handleSignout(req: Request, res: Response): Promise<void> {
-  const input: SignoutInput = { sessionToken: req.headers.authorization ?? "" };
-  await signoutUser(input);
+  const token = req.headers.authorization ?? "";
+  await signoutUser({ sessionToken: token });
   res.status(204).send();
 }
 
 export async function handleMe(req: Request, res: Response): Promise<void> {
-  const input: MeInput = { sessionToken: req.headers.authorization ?? "" };
-  const result = await getMe(input);
-  res.status(200).json(result);
+  res.status(200).json(req.currentUser);
 }

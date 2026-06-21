@@ -1,6 +1,9 @@
+import { prisma } from "@core/db/prisma";
 import { SignoutInput } from "./signout.models";
 
 export async function signoutUser(input: SignoutInput): Promise<void> {
-  void input;
-  throw new Error("Not implemented");
+  await prisma.session.update({
+    where: { token: input.sessionToken },
+    data: { isActive: false },
+  });
 }

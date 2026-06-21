@@ -1,11 +1,13 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { generateToken } from "@lib/token";
+
+type PrismaClientOrTx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
 
 export async function createSession({
   tx,
   userId,
 }: {
-  tx: Prisma.TransactionClient;
+  tx: PrismaClientOrTx | Prisma.TransactionClient;
   userId: string;
 }): Promise<string> {
   const accessToken = generateToken();
