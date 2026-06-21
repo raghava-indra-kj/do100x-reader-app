@@ -23,7 +23,6 @@ model session {
   isActive  Boolean  @default(true)
   createdAt DateTime @db.DateTime(6)
 
-  @@index([userId])
 }
 
 model page {
@@ -39,9 +38,6 @@ model page {
   createdAt     DateTime  @db.DateTime(6)
   updatedAt     DateTime  @db.DateTime(6)
   deletedAt     DateTime? @db.DateTime(6)
-
-  @@index([userId])
-  @@index([parentId])
 }
 
 model comment {
@@ -51,6 +47,4 @@ model comment {
   body      String   @db.Text
   createdAt DateTime @db.DateTime(6)
   updatedAt DateTime @db.DateTime(6)
-
-  @@index([pageId])
 }
