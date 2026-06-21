@@ -1,5 +1,5 @@
 import { ZodType, z } from "zod";
-import { SignupInput } from "./signup.types";
+import { SignupInput } from "./signup.models";
 
 export const SignupSchema: ZodType<SignupInput> = z.object({
   name: z.string().min(1),

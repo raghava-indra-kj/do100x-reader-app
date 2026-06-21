@@ -3,7 +3,3 @@ export type SignupInput = {
   email: string;
   password: string;
 };
-
-export type SignupResult = {
-  userId: string;
-};

@@ -1,4 +1,4 @@
-import { SignoutInput } from "./signout.types";
+import { SignoutInput } from "./signout.models";
 
 export async function signoutUser(input: SignoutInput): Promise<void> {
   void input;

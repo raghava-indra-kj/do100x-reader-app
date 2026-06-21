@@ -1,5 +1,5 @@
 import { ZodType, z } from "zod";
-import { SigninInput } from "./signin.types";
+import { SigninInput } from "./signin.models";
 
 export const SigninSchema: ZodType<SigninInput> = z.object({
   email: z.string().email(),

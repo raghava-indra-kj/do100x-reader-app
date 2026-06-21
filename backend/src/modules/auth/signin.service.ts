@@ -1,4 +1,4 @@
-import { SigninInput, SigninResult } from "./signin.types";
+import { SigninInput, SigninResult } from "./signin.models";
 
 export async function signinUser(input: SigninInput): Promise<SigninResult> {
   void input;

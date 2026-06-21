@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { SignupInput } from "./signup.types";
-import { SigninInput } from "./signin.types";
-import { SignoutInput } from "./signout.types";
-import { MeInput } from "./me.types";
+import { SignupInput } from "./signup.models";
+import { SigninInput } from "./signin.models";
+import { SignoutInput } from "./signout.models";
+import { MeInput } from "./me.models";
 import { signupUser } from "./signup.service";
 import { signinUser } from "./signin.service";
 import { signoutUser } from "./signout.service";
