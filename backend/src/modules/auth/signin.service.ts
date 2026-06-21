@@ -1,7 +1,7 @@
 import { appuser } from "@prisma-generated";
 import { prisma } from "@core/db/prisma";
+import { IllegalStateError } from "@core/errors/illegal-state.error";
 import { verifyPassword } from "@lib/password";
-import { createUserHomepage } from "@modules/page/create-user-homepage.service";
 import { AuthError } from "./errors/auth-error";
 import { AUTH_INVALID_CREDENTIALS } from "./errors/auth-error.constants";
 import { SigninInput, SigninInputSchema } from "./signin.models";
@@ -22,16 +22,13 @@ export async function signinUser(input: SigninInput): Promise<AuthResult> {
         throw new AuthError({ errorCode: AUTH_INVALID_CREDENTIALS, message: "Invalid credentials" });
     }
 
-    let resolvedUser: appuser & { homepageId: string };
     if (!user.homepageId) {
-        resolvedUser = await prisma.$transaction(async (tx) => createUserHomepage({ tx, userId: user.id }));
-    } else {
-        resolvedUser = user as appuser & { homepageId: string };
+        throw new IllegalStateError({ message: `User ${user.id} has no homepage` });
     }
 
     const accessToken = await createSession({ tx: prisma, userId: user.id });
 
-    const authUser = toAuthUser(resolvedUser);
+    const authUser = toAuthUser(user as appuser & { homepageId: string });
     const token: AuthToken = { accessToken };
     return { user: authUser, token };
 }
