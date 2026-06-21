@@ -4,9 +4,9 @@ import { isValidUUID } from "@lib/uuid";
 import { X_CLIENT_REQUEST_ID, X_REQUEST_ID } from "./http-headers.constant";
 
 function resolveClientRequestId(req: Request): string | null {
-  const header = req.headers[X_CLIENT_REQUEST_ID];
-  if (typeof header !== "string") return null;
-  return isValidUUID(header) ? header : null;
+  const clientRequestId = req.headers[X_CLIENT_REQUEST_ID];
+  if (typeof clientRequestId !== "string") return null;
+  return isValidUUID(clientRequestId) ? clientRequestId : null;
 }
 
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {

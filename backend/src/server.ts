@@ -1,7 +1,8 @@
 import { createApp } from "./app";
 import { env } from "@core/config/env";
-import { connectDatabase, disconnectDatabase } from "@core/db/prisma";
+import { connectDatabase } from "@core/db/prisma";
 import { logger } from "@lib/logger";
+import { runShutdownHandlers } from "@lib/shutdown";
 
 async function start(): Promise<void> {
   await connectDatabase();
@@ -15,13 +16,8 @@ async function start(): Promise<void> {
   const shutdown = (signal: string) => {
     logger.warn(`${signal} — shutting down`);
     server.close(async () => {
-      try {
-        await disconnectDatabase();
-      } catch (err) {
-        logger.error(err, "Failed to disconnect database during shutdown");
-      } finally {
-        process.exit(0);
-      }
+      await runShutdownHandlers();
+      process.exit(0);
     });
   };
 
