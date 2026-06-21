@@ -1,21 +1,17 @@
 import "express-async-errors";
 import express, { Express } from "express";
-import i18next from "i18next";
-import { handle } from "i18next-http-middleware";
-import { env } from "./core/config/env";
-import { commonNamespace } from "./common/i18n/namespaces";
+import { env } from "@core/config/env";
 
 export function createApp(): Express {
   const app = express();
   app.use(express.json({ limit: env.api.bodySizeLimit }));
-  app.use(handle(i18next));
 
   app.get(`${env.api.basePath}/status`, (_req, res) => {
     res.json({ success: true });
   });
 
-  app.use((req, res) => {
-    res.status(404).json({ message: req.t("common.notFound", { ns: commonNamespace }) });
+  app.use((_req, res) => {
+    res.status(404).json({ message: "Not found" });
   });
 
   return app;

@@ -1,11 +1,9 @@
 import { createApp } from "./app";
-import { env } from "./core/config/env";
-import { initI18n } from "./common/i18n/i18n";
-import { connectDatabase, disconnectDatabase } from "./core/db/prisma";
-import { logger } from "./lib/logger";
+import { env } from "@core/config/env";
+import { connectDatabase, disconnectDatabase } from "@core/db/prisma";
+import { logger } from "@lib/logger";
 
 async function start(): Promise<void> {
-  await initI18n();
   await connectDatabase();
   logger.info("database connected");
 

@@ -1,5 +1,5 @@
 import pino from "pino";
-import { AppEnvType, env } from "../core/config/env";
+import { AppEnvType, env } from "@core/config/env";
 
 const isDev = env.appEnv !== AppEnvType.PRODUCTION;
 
