@@ -3,9 +3,11 @@ import { ApiError } from "@core/errors/api-error";
 import { AppError } from "@core/errors/app-error";
 import { logger } from "@core/infra/logger";
 import { NextFunction, Request, Response } from "express";
+import { StatusCodes } from "http-status-codes";
 import { ErrorResponse } from "./error-response";
+import { SERVER_INTERNAL_ERROR } from "./http-error.constants";
 
-const INTERNAL_SERVER_ERROR = "Internal server error";
+const INTERNAL_SERVER_ERROR_MESSAGE = "Internal server error";
 
 function withDebugInfo(err: Error): Partial<ErrorResponse> {
   return env.isDebug ? { debugMessage: err.message, stack: err.stack } : {};
@@ -22,8 +24,8 @@ function buildApiErrorBody(err: ApiError): ErrorResponse {
 
 function buildAppErrorBody(err: AppError): ErrorResponse {
   return {
-    errorCode: err.errorCode,
-    message: INTERNAL_SERVER_ERROR,
+    errorCode: err.errorCode ?? SERVER_INTERNAL_ERROR,
+    message: INTERNAL_SERVER_ERROR_MESSAGE,
     data: err.data,
     ...withDebugInfo(err),
   };
@@ -31,28 +33,38 @@ function buildAppErrorBody(err: AppError): ErrorResponse {
 
 function buildGenericErrorBody(err: Error): ErrorResponse {
   return {
-    errorCode: null,
-    message: INTERNAL_SERVER_ERROR,
-    data: null,
+    errorCode: SERVER_INTERNAL_ERROR,
+    message: INTERNAL_SERVER_ERROR_MESSAGE,
     ...withDebugInfo(err),
   };
 }
 
 const FALLBACK_ERROR_BODY: ErrorResponse = {
-  errorCode: null,
-  message: INTERNAL_SERVER_ERROR,
-  data: null,
+  errorCode: SERVER_INTERNAL_ERROR,
+  message: INTERNAL_SERVER_ERROR_MESSAGE,
 };
 
 function toErrorResponse(err: unknown): { status: number; body: ErrorResponse } {
   if (err instanceof ApiError) return { status: err.statusCode, body: buildApiErrorBody(err) };
-  if (err instanceof AppError) return { status: 500, body: buildAppErrorBody(err) };
-  if (err instanceof Error) return { status: 500, body: buildGenericErrorBody(err) };
-  return { status: 500, body: FALLBACK_ERROR_BODY };
+  if (err instanceof AppError) return { status: StatusCodes.INTERNAL_SERVER_ERROR, body: buildAppErrorBody(err) };
+  if (err instanceof Error) return { status: StatusCodes.INTERNAL_SERVER_ERROR, body: buildGenericErrorBody(err) };
+  return { status: StatusCodes.INTERNAL_SERVER_ERROR, body: FALLBACK_ERROR_BODY };
 }
 
 export function errorMiddleware(err: unknown, req: Request, res: Response, _next: NextFunction): void {
-  logger.error({ err, method: req.method, url: req.url, requestId: req.requestId, clientRequestId: req.clientRequestId }, "Unhandled error");
   const { status, body } = toErrorResponse(err);
+
+  const isServerError = status >= StatusCodes.INTERNAL_SERVER_ERROR;
+  const shouldLog = isServerError || env.isDebug;
+
+  if (shouldLog) {
+    const context = { err, method: req.method, url: req.url, requestId: req.requestId, clientRequestId: req.clientRequestId };
+    if (isServerError) {
+      logger.error(context, "Server error");
+    } else {
+      logger.warn(context, "Client error");
+    }
+  }
+
   res.status(status).json(body);
 }

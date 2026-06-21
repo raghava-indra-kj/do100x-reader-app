@@ -1,7 +1,7 @@
 export type ErrorResponse = {
   errorCode: string | null;
   message: string;
-  data: unknown;
+  data?: unknown;
   debugMessage?: string;
   stack?: string;
 };

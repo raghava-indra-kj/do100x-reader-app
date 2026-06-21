@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authMiddleware } from "@core/http/auth.middleware";
+import { authMiddleware } from "./auth.middleware";
 import { validateReqBody } from "@core/http/validate-req-body.middleware";
 import { handleSignup, handleSignin, handleSignout, handleMe } from "./auth.handler";
 import { SignupInputSchema } from "./signup.models";
