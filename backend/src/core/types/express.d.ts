@@ -5,7 +5,8 @@ declare global {
         interface Request {
             requestId: string;
             clientRequestId: string | null;
-            currentUser: CurrentUser | null;
+            currentUser: CurrentUser;
+            optCurrentUser: CurrentUser | null;
         }
     }
 }

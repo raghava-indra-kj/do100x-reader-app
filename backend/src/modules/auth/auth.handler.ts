@@ -8,6 +8,8 @@ import { USER_EMAIL_TAKEN } from "@modules/user/errors/user-error.constants";
 import { signupUser } from "./signup.service";
 import { signinUser } from "./signin.service";
 import { signoutUser } from "./signout.service";
+import { SignoutBody } from "./signout.models";
+import { getMe } from "./me.service";
 
 export async function handleSignup(req: Request, res: Response): Promise<void> {
     try {
@@ -46,14 +48,16 @@ export async function handleSignin(req: Request, res: Response): Promise<void> {
 }
 
 export async function handleSignout(req: Request, res: Response): Promise<void> {
+    const body = req.body as SignoutBody;
     await signoutUser({
-        userId: req.currentUser!.id,
-        sessionId: req.currentUser!.sessionId,
-        allSessions: req.body.allSessions,
+        userId: req.currentUser.id,
+        sessionId: req.currentUser.sessionId,
+        allSessions: body.allSessions,
     });
     res.status(StatusCodes.NO_CONTENT).send();
 }
 
 export async function handleMe(req: Request, res: Response): Promise<void> {
-    res.status(StatusCodes.OK).json(req.currentUser);
+    const result = await getMe({ userId: req.currentUser.id });
+    res.status(StatusCodes.OK).json(result);
 }

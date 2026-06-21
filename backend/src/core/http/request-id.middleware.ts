@@ -24,6 +24,7 @@ export function requestIdMiddleware(req: Request, res: Response, next: NextFunct
 
     req.requestId = requestId;
     req.clientRequestId = clientRequestId;
+    req.optCurrentUser = null;
 
     res.setHeader(X_REQUEST_ID, requestId);
     if (clientRequestId !== null) {
