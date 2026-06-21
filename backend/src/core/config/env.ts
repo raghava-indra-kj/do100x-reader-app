@@ -18,6 +18,7 @@ export type EnvRaw = z.infer<typeof EnvRawSchema>;
 
 export type Env = {
   appEnv: AppEnvType;
+  isDebug: boolean;
   server: {
     port: number;
   };
@@ -33,6 +34,7 @@ export type Env = {
 function rawEnvToEnv(rawEnv: EnvRaw): Env {
   return {
     appEnv: rawEnv.APP_ENV,
+    isDebug: rawEnv.APP_ENV !== AppEnvType.PRODUCTION,
     server: {
       port: rawEnv.PORT,
     },
