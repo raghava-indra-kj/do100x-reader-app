@@ -1,5 +1,5 @@
 import { Prisma, appuser } from "@prisma-generated";
-import { randomUUID } from "crypto";
+import { generateUuid } from "@lib/uuid";
 import { PAGE_HOMEPAGE_DEFAULT_TITLE } from "./page.constants";
 
 export async function provisionHomepage({
@@ -9,7 +9,7 @@ export async function provisionHomepage({
   tx: Prisma.TransactionClient;
   userId: string;
 }): Promise<appuser & { homepageId: string }> {
-  const pageId = randomUUID();
+  const pageId = generateUuid();
   const now = new Date();
 
   await tx.page.create({

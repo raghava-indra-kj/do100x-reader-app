@@ -1,7 +1,6 @@
-import { randomUUID } from "crypto";
 import { NextFunction, Request, Response } from "express";
-import { isValidUUID } from "@lib/uuid";
-import { X_CLIENT_REQUEST_ID, X_REQUEST_ID } from "./http-headers.constant";
+import { generateUuid, isValidUUID } from "@lib/uuid";
+import { X_CLIENT_REQUEST_ID, X_REQUEST_ID } from "./http-headers.constants";
 
 function resolveClientRequestId(req: Request): string | null {
   const clientRequestId = req.headers[X_CLIENT_REQUEST_ID];
@@ -10,7 +9,7 @@ function resolveClientRequestId(req: Request): string | null {
 }
 
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction): void {
-  const requestId = randomUUID();
+  const requestId = generateUuid();
   const clientRequestId = resolveClientRequestId(req);
 
   req.requestId = requestId;

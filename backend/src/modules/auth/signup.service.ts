@@ -3,7 +3,7 @@ import { hashPassword } from "@lib/password";
 import { provisionHomepage } from "@modules/page/homepage.service";
 import { UserError } from "@modules/user/errors/user-error";
 import { USER_EMAIL_TAKEN } from "@modules/user/errors/user-error-codes";
-import { randomUUID } from "crypto";
+import { generateUuid } from "@lib/uuid";
 import { buildAuthResult, toAuthUser } from "./auth-result.builder";
 import { AuthResult, AuthToken } from "./auth.models";
 import { createSession } from "./session.service";
@@ -18,7 +18,7 @@ export async function signupUser(input: SignupInput): Promise<AuthResult> {
   }
 
   const hashedPassword = await hashPassword(parsed.password);
-  const userId = randomUUID();
+  const userId = generateUuid();
 
   const { updatedUser, accessToken } = await prisma.$transaction(async (tx) => {
     await tx.appuser.create({

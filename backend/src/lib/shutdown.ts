@@ -1,4 +1,4 @@
-import { logger } from "./logger";
+import { logger } from "@lib/logger";
 
 type ShutdownHandler = {
   name: string;
@@ -7,7 +7,7 @@ type ShutdownHandler = {
 
 const handlers: ShutdownHandler[] = [];
 
-export function registerShutdownHandler(name: string, disconnect: () => Promise<void>): void {
+export function registerShutdownHandler({ name, disconnect }: ShutdownHandler): void {
   handlers.push({ name, disconnect });
 }
 

@@ -17,6 +17,7 @@ const EnvRawSchema = z.object({
   DATABASE_USER: z.string(),
   DATABASE_PASSWORD: z.string(),
   DATABASE_NAME: z.string(),
+  DATABASE_CONNECTION_LIMIT: z.coerce.number(),
 });
 type EnvRaw = z.infer<typeof EnvRawSchema>;
 
@@ -36,6 +37,7 @@ export type Env = {
     user: string;
     password: string;
     name: string;
+    connectionLimit: number;
   };
 };
 
@@ -56,6 +58,7 @@ function rawEnvToEnv(rawEnv: EnvRaw): Env {
       user: rawEnv.DATABASE_USER,
       password: rawEnv.DATABASE_PASSWORD,
       name: rawEnv.DATABASE_NAME,
+      connectionLimit: rawEnv.DATABASE_CONNECTION_LIMIT,
     },
   };
 }

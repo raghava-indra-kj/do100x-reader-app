@@ -10,13 +10,13 @@ const adapter = new PrismaMariaDb({
   user: env.database.user,
   password: env.database.password,
   database: env.database.name,
-  connectionLimit: 5,
+  connectionLimit: env.database.connectionLimit,
 });
 
 export const prisma = new PrismaClient({ adapter });
 
 export async function connectDatabase(): Promise<void> {
   await prisma.$connect();
-  registerShutdownHandler("database", () => prisma.$disconnect());
+  registerShutdownHandler({ name: "database", disconnect: () => prisma.$disconnect() });
   logger.info("database connected");
 }

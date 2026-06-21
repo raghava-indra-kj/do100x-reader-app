@@ -22,7 +22,6 @@ model session {
   token     String   @unique @db.VarChar(64)
   isActive  Boolean  @default(true)
   createdAt DateTime @db.DateTime(6)
-
 }
 
 model page {

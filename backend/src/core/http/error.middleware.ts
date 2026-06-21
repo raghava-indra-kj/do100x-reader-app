@@ -16,7 +16,7 @@ function buildApiErrorBody(err: ApiError): ErrorResponse {
     errorCode: err.errorCode,
     message: err.message,
     data: err.data,
-    ...(env.isDebug ? { stack: err.stack } : {}),
+    ...withDebugInfo(err),
   };
 }
 
