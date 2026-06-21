@@ -10,9 +10,13 @@ export enum AppEnvType {
 const EnvRawSchema = z.object({
   APP_ENV: z.enum(AppEnvType),
   PORT: z.coerce.number(),
-  DATABASE_URL: z.string(),
   API_BODY_SIZE_LIMIT: z.string(),
   API_BASE_PATH: z.string(),
+  DATABASE_HOST: z.string(),
+  DATABASE_PORT: z.coerce.number(),
+  DATABASE_USER: z.string(),
+  DATABASE_PASSWORD: z.string(),
+  DATABASE_NAME: z.string(),
 });
 type EnvRaw = z.infer<typeof EnvRawSchema>;
 
@@ -27,7 +31,11 @@ export type Env = {
     bodySizeLimit: string;
   };
   database: {
-    url: string;
+    host: string;
+    port: number;
+    user: string;
+    password: string;
+    name: string;
   };
 };
 
@@ -43,7 +51,11 @@ function rawEnvToEnv(rawEnv: EnvRaw): Env {
       bodySizeLimit: rawEnv.API_BODY_SIZE_LIMIT,
     },
     database: {
-      url: rawEnv.DATABASE_URL,
+      host: rawEnv.DATABASE_HOST,
+      port: rawEnv.DATABASE_PORT,
+      user: rawEnv.DATABASE_USER,
+      password: rawEnv.DATABASE_PASSWORD,
+      name: rawEnv.DATABASE_NAME,
     },
   };
 }

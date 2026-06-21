@@ -1,9 +1,22 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { PrismaClient } from "@prisma-generated";
+import { env } from "@core/config/env";
+import { logger } from "@lib/logger";
 import { registerShutdownHandler } from "@lib/shutdown";
 
-export const prisma = new PrismaClient();
+const adapter = new PrismaMariaDb({
+  host: env.database.host,
+  port: env.database.port,
+  user: env.database.user,
+  password: env.database.password,
+  database: env.database.name,
+  connectionLimit: 5,
+});
+
+export const prisma = new PrismaClient({ adapter });
 
 export async function connectDatabase(): Promise<void> {
   await prisma.$connect();
   registerShutdownHandler("database", () => prisma.$disconnect());
+  logger.info("database connected");
 }

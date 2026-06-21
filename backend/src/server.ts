@@ -6,7 +6,6 @@ import { createApp } from "./app";
 
 async function start(): Promise<void> {
   await connectDatabase();
-  logger.info("database connected");
 
   const app = createApp();
   const server = app.listen(env.server.port, () => {

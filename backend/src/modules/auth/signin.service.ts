@@ -1,4 +1,4 @@
-import { appuser } from "@prisma/client";
+import { appuser } from "@prisma-generated";
 import { prisma } from "@core/db/prisma";
 import { verifyPassword } from "@lib/password";
 import { provisionHomepage } from "@modules/page/homepage.service";

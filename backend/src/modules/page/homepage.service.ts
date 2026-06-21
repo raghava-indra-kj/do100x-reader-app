@@ -1,4 +1,4 @@
-import { Prisma, appuser } from "@prisma/client";
+import { Prisma, appuser } from "@prisma-generated";
 import { randomUUID } from "crypto";
 import { PAGE_HOMEPAGE_DEFAULT_TITLE } from "./page.constants";
 

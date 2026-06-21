@@ -1,4 +1,4 @@
-import { appuser } from "@prisma/client";
+import { appuser } from "@prisma-generated";
 import { AuthResult, AuthUser, AuthToken } from "./auth.models";
 
 export function toAuthUser(user: appuser & { homepageId: string }): AuthUser {
