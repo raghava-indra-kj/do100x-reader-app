@@ -1,6 +1,6 @@
 import { prisma } from "@core/db/prisma";
 import { hashPassword } from "@lib/password";
-import { provisionHomepage } from "@modules/page/homepage.service";
+import { createUserHomepage } from "@modules/page/create-user-homepage.service";
 import { UserError } from "@modules/user/errors/user-error";
 import { USER_EMAIL_TAKEN } from "@modules/user/errors/user-error.constants";
 import { generateUuid } from "@lib/uuid";
@@ -31,7 +31,7 @@ export async function signupUser(input: SignupInput): Promise<AuthResult> {
             },
         });
 
-        const updatedUser = await provisionHomepage({ tx, userId });
+        const updatedUser = await createUserHomepage({ tx, userId });
         const accessToken = await createSession({ tx, userId });
 
         return { updatedUser, accessToken };

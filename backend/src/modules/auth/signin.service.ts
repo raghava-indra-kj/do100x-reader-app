@@ -1,7 +1,7 @@
 import { appuser } from "@prisma-generated";
 import { prisma } from "@core/db/prisma";
 import { verifyPassword } from "@lib/password";
-import { provisionHomepage } from "@modules/page/homepage.service";
+import { createUserHomepage } from "@modules/page/create-user-homepage.service";
 import { AuthError } from "./errors/auth-error";
 import { AUTH_INVALID_CREDENTIALS } from "./errors/auth-error.constants";
 import { SigninInput, SigninInputSchema } from "./signin.models";
@@ -24,7 +24,7 @@ export async function signinUser(input: SigninInput): Promise<AuthResult> {
 
     let resolvedUser: appuser & { homepageId: string };
     if (!user.homepageId) {
-        resolvedUser = await prisma.$transaction(async (tx) => provisionHomepage({ tx, userId: user.id }));
+        resolvedUser = await prisma.$transaction(async (tx) => createUserHomepage({ tx, userId: user.id }));
     } else {
         resolvedUser = user as appuser & { homepageId: string };
     }

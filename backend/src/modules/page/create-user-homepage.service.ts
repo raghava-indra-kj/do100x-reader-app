@@ -2,7 +2,7 @@ import { Prisma, appuser } from "@prisma-generated";
 import { generateUuid } from "@lib/uuid";
 import { PAGE_HOMEPAGE_DEFAULT_TITLE } from "./page.constants";
 
-export async function provisionHomepage({
+export async function createUserHomepage({
     tx,
     userId,
 }: {
