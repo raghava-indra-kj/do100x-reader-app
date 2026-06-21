@@ -1,7 +1,11 @@
 {
   "common": {
     "internalError": "Something went wrong. Please try again.",
-    "rateLimited": "Too many requests. Please try again later."
+    "rateLimited": "Too many requests. Please try again later.",
+    "notFound": "The requested resource was not found.",
+    "methodNotAllowed": "Method not allowed.",
+    "badRequest": "Invalid request.",
+    "payloadTooLarge": "Request body is too large."
   },
   "validation": {
     "failed": "{field}: {reason}",
