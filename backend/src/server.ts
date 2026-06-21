@@ -1,7 +1,7 @@
 import { createApp } from "./app";
-import { env } from "./config/env";
+import { env } from "./core/config/env";
 import { initI18n } from "./common/i18n/i18n";
-import { connectDatabase, disconnectDatabase } from "./common/prisma";
+import { connectDatabase, disconnectDatabase } from "./core/db/prisma";
 import { logger } from "./lib/logger";
 
 async function start(): Promise<void> {

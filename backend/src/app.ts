@@ -1,7 +1,8 @@
+import "express-async-errors";
 import express, { Express } from "express";
 import i18next from "i18next";
 import { handle } from "i18next-http-middleware";
-import { env } from "./config/env";
+import { env } from "./core/config/env";
 import { commonNamespace } from "./common/i18n/namespaces";
 
 export function createApp(): Express {
