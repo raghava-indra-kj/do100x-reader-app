@@ -3,7 +3,7 @@ import { ApiError } from "@core/errors/api-error";
 import { AppError } from "@core/errors/app-error";
 import { logger } from "@lib/logger";
 import { NextFunction, Request, Response } from "express";
-import { ErrorResponse } from "./error-response.type";
+import { ErrorResponse } from "./error-response";
 
 const INTERNAL_SERVER_ERROR = "Internal server error";
 
@@ -52,7 +52,7 @@ function toErrorResponse(err: unknown): { status: number; body: ErrorResponse } 
 }
 
 export function errorMiddleware(err: unknown, req: Request, res: Response, _next: NextFunction): void {
-  logger.error({ err, method: req.method, url: req.url }, "Unhandled error");
+  logger.error({ err, method: req.method, url: req.url, requestId: req.requestId, clientRequestId: req.clientRequestId }, "Unhandled error");
   const { status, body } = toErrorResponse(err);
   res.status(status).json(body);
 }
