@@ -1,16 +1,13 @@
 import { randomBytes } from "crypto";
-import { Prisma, PrismaClient } from "@prisma-generated";
+import { Prisma } from "@prisma-generated";
 import { generateUuid } from "@lib/uuid";
-
-const SESSION_TOKEN_BYTES = 32;
-
-type PrismaClientOrTx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
+import { SESSION_TOKEN_BYTES } from "@modules/auth/auth.constants";
 
 export async function createSession({
     tx,
     userId,
 }: {
-    tx: PrismaClientOrTx | Prisma.TransactionClient;
+    tx: Prisma.TransactionClient;
     userId: string;
 }): Promise<string> {
     const accessToken = randomBytes(SESSION_TOKEN_BYTES).toString("hex");
