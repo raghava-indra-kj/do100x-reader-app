@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { ErrorResponse } from "./error-response";
+import { RESOURCE_NOT_FOUND } from "./http-error.constants";
 
 const NOT_FOUND_BODY: ErrorResponse = {
-  errorCode: null,
+  errorCode: RESOURCE_NOT_FOUND,
   message: "Not found",
   data: null,
 };
