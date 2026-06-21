@@ -15,8 +15,13 @@ async function start(): Promise<void> {
   const shutdown = (signal: string) => {
     logger.warn(`${signal} — shutting down`);
     server.close(async () => {
-      await disconnectDatabase();
-      process.exit(0);
+      try {
+        await disconnectDatabase();
+      } catch (err) {
+        logger.error(err, "Failed to disconnect database during shutdown");
+      } finally {
+        process.exit(0);
+      }
     });
   };
 
