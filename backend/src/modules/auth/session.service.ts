@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import { Prisma, PrismaClient } from "@prisma-generated";
+import { generateUuid } from "@lib/uuid";
 
 const SESSION_TOKEN_BYTES = 32;
 
@@ -15,6 +16,7 @@ export async function createSession({
     const accessToken = randomBytes(SESSION_TOKEN_BYTES).toString("hex");
     await tx.session.create({
         data: {
+            id: generateUuid(),
             userId,
             token: accessToken,
             isActive: true,

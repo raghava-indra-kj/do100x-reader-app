@@ -42,8 +42,7 @@ export async function handleSignin(req: Request, res: Response): Promise<void> {
 }
 
 export async function handleSignout(req: Request, res: Response): Promise<void> {
-    const token = req.headers.authorization ?? "";
-    await signoutUser({ sessionToken: token });
+    await signoutUser({ userId: req.currentUser!.id });
     res.status(StatusCodes.NO_CONTENT).send();
 }
 

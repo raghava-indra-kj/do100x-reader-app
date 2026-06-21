@@ -7,12 +7,12 @@ import { AUTH_INVALID_CREDENTIALS } from "./errors/auth-error.constants";
 import { SigninInput, SigninInputSchema } from "./signin.models";
 import { AuthResult, AuthToken } from "./auth.models";
 import { createSession } from "./session.service";
-import { toAuthUser, buildAuthResult } from "./auth-result.mapper";
+import { toAuthUser } from "./auth-result.mapper";
 
 export async function signinUser(input: SigninInput): Promise<AuthResult> {
     const parsed = SigninInputSchema.parse(input);
 
-    const user = await prisma.appuser.findFirst({ where: { email: parsed.email } });
+    const user = await prisma.appuser.findUnique({ where: { email: parsed.email } });
     if (!user) {
         throw new AuthError({ errorCode: AUTH_INVALID_CREDENTIALS, message: "Invalid credentials" });
     }
@@ -33,5 +33,5 @@ export async function signinUser(input: SigninInput): Promise<AuthResult> {
 
     const authUser = toAuthUser(resolvedUser);
     const token: AuthToken = { accessToken };
-    return buildAuthResult({ user: authUser, token });
+    return { user: authUser, token };
 }

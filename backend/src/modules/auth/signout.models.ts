@@ -1,3 +1,3 @@
 export type SignoutInput = {
-    sessionToken: string;
+    userId: string;
 };

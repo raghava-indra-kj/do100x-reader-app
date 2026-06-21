@@ -25,6 +25,12 @@
 - `core/` — app infrastructure: config, db, errors, HTTP middleware. No business logic.
 - `modules/` — business domain. Each module owns its errors, models, services, handlers, and router.
 
+## Services
+
+- Services validate their own input independently of callers. Never assume pre-validation by the HTTP layer.
+- Business rules are explicit in code. Never rely on database defaults to enforce them.
+- IDs are always generated in application code (`generateUuid()`), not delegated to the database.
+
 ## Errors
 
 - HTTP status codes: use `StatusCodes.*` from `http-status-codes`. Never hardcode numeric status codes.

@@ -4,7 +4,7 @@ import { provisionHomepage } from "@modules/page/homepage.service";
 import { UserError } from "@modules/user/errors/user-error";
 import { USER_EMAIL_TAKEN } from "@modules/user/errors/user-error.constants";
 import { generateUuid } from "@lib/uuid";
-import { buildAuthResult, toAuthUser } from "./auth-result.mapper";
+import { toAuthUser } from "./auth-result.mapper";
 import { AuthResult, AuthToken } from "./auth.models";
 import { createSession } from "./session.service";
 import { SignupInput, SignupInputSchema } from "./signup.models";
@@ -12,7 +12,7 @@ import { SignupInput, SignupInputSchema } from "./signup.models";
 export async function signupUser(input: SignupInput): Promise<AuthResult> {
     const parsed = SignupInputSchema.parse(input);
 
-    const existing = await prisma.appuser.findFirst({ where: { email: parsed.email } });
+    const existing = await prisma.appuser.findUnique({ where: { email: parsed.email } });
     if (existing) {
         throw new UserError({ errorCode: USER_EMAIL_TAKEN, message: "Email is already taken" });
     }
@@ -40,5 +40,5 @@ export async function signupUser(input: SignupInput): Promise<AuthResult> {
     const user = toAuthUser(updatedUser);
     const token: AuthToken = { accessToken };
 
-    return buildAuthResult({ user, token });
+    return { user, token };
 }
