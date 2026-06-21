@@ -1,7 +1,7 @@
 import { randomUUID } from "crypto";
 import { NextFunction, Request, Response } from "express";
 import { isValidUUID } from "@lib/uuid";
-import { X_CLIENT_REQUEST_ID, X_REQUEST_ID } from "./constant";
+import { X_CLIENT_REQUEST_ID, X_REQUEST_ID } from "./http-headers.constant";
 
 function resolveClientRequestId(req: Request): string | null {
   const header = req.headers[X_CLIENT_REQUEST_ID];

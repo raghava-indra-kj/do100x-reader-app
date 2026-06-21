@@ -14,7 +14,7 @@ const EnvRawSchema = z.object({
   API_BODY_SIZE_LIMIT: z.string(),
   API_BASE_PATH: z.string(),
 });
-export type EnvRaw = z.infer<typeof EnvRawSchema>;
+type EnvRaw = z.infer<typeof EnvRawSchema>;
 
 export type Env = {
   appEnv: AppEnvType;

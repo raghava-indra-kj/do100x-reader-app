@@ -1,9 +1,7 @@
 import pino from "pino";
-import { AppEnvType, env } from "@core/config/env";
+import { env } from "@core/config/env";
 
-const isDev = env.appEnv !== AppEnvType.PRODUCTION;
-
-const devLogginOptions = {
+const devLoggingOptions = {
   level: "debug",
   transport: {
     target: "pino-pretty",
@@ -18,4 +16,4 @@ const devLogginOptions = {
 
 const prodLoggingOptions = { level: "info" };
 
-export const logger = pino(isDev ? devLogginOptions : prodLoggingOptions);
+export const logger = pino(env.isDebug ? devLoggingOptions : prodLoggingOptions);
