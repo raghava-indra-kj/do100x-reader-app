@@ -1,8 +1,8 @@
-import { createApp } from "./app";
 import { env } from "@core/config/env";
 import { connectDatabase } from "@core/db/prisma";
 import { logger } from "@lib/logger";
 import { runShutdownHandlers } from "@lib/shutdown";
+import { createApp } from "./app";
 
 async function start(): Promise<void> {
   await connectDatabase();
