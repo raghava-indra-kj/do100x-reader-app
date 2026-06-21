@@ -1,5 +1,4 @@
 import { Request, Response } from "express";
-import { SignupInput } from "./signup.models";
 import { SigninInput } from "./signin.models";
 import { SignoutInput } from "./signout.models";
 import { MeInput } from "./me.models";
@@ -9,7 +8,7 @@ import { signoutUser } from "./signout.service";
 import { getMe } from "./me.service";
 
 export async function handleSignup(req: Request, res: Response): Promise<void> {
-  const result = await signupUser(req.body as SignupInput);
+  const result = await signupUser(req.body);
   res.status(201).json(result);
 }
 
