@@ -10,28 +10,28 @@ import { createSession } from "./session.service";
 import { toAuthUser, buildAuthResult } from "./auth-result.mapper";
 
 export async function signinUser(input: SigninInput): Promise<AuthResult> {
-  const parsed = SigninInputSchema.parse(input);
+    const parsed = SigninInputSchema.parse(input);
 
-  const user = await prisma.appuser.findFirst({ where: { email: parsed.email } });
-  if (!user) {
-    throw new AuthError({ errorCode: AUTH_INVALID_CREDENTIALS, message: "Invalid credentials" });
-  }
+    const user = await prisma.appuser.findFirst({ where: { email: parsed.email } });
+    if (!user) {
+        throw new AuthError({ errorCode: AUTH_INVALID_CREDENTIALS, message: "Invalid credentials" });
+    }
 
-  const valid = await verifyPassword({ hash: user.password, plain: parsed.password });
-  if (!valid) {
-    throw new AuthError({ errorCode: AUTH_INVALID_CREDENTIALS, message: "Invalid credentials" });
-  }
+    const valid = await verifyPassword({ hash: user.password, plain: parsed.password });
+    if (!valid) {
+        throw new AuthError({ errorCode: AUTH_INVALID_CREDENTIALS, message: "Invalid credentials" });
+    }
 
-  let resolvedUser: appuser & { homepageId: string };
-  if (!user.homepageId) {
-    resolvedUser = await prisma.$transaction(async (tx) => provisionHomepage({ tx, userId: user.id }));
-  } else {
-    resolvedUser = user as appuser & { homepageId: string };
-  }
+    let resolvedUser: appuser & { homepageId: string };
+    if (!user.homepageId) {
+        resolvedUser = await prisma.$transaction(async (tx) => provisionHomepage({ tx, userId: user.id }));
+    } else {
+        resolvedUser = user as appuser & { homepageId: string };
+    }
 
-  const accessToken = await createSession({ tx: prisma, userId: user.id });
+    const accessToken = await createSession({ tx: prisma, userId: user.id });
 
-  const authUser = toAuthUser(resolvedUser);
-  const token: AuthToken = { accessToken };
-  return buildAuthResult({ user: authUser, token });
+    const authUser = toAuthUser(resolvedUser);
+    const token: AuthToken = { accessToken };
+    return buildAuthResult({ user: authUser, token });
 }

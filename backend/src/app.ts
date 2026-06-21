@@ -7,12 +7,12 @@ import { statusRouter } from "@modules/status/status.router";
 import { authRouter } from "@modules/auth/auth.router";
 
 export function createApp(): Express {
-  const app = express();
-  app.use(express.json({ limit: env.api.bodySizeLimit }));
-  app.use(requestIdMiddleware);
-  app.use(env.api.basePath, statusRouter);
-  app.use(env.api.basePath, authRouter);
-  app.use(notFoundMiddleware);
-  app.use(errorMiddleware);
-  return app;
+    const app = express();
+    app.use(express.json({ limit: env.api.bodySizeLimit }));
+    app.use(requestIdMiddleware);
+    app.use(env.api.basePath, statusRouter);
+    app.use(env.api.basePath, authRouter);
+    app.use(notFoundMiddleware);
+    app.use(errorMiddleware);
+    return app;
 }

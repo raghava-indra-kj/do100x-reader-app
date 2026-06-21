@@ -8,12 +8,16 @@ datasource db {
 }
 
 model appuser {
-  id         String   @id @default(uuid()) @db.VarChar(36)
-  name       String   @db.VarChar(100)
-  email      String   @unique @db.VarChar(60)
-  password   String   @db.VarChar(255)
-  homepageId String?  @db.VarChar(36)
-  createdAt  DateTime @db.DateTime(6)
+  id         String    @id @default(uuid()) @db.VarChar(36)
+  name       String    @db.VarChar(100)
+  email      String    @unique @db.VarChar(60)
+  password   String    @db.VarChar(255)
+  homepageId String?   @db.VarChar(36)
+  createdAt  DateTime  @db.DateTime(6)
+  homepage   page?     @relation("UserHomepage", fields: [homepageId], references: [id])
+  sessions   session[]
+  pages      page[]    @relation("UserPages")
+  comments   comment[]
 }
 
 model session {
@@ -22,6 +26,7 @@ model session {
   token     String   @unique @db.VarChar(64)
   isActive  Boolean  @default(true)
   createdAt DateTime @db.DateTime(6)
+  user      appuser  @relation(fields: [userId], references: [id])
 }
 
 model page {
@@ -37,6 +42,11 @@ model page {
   createdAt     DateTime  @db.DateTime(6)
   updatedAt     DateTime  @db.DateTime(6)
   deletedAt     DateTime? @db.DateTime(6)
+  user          appuser   @relation("UserPages", fields: [userId], references: [id])
+  parent        page?     @relation("PageChildren", fields: [parentId], references: [id])
+  children      page[]    @relation("PageChildren")
+  homepageFor   appuser[] @relation("UserHomepage")
+  comments      comment[]
 }
 
 model comment {
@@ -46,4 +56,6 @@ model comment {
   body      String   @db.Text
   createdAt DateTime @db.DateTime(6)
   updatedAt DateTime @db.DateTime(6)
+  page      page     @relation(fields: [pageId], references: [id])
+  user      appuser  @relation(fields: [userId], references: [id])
 }

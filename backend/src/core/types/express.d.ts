@@ -1,13 +1,13 @@
-import { CurrentUser } from "../models/current-user";
+import { CurrentUser } from "@core/models/current-user";
 
 declare global {
-  namespace Express {
-    interface Request {
-      requestId: string;
-      clientRequestId: string | null;
-      currentUser: CurrentUser | null;
+    namespace Express {
+        interface Request {
+            requestId: string;
+            clientRequestId: string | null;
+            currentUser: CurrentUser | null;
+        }
     }
-  }
 }
 
-export { };
+export {};

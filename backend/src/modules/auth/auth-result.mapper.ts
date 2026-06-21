@@ -2,20 +2,14 @@ import { appuser } from "@prisma-generated";
 import { AuthResult, AuthUser, AuthToken } from "./auth.models";
 
 export function toAuthUser(user: appuser & { homepageId: string }): AuthUser {
-  return {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    homepageId: user.homepageId,
-  };
+    return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        homepageId: user.homepageId,
+    };
 }
 
-export function buildAuthResult({
-  user,
-  token,
-}: {
-  user: AuthUser;
-  token: AuthToken;
-}): AuthResult {
-  return { user, token };
+export function buildAuthResult({ user, token }: { user: AuthUser; token: AuthToken }): AuthResult {
+    return { user, token };
 }
