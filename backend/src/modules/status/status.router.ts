@@ -1,9 +1,8 @@
 import { Router } from "express";
+import { handleStatus } from "./status.handler";
 
 const router = Router();
 
-router.get("/status", (_req, res) => {
-    res.json({ success: true });
-});
+router.get("/status", handleStatus);
 
 export { router as statusRouter };
