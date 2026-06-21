@@ -21,5 +21,6 @@ export async function resolveCurrentUser({ token }: { token: string }): Promise<
         name: user.name,
         email: user.email,
         homepageId: user.homepageId,
+        sessionId: session.id,
     });
 }

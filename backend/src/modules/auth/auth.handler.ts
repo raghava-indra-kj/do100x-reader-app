@@ -42,7 +42,11 @@ export async function handleSignin(req: Request, res: Response): Promise<void> {
 }
 
 export async function handleSignout(req: Request, res: Response): Promise<void> {
-    await signoutUser({ userId: req.currentUser!.id });
+    await signoutUser({
+        userId: req.currentUser!.id,
+        sessionId: req.currentUser!.sessionId,
+        allSessions: req.body.allSessions,
+    });
     res.status(StatusCodes.NO_CONTENT).send();
 }
 

@@ -4,12 +4,13 @@ import { validateReqBody } from "@core/http/validate-req-body.middleware";
 import { handleSignup, handleSignin, handleSignout, handleMe } from "./auth.handler";
 import { SignupInputSchema } from "./signup.models";
 import { SigninInputSchema } from "./signin.models";
+import { SignoutBodySchema } from "./signout.models";
 
 const router = Router();
 
 router.post("/auth/signup", validateReqBody(SignupInputSchema), handleSignup);
 router.post("/auth/signin", validateReqBody(SigninInputSchema), handleSignin);
-router.post("/auth/signout", authMiddleware, handleSignout);
+router.post("/auth/signout", authMiddleware, validateReqBody(SignoutBodySchema), handleSignout);
 router.get("/auth/me", authMiddleware, handleMe);
 
 export { router as authRouter };
