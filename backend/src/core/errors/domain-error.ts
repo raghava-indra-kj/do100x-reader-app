@@ -9,7 +9,7 @@ export class DomainError extends AppError {
   }: {
     message: string;
     errorCode: string;
-    data?: unknown | null;
+    data?: unknown;
     cause?: Error;
   }) {
     super({ message, errorCode, data, cause });

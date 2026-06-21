@@ -3,11 +3,11 @@ import { prisma } from "@core/db/prisma";
 import { verifyPassword } from "@lib/password";
 import { provisionHomepage } from "@modules/page/homepage.service";
 import { AuthError } from "./errors/auth-error";
-import { AUTH_INVALID_CREDENTIALS } from "./errors/auth-error-codes";
+import { AUTH_INVALID_CREDENTIALS } from "./errors/auth-error.constants";
 import { SigninInput, SigninInputSchema } from "./signin.models";
 import { AuthResult, AuthToken } from "./auth.models";
 import { createSession } from "./session.service";
-import { toAuthUser, buildAuthResult } from "./auth-result.builder";
+import { toAuthUser, buildAuthResult } from "./auth-result.mapper";
 
 export async function signinUser(input: SigninInput): Promise<AuthResult> {
   const parsed = SigninInputSchema.parse(input);

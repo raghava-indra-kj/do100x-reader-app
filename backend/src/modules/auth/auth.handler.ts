@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { ApiError } from "@core/errors/api-error";
 import { AuthError } from "./errors/auth-error";
-import { AUTH_INVALID_CREDENTIALS } from "./errors/auth-error-codes";
+import { AUTH_INVALID_CREDENTIALS } from "./errors/auth-error.constants";
 import { UserError } from "@modules/user/errors/user-error";
-import { USER_EMAIL_TAKEN } from "@modules/user/errors/user-error-codes";
+import { USER_EMAIL_TAKEN } from "@modules/user/errors/user-error.constants";
 import { signupUser } from "./signup.service";
 import { signinUser } from "./signin.service";
 import { signoutUser } from "./signout.service";

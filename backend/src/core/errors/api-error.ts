@@ -13,7 +13,7 @@ export class ApiError extends AppError {
     statusCode: number;
     message: string;
     errorCode?: string | null;
-    data?: unknown | null;
+    data?: unknown;
     cause?: Error;
   }) {
     super({ message, errorCode, data, cause });
