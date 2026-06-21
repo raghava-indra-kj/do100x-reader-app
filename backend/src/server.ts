@@ -1,7 +1,7 @@
 import { env } from "@core/config/env";
 import { connectDatabase } from "@core/db/prisma";
-import { logger } from "@lib/logger";
-import { runShutdownHandlers } from "@lib/shutdown";
+import { logger } from "@core/infra/logger";
+import { runShutdownHandlers } from "@core/infra/shutdown";
 import { createApp } from "./app";
 
 async function start(): Promise<void> {

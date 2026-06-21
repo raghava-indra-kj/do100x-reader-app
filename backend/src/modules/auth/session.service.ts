@@ -1,5 +1,7 @@
+import { randomBytes } from "crypto";
 import { Prisma, PrismaClient } from "@prisma-generated";
-import { generateToken } from "@lib/token";
+
+const SESSION_TOKEN_BYTES = 32;
 
 type PrismaClientOrTx = Omit<PrismaClient, "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends">;
 
@@ -10,7 +12,7 @@ export async function createSession({
   tx: PrismaClientOrTx | Prisma.TransactionClient;
   userId: string;
 }): Promise<string> {
-  const accessToken = generateToken();
+  const accessToken = randomBytes(SESSION_TOKEN_BYTES).toString("hex");
   await tx.session.create({
     data: {
       userId,

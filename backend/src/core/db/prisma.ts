@@ -1,8 +1,8 @@
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import { PrismaClient } from "@prisma-generated";
 import { env } from "@core/config/env";
-import { logger } from "@lib/logger";
-import { registerShutdownHandler } from "@lib/shutdown";
+import { logger } from "@core/infra/logger";
+import { registerShutdownHandler } from "@core/infra/shutdown";
 
 const adapter = new PrismaMariaDb({
   host: env.database.host,

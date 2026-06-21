@@ -1,7 +1,7 @@
 import { env } from "@core/config/env";
 import { ApiError } from "@core/errors/api-error";
 import { AppError } from "@core/errors/app-error";
-import { logger } from "@lib/logger";
+import { logger } from "@core/infra/logger";
 import { NextFunction, Request, Response } from "express";
 import { ErrorResponse } from "./error-response";
 
