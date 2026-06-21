@@ -6,10 +6,10 @@ import { commonNamespace } from "./common/i18n/namespaces";
 
 export function createApp(): Express {
   const app = express();
-  app.use(express.json({ limit: env.request.jsonLimit }));
+  app.use(express.json({ limit: env.api.bodySizeLimit }));
   app.use(handle(i18next));
 
-  app.get(`${env.api.prefix}/status`, (_req, res) => {
+  app.get(`${env.api.basePath}/status`, (_req, res) => {
     res.json({ success: true });
   });
 
