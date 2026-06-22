@@ -48,12 +48,13 @@ model page {
 }
 
 model comment {
-  id        String   @id @default(uuid()) @db.VarChar(36)
-  pageId    String   @db.VarChar(36)
-  userId    String   @db.VarChar(36)
-  body      String   @db.Text
-  createdAt DateTime @db.DateTime(6)
-  updatedAt DateTime @db.DateTime(6)
-  page      page     @relation(fields: [pageId], references: [id])
-  user      appuser  @relation(fields: [userId], references: [id])
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  pageId        String   @db.VarChar(36)
+  userId        String   @db.VarChar(36)
+  selectionText String?  @db.MediumText
+  comment       String   @db.Text
+  createdAt     DateTime @db.DateTime(6)
+  updatedAt     DateTime @db.DateTime(6)
+  page          page     @relation(fields: [pageId], references: [id])
+  user          appuser  @relation(fields: [userId], references: [id])
 }
