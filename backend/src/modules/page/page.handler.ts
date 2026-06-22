@@ -9,11 +9,13 @@ import {
     INVALID_PAGE_ID,
     PAGE_ACCESS_DENIED,
     PAGE_CANNOT_DELETE_HOMEPAGE,
+    PAGE_CANNOT_REPARENT_HOMEPAGE,
     PAGE_INVALID_MOVE_POSITION,
     PAGE_NEIGHBOR_NOT_FOUND,
     PAGE_NEIGHBOR_NOT_SIBLING,
     PAGE_NOT_FOUND,
     PAGE_PARENT_NOT_FOUND,
+    PAGE_REPARENT_WOULD_CREATE_CYCLE,
 } from "./errors/page-error.constants";
 import { getPage } from "./get-page.service";
 import { MovePageBody } from "./move-page.models";
@@ -22,6 +24,8 @@ import { QueryPagesBody } from "./query-pages.models";
 import { queryPages } from "./query-pages.service";
 import { UpdatePageBody } from "./update-page.models";
 import { updatePage } from "./update-page.service";
+import { ReparentPageBody } from "./reparent-page.models";
+import { reparentPage } from "./reparent-page.service";
 import { requirePageIdParam } from "./validators/page-id.validator";
 import { CommentError } from "./errors/comment-error";
 import { COMMENT_NOT_FOUND, COMMENT_ACCESS_DENIED, INVALID_COMMENT_ID } from "./errors/comment-error.constants";
@@ -58,6 +62,12 @@ function handlePageError(err: unknown): never {
         }
         if (err.errorCode === PAGE_CANNOT_DELETE_HOMEPAGE) {
             throw new ApiError({ statusCode: StatusCodes.FORBIDDEN, message: "Cannot delete the homepage", errorCode: PAGE_CANNOT_DELETE_HOMEPAGE });
+        }
+        if (err.errorCode === PAGE_CANNOT_REPARENT_HOMEPAGE) {
+            throw new ApiError({ statusCode: StatusCodes.FORBIDDEN, message: "Cannot reparent the homepage", errorCode: PAGE_CANNOT_REPARENT_HOMEPAGE });
+        }
+        if (err.errorCode === PAGE_REPARENT_WOULD_CREATE_CYCLE) {
+            throw new ApiError({ statusCode: StatusCodes.BAD_REQUEST, message: "Cannot reparent to a descendant", errorCode: PAGE_REPARENT_WOULD_CREATE_CYCLE });
         }
     }
     throw err;
@@ -143,6 +153,21 @@ export async function handleMovePage(req: Request, res: Response): Promise<void>
             pageId,
             afterId: body.afterId,
             beforeId: body.beforeId,
+        });
+        res.status(StatusCodes.OK).json(result);
+    } catch (err) {
+        handlePageError(err);
+    }
+}
+
+export async function handleReparentPage(req: Request, res: Response): Promise<void> {
+    const pageId = requirePageIdParam(req.params.id);
+    const body = req.body as ReparentPageBody;
+    try {
+        const result = await reparentPage({
+            currentUser: req.currentUser,
+            pageId,
+            newParentId: body.newParentId,
         });
         res.status(StatusCodes.OK).json(result);
     } catch (err) {

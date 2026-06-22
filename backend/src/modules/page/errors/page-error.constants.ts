@@ -6,3 +6,5 @@ export const PAGE_NEIGHBOR_NOT_FOUND = "page.neighbor_not_found";
 export const PAGE_NEIGHBOR_NOT_SIBLING = "page.neighbor_not_sibling";
 export const PAGE_INVALID_MOVE_POSITION = "page.invalid_move_position";
 export const PAGE_CANNOT_DELETE_HOMEPAGE = "page.cannot_delete_homepage";
+export const PAGE_CANNOT_REPARENT_HOMEPAGE = "page.cannot_reparent_homepage";
+export const PAGE_REPARENT_WOULD_CREATE_CYCLE = "page.reparent_would_create_cycle";
