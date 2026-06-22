@@ -1,5 +1,0 @@
-export const PAGE_HOMEPAGE_DEFAULT_TITLE = "Home";
-
-export const PAGE_TITLE_MIN_LENGTH = 1;
-export const PAGE_TITLE_MAX_LENGTH = 1000;
-export const PAGE_CONTENT_MAX_LENGTH = 500_000;
