@@ -1,8 +1,9 @@
 import { prisma } from "@core/db/prisma";
 import { IllegalStateError } from "@core/errors/illegal-state.error";
-import { MeResult } from "./me.models";
+import { MeInput, MeInputSchema, MeResult } from "./me.models";
 
-export async function getMe({ userId }: { userId: string }): Promise<MeResult> {
+export async function getMe(input: MeInput): Promise<MeResult> {
+    const { userId } = MeInputSchema.parse(input);
     const user = await prisma.appuser.findUnique({ where: { id: userId } });
     if (!user) {
         throw new IllegalStateError({ message: `User ${userId} not found` });

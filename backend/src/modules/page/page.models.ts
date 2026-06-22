@@ -7,11 +7,10 @@ export type Page = {
     title: string;
     content: PageBody | null;
     category: string | null;
-    sortOrder: number;
+    sortOrder: string;
     childrenCount: number;
     createdAt: Date;
     updatedAt: Date;
-    deletedAt: Date | null;
 };
 
 export type PageListItem = {
@@ -20,11 +19,10 @@ export type PageListItem = {
     parentId: string | null;
     title: string;
     category: string | null;
-    sortOrder: number;
+    sortOrder: string;
     childrenCount: number;
     createdAt: Date;
     updatedAt: Date;
-    deletedAt: Date | null;
 };
 
 export type PageListResult = {

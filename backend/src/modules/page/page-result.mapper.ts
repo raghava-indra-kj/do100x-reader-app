@@ -13,7 +13,6 @@ export function toPage(row: page): Page {
         childrenCount: row.childrenCount,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-        deletedAt: row.deletedAt,
     };
 }
 
@@ -28,6 +27,5 @@ export function toPageListItem(row: Omit<page, "content">): PageListItem {
         childrenCount: row.childrenCount,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
-        deletedAt: row.deletedAt,
     };
 }

@@ -1,12 +1,12 @@
 import { ApiError } from "@core/errors/api-error";
 import { StatusCodes } from "http-status-codes";
-import { isValidUUID } from "@lib/uuid";
 import { PageError } from "../errors/page-error";
 import { INVALID_PAGE_ID } from "../errors/page-error.constants";
+import { pageIdSchema } from "../page-id.models";
 
 export function parsePageId(rawId: unknown): string | null {
-    if (typeof rawId !== "string") return null;
-    return isValidUUID(rawId) ? rawId : null;
+    const result = pageIdSchema.safeParse(rawId);
+    return result.success ? result.data : null;
 }
 
 export function requirePageId(rawId: unknown): string {

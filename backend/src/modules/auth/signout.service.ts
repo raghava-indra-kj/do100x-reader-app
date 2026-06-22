@@ -1,7 +1,8 @@
 import { prisma } from "@core/db/prisma";
-import { SignoutInput } from "./signout.models";
+import { SignoutInput, SignoutInputSchema } from "./signout.models";
 
-export async function signoutUser({ userId, sessionId, allSessions }: SignoutInput): Promise<void> {
+export async function signoutUser(input: SignoutInput): Promise<void> {
+    const { userId, sessionId, allSessions } = SignoutInputSchema.parse(input);
     if (allSessions) {
         await prisma.session.updateMany({
             where: { userId, isActive: true },

@@ -1,6 +1,7 @@
+import { generateKeyBetween } from "fractional-indexing";
 import { Prisma, appuser } from "@prisma-generated";
-import { generateUuid } from "@lib/uuid";
 import { PAGE_HOMEPAGE_DEFAULT_TITLE } from "./page.constants";
+import { insertPage } from "./insert-page.service";
 
 export async function createUserHomepage({
     tx,
@@ -9,25 +10,17 @@ export async function createUserHomepage({
     tx: Prisma.TransactionClient;
     userId: string;
 }): Promise<appuser & { homepageId: string }> {
-    const pageId = generateUuid();
-    const now = new Date();
-
-    await tx.page.create({
-        data: {
-            id: pageId,
-            userId,
-            parentId: null,
-            title: PAGE_HOMEPAGE_DEFAULT_TITLE,
-            sortOrder: 1,
-            childrenCount: 0,
-            createdAt: now,
-            updatedAt: now,
-        },
+    const page = await insertPage({
+        tx,
+        userId,
+        parentId: null,
+        title: PAGE_HOMEPAGE_DEFAULT_TITLE,
+        sortOrder: generateKeyBetween(null, null),
     });
 
     const updatedUser = await tx.appuser.update({
         where: { id: userId },
-        data: { homepageId: pageId },
+        data: { homepageId: page.id },
     });
 
     return updatedUser as appuser & { homepageId: string };

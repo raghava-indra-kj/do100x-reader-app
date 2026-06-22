@@ -9,7 +9,6 @@ export async function queryPages(input: QueryPagesInput): Promise<PageListResult
     const rows = await prisma.page.findMany({
         where: {
             userId: currentUser.id,
-            deletedAt: null,
             ...(parentId !== undefined ? { parentId } : {}),
             ...(searchQuery ? { title: { contains: searchQuery } } : {}),
         },
@@ -23,9 +22,8 @@ export async function queryPages(input: QueryPagesInput): Promise<PageListResult
             childrenCount: true,
             createdAt: true,
             updatedAt: true,
-            deletedAt: true,
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { sortOrder: "asc" },
     });
 
     return { pages: rows.map(toPageListItem) };

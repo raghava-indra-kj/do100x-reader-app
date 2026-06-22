@@ -36,11 +36,10 @@ model page {
   title         String    @db.VarChar(1000)
   content       Json?
   category      String?   @db.VarChar(255)
-  sortOrder     Int
+  sortOrder     String    @db.VarChar(255)
   childrenCount Int
   createdAt     DateTime  @db.DateTime(6)
   updatedAt     DateTime  @db.DateTime(6)
-  deletedAt     DateTime? @db.DateTime(6)
   user          appuser   @relation("UserPages", fields: [userId], references: [id])
   parent        page?     @relation("PageChildren", fields: [parentId], references: [id])
   children      page[]    @relation("PageChildren")
