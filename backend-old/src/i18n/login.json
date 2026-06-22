@@ -1,7 +1,0 @@
-{
-  "errors": {
-    "password": {
-      "required": "Password is required."
-    }
-  }
-}
