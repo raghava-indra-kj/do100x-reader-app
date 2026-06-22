@@ -18,7 +18,6 @@ export async function createUserHomepage({
             userId,
             parentId: null,
             title: PAGE_HOMEPAGE_DEFAULT_TITLE,
-            isPublic: false,
             sortOrder: 1,
             childrenCount: 0,
             createdAt: now,

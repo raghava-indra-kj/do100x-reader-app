@@ -35,7 +35,6 @@ model page {
   parentId      String?   @db.VarChar(36)
   title         String    @db.VarChar(1000)
   content       Json?
-  isPublic      Boolean   @default(false)
   category      String?   @db.VarChar(255)
   sortOrder     Int
   childrenCount Int

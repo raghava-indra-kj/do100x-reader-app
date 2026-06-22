@@ -4,7 +4,19 @@ import { ApiError } from "@core/errors/api-error";
 import { PageError } from "./errors/page-error";
 import { PAGE_NOT_FOUND, PAGE_ACCESS_DENIED } from "./errors/page-error.constants";
 import { getPage } from "./get-page.service";
+import { queryPages } from "./query-pages.service";
+import { QueryPagesBody } from "./query-pages.models";
 import { requirePageIdParam } from "./validators/page-id.validator";
+
+export async function handleQueryPages(req: Request, res: Response): Promise<void> {
+    const body = req.body as QueryPagesBody;
+    const result = await queryPages({
+        currentUser: req.currentUser,
+        parentId: body.parentId,
+        searchQuery: body.searchQuery,
+    });
+    res.status(StatusCodes.OK).json(result);
+}
 
 export async function handleGetPage(req: Request, res: Response): Promise<void> {
     const pageId = requirePageIdParam(req.params.id);
@@ -12,7 +24,7 @@ export async function handleGetPage(req: Request, res: Response): Promise<void> 
     try {
         const result = await getPage({
             pageId,
-            currentUser: req.optCurrentUser,
+            currentUser: req.currentUser,
         });
         res.status(StatusCodes.OK).json(result);
     } catch (err) {
