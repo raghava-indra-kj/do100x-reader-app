@@ -1,0 +1,3 @@
+export const COMMENT_MIN_LENGTH = 1;
+export const COMMENT_MAX_LENGTH = 10_000;
+export const SELECTION_TEXT_MAX_LENGTH = 50_000;
