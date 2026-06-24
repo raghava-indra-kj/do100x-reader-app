@@ -2,10 +2,12 @@ import type { Page } from '@domain/page/models/page';
 import type { Section } from '@domain/page/models/section';
 import { getPage } from '@domain/page/services/pages-service';
 import { DataState } from '@lib/utils/data-state';
+import type { PageHeadingLevel } from './theme/page-heading-level';
 import { action, computed, makeObservable, observable, runInAction } from 'mobx';
 import { createContext, useContext } from 'react';
 import { PageUiSettingsStore } from './ui-settings-store';
 import { DictionaryStore } from './dictionary-store';
+import { PageReadingState } from './reading-state';
 
 export const PageContext = createContext<PageStore | null>(null);
 
@@ -32,6 +34,7 @@ export class PageStore {
     initDataState: DataState<void>;
     uiSettingsStore: PageUiSettingsStore;
     dictionaryStore: DictionaryStore;
+    readingState: PageReadingState;
     private _currentPage: Page | null;
     private _currentSectionId: string | null;
     commentsVersion: number;
@@ -41,6 +44,7 @@ export class PageStore {
         this.initDataState = DataState.init();
         this.uiSettingsStore = new PageUiSettingsStore();
         this.dictionaryStore = new DictionaryStore();
+        this.readingState = new PageReadingState({ pageId });
         this._currentPage = null;
         this._currentSectionId = null;
         this.commentsVersion = 0;
@@ -55,9 +59,11 @@ export class PageStore {
             currentSection: computed,
             hasPrevSection: computed,
             hasNextSection: computed,
+            headingLevel: computed,
             setCurrentSection: action,
             goToPrevSection: action,
             goToNextSection: action,
+            setHeadingLevel: action,
             bumpCommentsVersion: action,
         });
     }
@@ -89,7 +95,7 @@ export class PageStore {
         const flat = this.flatSections;
         if (flat.length === 0) return null;
 
-        const maxLevel = this.uiSettingsStore.headingLevel.value ?? 6;
+        const maxLevel = this.headingLevel.value ?? 6;
         const selected = this._currentSectionId
             ? flat.findIndex((s) => s.id === this._currentSectionId)
             : 0;
@@ -103,11 +109,21 @@ export class PageStore {
 
     setCurrentSection(section: Section) {
         this._currentSectionId = section.id;
+        this.readingState.setSectionId(section.id);
+    }
+
+    /** Resolves the per-page heading level override, or the global default (H2) when none is set. */
+    get headingLevel(): PageHeadingLevel {
+        return this.readingState.headingLevelOverride ?? this.uiSettingsStore.defaultHeadingLevel;
+    }
+
+    setHeadingLevel(level: PageHeadingLevel) {
+        this.readingState.setHeadingLevel(level);
     }
 
     /** Sections shallow enough to navigate to at the current heading level (mirrors the TOC). */
     get navigableSections(): Section[] {
-        const maxLevel = this.uiSettingsStore.headingLevel.value ?? 6;
+        const maxLevel = this.headingLevel.value ?? 6;
         return this.flatSections.filter((s) => s.level <= maxLevel);
     }
 
@@ -143,7 +159,11 @@ export class PageStore {
         runInAction(() => {
             if (result.ok) {
                 this._currentPage = result.data;
-                this._currentSectionId = null;
+                const persistedSectionId = result.data.isEmpty ? null : this.readingState.sectionId;
+                this._currentSectionId =
+                    persistedSectionId && this.flatSections.some((s) => s.id === persistedSectionId)
+                        ? persistedSectionId
+                        : null;
                 if (result.data.isEmpty && this.uiSettingsStore.sidebarPanel === 'contents') {
                     this.uiSettingsStore.setSidebarPanel('subpages');
                 }

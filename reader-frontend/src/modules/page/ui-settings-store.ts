@@ -13,7 +13,7 @@ export type SidebarPanelId = 'contents' | 'subpages' | 'comments';
 interface StoredSettings {
     fontSizeId: string;
     fontFamiliesId: string;
-    headingLevelId: string;
+    defaultHeadingLevelId: string;
     sidebarPanelOpen: boolean;
     sidebarPanelId: string;
     subpageSortId: string;
@@ -46,7 +46,7 @@ export const usePageUiSettingsStore = () => {
 export class PageUiSettingsStore {
     fontSize: PageFontSizes;
     fontFamilies: PageFontFamilies;
-    headingLevel: PageHeadingLevel;
+    defaultHeadingLevel: PageHeadingLevel;
     sidebarPanelOpen: boolean;
     sidebarPanel: SidebarPanelId;
     subpageSort: PageSubpageSort;
@@ -56,7 +56,7 @@ export class PageUiSettingsStore {
         const stored = loadStored();
         this.fontSize = findById(PageFontSizes.VALUES, stored.fontSizeId, PageFontSizes.BASE);
         this.fontFamilies = findById(PageFontFamilies.VALUES, stored.fontFamiliesId, PageFontFamilies.LEXEND);
-        this.headingLevel = findById(PageHeadingLevel.VALUES, stored.headingLevelId, PageHeadingLevel.H3);
+        this.defaultHeadingLevel = findById(PageHeadingLevel.VALUES, stored.defaultHeadingLevelId, PageHeadingLevel.H2);
         this.sidebarPanelOpen = stored.sidebarPanelOpen ?? true;
         this.sidebarPanel = (['contents', 'subpages', 'comments'] as SidebarPanelId[]).includes(stored.sidebarPanelId as SidebarPanelId)
             ? (stored.sidebarPanelId as SidebarPanelId)
@@ -66,7 +66,7 @@ export class PageUiSettingsStore {
         makeObservable(this, {
             fontSize: observable,
             fontFamilies: observable,
-            headingLevel: observable,
+            defaultHeadingLevel: observable,
             sidebarPanelOpen: observable,
             sidebarPanel: observable,
             subpageSort: observable,
@@ -75,7 +75,7 @@ export class PageUiSettingsStore {
             isFontSizeDecreasable: computed,
             setFontSize: action,
             setFontFamilies: action,
-            setHeadingLevel: action,
+            setDefaultHeadingLevel: action,
             setSidebarPanelOpen: action,
             setSidebarPanel: action,
             setSubpageSort: action,
@@ -89,7 +89,7 @@ export class PageUiSettingsStore {
         const settings: StoredSettings = {
             fontSizeId: this.fontSize.id,
             fontFamiliesId: this.fontFamilies.id,
-            headingLevelId: this.headingLevel.id,
+            defaultHeadingLevelId: this.defaultHeadingLevel.id,
             sidebarPanelOpen: this.sidebarPanelOpen,
             sidebarPanelId: this.sidebarPanel,
             subpageSortId: this.subpageSort.id,
@@ -108,8 +108,8 @@ export class PageUiSettingsStore {
         this.persist();
     }
 
-    setHeadingLevel(headingLevel: PageHeadingLevel) {
-        this.headingLevel = headingLevel;
+    setDefaultHeadingLevel(headingLevel: PageHeadingLevel) {
+        this.defaultHeadingLevel = headingLevel;
         this.persist();
     }
 

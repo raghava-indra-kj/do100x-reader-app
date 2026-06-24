@@ -127,10 +127,10 @@ export function PageAppbar() {
                         const availableHeadings = PageHeadingLevel.VALUES.filter(
                             (h) => h.value !== null && availableLevels.has(h.value),
                         );
-                        const currentId = uiSettings.headingLevel.id;
+                        const currentId = store.headingLevel.id;
                         const isCurrentAvailable = availableHeadings.some((h) => h.id === currentId);
                         if (!isCurrentAvailable && availableHeadings.length > 0) {
-                            uiSettings.setHeadingLevel(availableHeadings[0]);
+                            store.setHeadingLevel(availableHeadings[0]);
                         }
                         const headingLevelItems = Object.fromEntries(
                             availableHeadings.map((h) => [h.id, h.label]),
@@ -138,10 +138,10 @@ export function PageAppbar() {
                         if (Object.keys(headingLevelItems).length === 0) return null;
                         return (
                             <Select
-                                value={uiSettings.headingLevel.id}
+                                value={store.headingLevel.id}
                                 onValueChange={(id) => {
                                     const level = PageHeadingLevel.VALUES.find(h => h.id === id);
-                                    if (level) uiSettings.setHeadingLevel(level);
+                                    if (level) store.setHeadingLevel(level);
                                 }}
                                 items={headingLevelItems}
                                 placeholder="Heading"

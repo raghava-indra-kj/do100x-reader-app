@@ -64,14 +64,14 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     </Observer>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <FormLabel>Heading Level</FormLabel>
+                    <FormLabel>Default Heading Level</FormLabel>
                     <Observer>
                         {() => (
                             <Select
-                                value={uiSettings.headingLevel.id}
+                                value={uiSettings.defaultHeadingLevel.id}
                                 onValueChange={(id) => {
                                     const level = PageHeadingLevel.VALUES.find(h => h.id === id);
-                                    if (level) uiSettings.setHeadingLevel(level);
+                                    if (level) uiSettings.setDefaultHeadingLevel(level);
                                 }}
                                 items={headingLevelItems}
                                 placeholder="Heading"

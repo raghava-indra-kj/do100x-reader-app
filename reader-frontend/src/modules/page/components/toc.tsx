@@ -87,7 +87,7 @@ export const PageToc = observer(function PageToc() {
         );
     }
 
-    const maxLevel = store.uiSettingsStore.headingLevel.value ?? 6;
+    const maxLevel = store.headingLevel.value ?? 6;
     const baseLevel = page.sections[0]?.level ?? 1;
     const activeSectionId = store.currentSection?.id;
 
