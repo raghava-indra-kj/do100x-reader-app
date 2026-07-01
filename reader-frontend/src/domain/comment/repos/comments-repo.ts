@@ -4,7 +4,7 @@ import type { DbComment } from '../models/db-comment';
 
 export interface ICommentsRepo {
 
-    getComments(params: { pageId: string }): AsyncResult<DbComment[], AppError>;
+    getComments(params: { pageId?: string; isExplanation?: boolean; date?: string }): AsyncResult<DbComment[], AppError>;
 
     createComment(params: {
         pageId: string;
@@ -13,6 +13,7 @@ export interface ICommentsRepo {
         selectedText: string;
         body: string;
         linkedPageId: string | null;
+        isExplanation: boolean;
     }): AsyncResult<string, AppError>;
 
     editComment(params: {

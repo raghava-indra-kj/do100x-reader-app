@@ -48,6 +48,10 @@ export function UpsertPageDialog({
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [category, setCategory] = useState<string | null>(null);
+    const [meaningSystemPrompt, setMeaningSystemPrompt] = useState("");
+    const [explanationSystemPrompt, setExplanationSystemPrompt] = useState("");
+    const [doubtSystemPrompt, setDoubtSystemPrompt] = useState("");
+    const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
     const [submitState, setSubmitState] = useState<DataState<void>>(DataState.init);
     const [readNowOpen, setReadNowOpen] = useState(false);
 
@@ -59,6 +63,10 @@ export function UpsertPageDialog({
             setTitle("");
             setContent("");
             setCategory(null);
+            setMeaningSystemPrompt("");
+            setExplanationSystemPrompt("");
+            setDoubtSystemPrompt("");
+            setIsAdvancedOpen(false);
             setSubmitState(DataState.init());
             loadingRef.current = false;
             return;
@@ -70,6 +78,9 @@ export function UpsertPageDialog({
             setTitle(page.title);
             setContent(page.content ?? "");
             setCategory(page.category);
+            setMeaningSystemPrompt(page.meaningSystemPrompt ?? "");
+            setExplanationSystemPrompt(page.explanationSystemPrompt ?? "");
+            setDoubtSystemPrompt(page.doubtSystemPrompt ?? "");
             return;
         }
 
@@ -77,6 +88,9 @@ export function UpsertPageDialog({
             setTitle(initialTitle ?? "");
             setContent(initialContent ?? "");
             setCategory(initialCategory ?? null);
+            setMeaningSystemPrompt("");
+            setExplanationSystemPrompt("");
+            setDoubtSystemPrompt("");
             return;
         }
 
@@ -90,6 +104,9 @@ export function UpsertPageDialog({
                     setTitle(result.data.title);
                     setContent(result.data.content ?? "");
                     setCategory(result.data.category);
+                    setMeaningSystemPrompt(result.data.meaningSystemPrompt ?? "");
+                    setExplanationSystemPrompt(result.data.explanationSystemPrompt ?? "");
+                    setDoubtSystemPrompt(result.data.doubtSystemPrompt ?? "");
                 }
             });
         }
@@ -123,9 +140,21 @@ export function UpsertPageDialog({
         if (!title.trim()) return;
         setSubmitState(DataState.loading());
         const trimmedCategory = category?.trim() || null;
+        const meaningPromptValue = meaningSystemPrompt.trim() || undefined;
+        const explanationPromptValue = explanationSystemPrompt.trim() || undefined;
+        const doubtPromptValue = doubtSystemPrompt.trim() || undefined;
+
         if (isEdit) {
             if (!editId) return;
-            const result = await editPage({ pageId: editId, title: title.trim(), content, category: trimmedCategory });
+            const result = await editPage({
+                pageId: editId,
+                title: title.trim(),
+                content,
+                category: trimmedCategory,
+                meaningSystemPrompt: meaningPromptValue,
+                explanationSystemPrompt: explanationPromptValue,
+                doubtSystemPrompt: doubtPromptValue,
+            });
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
                 onOpenChange(false);
@@ -140,6 +169,9 @@ export function UpsertPageDialog({
                 title: title.trim(),
                 content,
                 category: trimmedCategory,
+                meaningSystemPrompt: meaningPromptValue,
+                explanationSystemPrompt: explanationPromptValue,
+                doubtSystemPrompt: doubtPromptValue,
             });
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
@@ -149,7 +181,7 @@ export function UpsertPageDialog({
                 setSubmitState(DataState.error(result.error));
             }
         }
-    }, [title, content, category, isEdit, editId, parentPageId, authStore, navigate, onOpenChange, store]);
+    }, [title, content, category, isEdit, editId, parentPageId, authStore, navigate, onOpenChange, store, meaningSystemPrompt, explanationSystemPrompt, doubtSystemPrompt]);
 
     return (
         <Dialog
@@ -199,6 +231,49 @@ export function UpsertPageDialog({
                         placeholder="Write your content here…"
                         className="w-full flex-1 resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-4 py-2.5 text-sm rounded-[var(--radius-md)] transition-colors outline-none overflow-y-auto"
                     />
+                </div>
+                {/* Collapsible AI Prompts section */}
+                <div className="shrink-0 space-y-3">
+                    <button
+                        type="button"
+                        onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-subtle)] hover:text-[var(--color-text-strong)] cursor-pointer select-none"
+                    >
+                        <span className="w-3 text-center">{isAdvancedOpen ? '▼' : '▶'}</span>
+                        <span>AI Prompt Customizations (Optional)</span>
+                    </button>
+
+                    {isAdvancedOpen && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-lg bg-[var(--color-surface-soft)] border border-[var(--color-border-subtle)] animate-in fade-in slide-in-from-top-2 duration-150">
+                            <div className="space-y-2">
+                                <FormLabel>Prompt for Explanation</FormLabel>
+                                <textarea
+                                    value={explanationSystemPrompt}
+                                    onChange={(e) => setExplanationSystemPrompt(e.target.value)}
+                                    placeholder="Use inherited page prompt..."
+                                    className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <FormLabel>Prompt for Meanings</FormLabel>
+                                <textarea
+                                    value={meaningSystemPrompt}
+                                    onChange={(e) => setMeaningSystemPrompt(e.target.value)}
+                                    placeholder="Use inherited page prompt..."
+                                    className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <FormLabel>Prompt for Asking Doubts</FormLabel>
+                                <textarea
+                                    value={doubtSystemPrompt}
+                                    onChange={(e) => setDoubtSystemPrompt(e.target.value)}
+                                    placeholder="Use inherited page prompt..."
+                                    className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
                 {submitState.isError && (
                     <p className="text-sm shrink-0 text-[var(--color-error)]">

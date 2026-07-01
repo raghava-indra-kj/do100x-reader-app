@@ -13,6 +13,9 @@ export interface IPagesRepo {
         title: string;
         content: string;
         category: string | null;
+        meaningSystemPrompt?: string;
+        explanationSystemPrompt?: string;
+        doubtSystemPrompt?: string;
     }): AsyncResult<string, AppError>;
 
     editPage(params: {
@@ -20,6 +23,9 @@ export interface IPagesRepo {
         title: string;
         content: string;
         category: string | null;
+        meaningSystemPrompt?: string;
+        explanationSystemPrompt?: string;
+        doubtSystemPrompt?: string;
     }): AsyncResult<void, AppError>;
 
     deletePage(params: { pageId: string }): AsyncResult<void, AppError>;

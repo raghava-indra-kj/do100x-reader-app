@@ -8,6 +8,7 @@ export const DbCommentSchema = z.object({
     selectedText: z.string(),
     body: z.string(),
     linkedPageId: z.string().nullable(),
+    isExplanation: z.boolean(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
 });

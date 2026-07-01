@@ -5,9 +5,13 @@ import { DbCommentSchema, type DbComment } from '../models/db-comment';
 import type { ICommentsRepo } from './comments-repo';
 
 export class CommentsRepoApi implements ICommentsRepo {
-    async getComments({ pageId }: { pageId: string }): AsyncResult<DbComment[], AppError> {
+    async getComments(params: { pageId?: string; isExplanation?: boolean; date?: string }): AsyncResult<DbComment[], AppError> {
         try {
-            const { data } = await apiClient.get('/comments', { params: { pageId } });
+            const query: Record<string, string> = {};
+            if (params.pageId) query.pageId = params.pageId;
+            if (params.isExplanation !== undefined) query.isExplanation = String(params.isExplanation);
+            if (params.date) query.date = params.date;
+            const { data } = await apiClient.get('/comments', { params: query });
             return ok((data as unknown[]).map((item) => DbCommentSchema.parse(item)));
         } catch (error) {
             return err(new AppError({ message: getApiErrorMessage(error, 'Failed to get comments'), cause: error }));
@@ -21,6 +25,7 @@ export class CommentsRepoApi implements ICommentsRepo {
         selectedText: string;
         body: string;
         linkedPageId: string | null;
+        isExplanation: boolean;
     }): AsyncResult<string, AppError> {
         try {
             const { data } = await apiClient.post('/comments', params);

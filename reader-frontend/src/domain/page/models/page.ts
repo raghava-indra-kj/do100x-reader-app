@@ -12,6 +12,9 @@ export class Page {
     readonly updatedAt: Date;
     readonly sections: Section[];
     readonly childrenCount: number;
+    readonly meaningSystemPrompt: string | null;
+    readonly explanationSystemPrompt: string | null;
+    readonly doubtSystemPrompt: string | null;
 
     constructor(params: {
         id: string;
@@ -23,6 +26,9 @@ export class Page {
         updatedAt: Date;
         sections: Section[];
         childrenCount: number;
+        meaningSystemPrompt?: string | null;
+        explanationSystemPrompt?: string | null;
+        doubtSystemPrompt?: string | null;
     }) {
         this.id = params.id;
         this.parentPageId = params.parentPageId;
@@ -33,6 +39,9 @@ export class Page {
         this.updatedAt = params.updatedAt;
         this.sections = params.sections;
         this.childrenCount = params.childrenCount;
+        this.meaningSystemPrompt = params.meaningSystemPrompt ?? null;
+        this.explanationSystemPrompt = params.explanationSystemPrompt ?? null;
+        this.doubtSystemPrompt = params.doubtSystemPrompt ?? null;
     }
 
     get isRootPage(): boolean {
@@ -46,5 +55,4 @@ export class Page {
     get hasChildren(): boolean {
         return this.childrenCount > 0;
     }
-
 }

@@ -20,6 +20,9 @@ router.get("/:pageId", async (req, res) => {
       childrenCount: true,
       createdAt: true,
       updatedAt: true,
+      meaningSystemPrompt: true,
+      explanationSystemPrompt: true,
+      doubtSystemPrompt: true,
     },
   });
 
@@ -39,6 +42,9 @@ router.get("/:pageId", async (req, res) => {
     childrenCount: page.childrenCount,
     createdAt: page.createdAt,
     updatedAt: page.updatedAt,
+    meaningSystemPrompt: page.meaningSystemPrompt ?? null,
+    explanationSystemPrompt: page.explanationSystemPrompt ?? null,
+    doubtSystemPrompt: page.doubtSystemPrompt ?? null,
   });
 });
 
@@ -88,12 +94,24 @@ router.get("/", async (req, res) => {
 
 // POST /pages
 router.post("/", async (req, res) => {
-  const { parentPageId, title, content, category, userId } = req.body as {
+  const {
+    parentPageId,
+    title,
+    content,
+    category,
+    userId,
+    meaningSystemPrompt,
+    explanationSystemPrompt,
+    doubtSystemPrompt,
+  } = req.body as {
     parentPageId: string | null;
     title: string;
     content: string;
     category: string | null;
     userId: string;
+    meaningSystemPrompt?: string;
+    explanationSystemPrompt?: string;
+    doubtSystemPrompt?: string;
   };
 
   const now = new Date();
@@ -116,6 +134,9 @@ router.post("/", async (req, res) => {
       childrenCount: 0,
       createdAt: now,
       updatedAt: now,
+      meaningSystemPrompt: meaningSystemPrompt || null,
+      explanationSystemPrompt: explanationSystemPrompt || null,
+      doubtSystemPrompt: doubtSystemPrompt || null,
     },
   });
 
@@ -132,11 +153,33 @@ router.post("/", async (req, res) => {
 // PUT /pages/:pageId
 router.put("/:pageId", async (req, res) => {
   const { pageId } = req.params;
-  const { title, content, category } = req.body as { title: string; content: string; category: string | null };
+  const {
+    title,
+    content,
+    category,
+    meaningSystemPrompt,
+    explanationSystemPrompt,
+    doubtSystemPrompt,
+  } = req.body as {
+    title: string;
+    content: string;
+    category: string | null;
+    meaningSystemPrompt?: string;
+    explanationSystemPrompt?: string;
+    doubtSystemPrompt?: string;
+  };
 
   await prisma.page.update({
     where: { id: pageId },
-    data: { title, content, category: category ?? null, updatedAt: new Date() },
+    data: {
+      title,
+      content,
+      category: category ?? null,
+      meaningSystemPrompt: meaningSystemPrompt || null,
+      explanationSystemPrompt: explanationSystemPrompt || null,
+      doubtSystemPrompt: doubtSystemPrompt || null,
+      updatedAt: new Date(),
+    },
   });
 
   res.status(204).send();

@@ -7,7 +7,7 @@ import { DataState } from '@lib/utils/data-state';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Input } from '@modules/core/ui/primitives/input';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
-import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link, Unlink } from 'lucide-react';
+import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link, Unlink, NotebookPen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { pagesPageWithIdRouteValue } from '@boot/routes';
 
@@ -157,6 +157,11 @@ function CommentCard({
                 </div>
                 {comment.linkedPageId && (
                     <Link size={11} className="shrink-0 text-[var(--color-brand)]" />
+                )}
+                {comment.isExplanation && (
+                    <Tooltip content="Marked as my explanation">
+                        <NotebookPen size={11} className="shrink-0 text-[var(--color-text-muted)]" />
+                    </Tooltip>
                 )}
             </button>
 

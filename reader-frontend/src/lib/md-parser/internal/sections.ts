@@ -60,7 +60,7 @@ function sliceContent(nodes: AstNode[], source: string): string | null {
  */
 function makePreamble(nodes: AstNode[], source: string): MdSection {
     return {
-        id: crypto.randomUUID(),
+        id: "preamble",
         title: null,
         rawTitle: null,
         level: 0,
@@ -93,6 +93,7 @@ export function buildSections(tree: Root, source: string): MdSection[] {
     const roots: MdSection[] = [];
     const stack: MdSection[] = [];
     let buffer: AstNode[] = [];
+    const slugCounts: Record<string, number> = {};
 
     for (const node of tree.children) {
         if ((node as { type: string }).type === "yaml") continue;
@@ -117,9 +118,18 @@ export function buildSections(tree: Root, source: string): MdSection[] {
             stack.pop();
         }
 
+        const title = headingTitle(heading);
+        const slug = title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "") || "section";
+        const count = slugCounts[slug] ?? 0;
+        slugCounts[slug] = count + 1;
+        const sectionId = `sec-${heading.depth}-${slug}${count > 0 ? `-${count}` : ""}`;
+
         const section: MdSection = {
-            id: crypto.randomUUID(),
-            title: headingTitle(heading),
+            id: sectionId,
+            title,
             rawTitle: headingRawTitle(heading, source),
             level: heading.depth,
             content: null,

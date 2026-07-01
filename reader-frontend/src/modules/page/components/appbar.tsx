@@ -37,35 +37,53 @@ export function PageAppbar() {
 
     return (
         <header className="shrink-0 flex items-center justify-between border-b border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-4 py-2.5 sm:px-6">
-            <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0 text-xs leading-tight">
                 <Observer>
                     {() => {
                         const page = store.optCurrentPage;
+                        const section = store.currentSection;
+                        const parentTitle = store.parentPageTitle;
                         if (!page) return null;
                         const parentPageId = page.parentPageId;
-                        if (parentPageId) {
-                            return (
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        iconOnly
-                                        onClick={() => navigate(pagesPageWithIdRouteValue(parentPageId))}
-                                        tooltip="Back to parent page"
-                                    >
-                                        <ArrowLeft size={16} />
-                                    </Button>
-                                    <span className="truncate font-[family-name:var(--font-serif)] text-base font-semibold text-[var(--color-text-strong)]">{page.title}</span>
-                                </div>
-                            );
-                        }
+
                         return (
-                            <div
-                                className="flex cursor-pointer items-center gap-2.5 min-w-0"
-                                onClick={() => navigate(homePageRoute)}
-                            >
-                                <img src="/logo.png" alt="" className="h-6 w-6 shrink-0" />
-                                <span className="truncate font-[family-name:var(--font-serif)] text-base font-semibold text-[var(--color-text-strong)]">{page.title}</span>
+                            <div className="flex items-center gap-1 min-w-0">
+                                {parentPageId ? (
+                                    <>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            iconOnly
+                                            onClick={() => navigate(pagesPageWithIdRouteValue(parentPageId))}
+                                            tooltip="Back to parent page"
+                                        >
+                                            <ArrowLeft size={14} />
+                                        </Button>
+                                        <span
+                                            className="truncate max-w-[100px] cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors"
+                                            onClick={() => navigate(pagesPageWithIdRouteValue(parentPageId))}
+                                            title={parentTitle ?? undefined}
+                                        >
+                                            {parentTitle || '\u2026'}
+                                        </span>
+                                        <ChevronRight size={10} className="shrink-0 text-[var(--color-text-muted)]" />
+                                    </>
+                                ) : (
+                                    <div className="flex cursor-pointer items-center gap-1.5 shrink-0" onClick={() => navigate(homePageRoute)}>
+                                        <img src="/logo.png" alt="" className="h-4 w-4 shrink-0" />
+                                    </div>
+                                )}
+                                <span className="truncate font-semibold text-[var(--color-text-strong)] max-w-[160px]" title={page.title}>
+                                    {page.title}
+                                </span>
+                                {section?.title && (
+                                    <>
+                                        <ChevronRight size={10} className="shrink-0 text-[var(--color-text-muted)]" />
+                                        <span className="truncate text-[var(--color-text-muted)] max-w-[200px]" title={section.title}>
+                                            {section.title}
+                                        </span>
+                                    </>
+                                )}
                             </div>
                         );
                     }}

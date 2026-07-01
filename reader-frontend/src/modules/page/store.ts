@@ -8,6 +8,15 @@ import { createContext, useContext } from 'react';
 import { PageUiSettingsStore } from './ui-settings-store';
 import { DictionaryStore } from './dictionary-store';
 import { PageReadingState } from './reading-state';
+import { MeaningStore } from './meaning-store';
+import { DoubtStore } from './doubt-store';
+import { ExplanationStore } from './explanation-store';
+
+export interface Motivation {
+    quote: string;
+    meaning: string;
+    by: string;
+}
 
 export const PageContext = createContext<PageStore | null>(null);
 
@@ -34,37 +43,58 @@ export class PageStore {
     initDataState: DataState<void>;
     uiSettingsStore: PageUiSettingsStore;
     dictionaryStore: DictionaryStore;
+    meaningStore: MeaningStore;
+    doubtStore: DoubtStore;
+    explanationStore: ExplanationStore;
     readingState: PageReadingState;
     private _currentPage: Page | null;
     private _currentSectionId: string | null;
+    _parentPageTitle: string | null;
+    _motivationQuote: Motivation | null;
     commentsVersion: number;
+    vocabVersion: number;
 
     constructor({ pageId }: { pageId: string }) {
         this.pageId = pageId;
         this.initDataState = DataState.init();
         this.uiSettingsStore = new PageUiSettingsStore();
         this.dictionaryStore = new DictionaryStore();
+        this.meaningStore = new MeaningStore(this);
+        this.doubtStore = new DoubtStore(this);
+        this.explanationStore = new ExplanationStore(this);
         this.readingState = new PageReadingState({ pageId });
         this._currentPage = null;
         this._currentSectionId = null;
+        this._parentPageTitle = null;
+        this._motivationQuote = null;
         this.commentsVersion = 0;
-        makeObservable<PageStore, "_currentPage" | "_currentSectionId">(this, {
+        this.vocabVersion = 0;
+        makeObservable<PageStore, "_currentPage" | "_currentSectionId" | "_parentPageTitle">(this, {
             initDataState: observable.ref,
             _currentPage: observable.ref,
             _currentSectionId: observable.ref,
+            _parentPageTitle: observable.ref,
+            _motivationQuote: observable.ref,
             commentsVersion: observable,
+            vocabVersion: observable,
             optCurrentPage: computed,
             flatSections: computed,
             navigableSections: computed,
             currentSection: computed,
             hasPrevSection: computed,
             hasNextSection: computed,
+            parentPageTitle: computed,
+            motivationQuote: computed,
+            readingProgress: computed,
             headingLevel: computed,
             setCurrentSection: action,
             goToPrevSection: action,
             goToNextSection: action,
+            triggerMotivation: action,
+            dismissMotivation: action,
             setHeadingLevel: action,
             bumpCommentsVersion: action,
+            bumpVocabVersion: action,
         });
     }
 
@@ -76,8 +106,20 @@ export class PageStore {
         this.commentsVersion++;
     }
 
+    bumpVocabVersion() {
+        this.vocabVersion++;
+    }
+
     get optCurrentPage(): Page | null {
         return this._currentPage;
+    }
+
+    get parentPageTitle(): string | null {
+        return this._parentPageTitle;
+    }
+
+    get motivationQuote(): Motivation | null {
+        return this._motivationQuote;
     }
 
     get flatSections(): Section[] {
@@ -139,6 +181,16 @@ export class PageStore {
         return sections.indexOf(current) < sections.length - 1;
     }
 
+    get readingProgress(): number {
+        const sections = this.navigableSections;
+        if (sections.length === 0) return 0;
+        const current = this.currentSection;
+        if (!current) return 0;
+        const index = sections.indexOf(current);
+        if (index < 0) return 0;
+        return Math.round(((index + 1) / sections.length) * 100);
+    }
+
     goToPrevSection() {
         const current = this.currentSection;
         if (!current) return;
@@ -168,8 +220,28 @@ export class PageStore {
                     this.uiSettingsStore.setSidebarPanel('subpages');
                 }
                 this.initDataState = DataState.data(undefined);
+                if (result.data.parentPageId) {
+                    this.loadParentPageTitle(result.data.parentPageId);
+                }
             } else {
                 this.initDataState = DataState.error(result.error);
+            }
+        });
+    }
+
+    triggerMotivation(quote: Motivation) {
+        this._motivationQuote = quote;
+    }
+
+    dismissMotivation() {
+        this._motivationQuote = null;
+    }
+
+    async loadParentPageTitle(parentPageId: string) {
+        const result = await getPage({ pageId: parentPageId });
+        runInAction(() => {
+            if (result.ok) {
+                this._parentPageTitle = result.data.title;
             }
         });
     }

@@ -15,6 +15,7 @@ function toComment(db: import('../models/db-comment').DbComment): Comment {
         selectedText: db.selectedText,
         body: db.body,
         linkedPageId: db.linkedPageId,
+        isExplanation: db.isExplanation,
         createdAt: db.createdAt,
         updatedAt: db.updatedAt,
     });
@@ -29,11 +30,24 @@ export async function getComments(
     return ok(result.data.map(toComment));
 }
 
+export async function getExplanations(
+    params: { pageId?: string; date?: string }
+): AsyncResult<Comment[], AppError> {
+    const repo = container.get<ICommentsRepo>(TYPES.ICommentsRepo);
+    const result = await repo.getComments({ ...params, isExplanation: true });
+    if (!result.ok) return result;
+    return ok(result.data.map(toComment));
+}
+
 export async function createComment(
-    params: { pageId: string; pageTitle: string; sectionTitle: string | null; selectedText: string; body: string; linkedPageId?: string | null }
+    params: { pageId: string; pageTitle: string; sectionTitle: string | null; selectedText: string; body: string; linkedPageId?: string | null; isExplanation?: boolean }
 ): AsyncResult<string, AppError> {
     const repo = container.get<ICommentsRepo>(TYPES.ICommentsRepo);
-    const result = await repo.createComment({ ...params, linkedPageId: params.linkedPageId ?? null });
+    const result = await repo.createComment({
+        ...params,
+        linkedPageId: params.linkedPageId ?? null,
+        isExplanation: params.isExplanation ?? false,
+    });
     if (!result.ok) return result;
     return ok(result.data);
 }

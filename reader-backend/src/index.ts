@@ -6,6 +6,10 @@ import meRouter from "./me";
 import signupRouter from "./signup";
 import pagesRouter from "./pages";
 import commentsRouter from "./comments";
+import vocabularyRouter from "./vocabulary";
+import modelConfigRouter from "./model-config";
+import userModelsRouter from "./user-models";
+import chatRouter from "./chat";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,6 +29,10 @@ app.use("/backend-api/me", meRouter);
 app.use("/backend-api/signup", signupRouter);
 app.use("/backend-api/pages", pagesRouter);
 app.use("/backend-api/comments", commentsRouter);
+app.use("/backend-api/vocabulary", vocabularyRouter);
+app.use("/backend-api/model-config", modelConfigRouter);
+app.use("/backend-api/user-models", userModelsRouter);
+app.use("/backend-api/chat", chatRouter);
 
 if (hasFrontend) {
   app.get("*splat", (_req, res) => {

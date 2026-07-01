@@ -1,6 +1,6 @@
 import { usePageStore } from '../../store';
 import type { SidebarPanelId } from '../../ui-settings-store';
-import { List, FileText, MessageSquare } from 'lucide-react';
+import { List, FileText, MessageSquare, NotebookPen, Sparkles, HelpCircle, Compass } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 
@@ -8,6 +8,10 @@ const panels: { id: SidebarPanelId; label: string; shortcut: string; icon: typeo
     { id: 'contents', label: 'Contents', shortcut: 'Alt+C', icon: List },
     { id: 'subpages', label: 'Subpages', shortcut: 'Alt+S', icon: FileText },
     { id: 'comments', label: 'Comments', shortcut: 'Alt+M', icon: MessageSquare },
+    { id: 'vocabulary', label: 'Vocabulary', shortcut: 'Alt+V', icon: NotebookPen },
+    { id: 'meaning', label: 'AI Meaning', shortcut: 'Alt+A', icon: Sparkles },
+    { id: 'explanation', label: 'AI Explanation', shortcut: 'Alt+E', icon: Compass },
+    { id: 'doubt', label: 'AI Doubts', shortcut: 'Alt+D', icon: HelpCircle },
 ];
 
 export function NavRail() {

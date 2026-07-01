@@ -42,6 +42,9 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         updatedAt: dbPage.updatedAt,
         sections: doc.sections.map((s) => toSection({ mdSection: s, pageId: dbPage.id })),
         childrenCount: dbPage.childrenCount,
+        meaningSystemPrompt: dbPage.meaningSystemPrompt,
+        explanationSystemPrompt: dbPage.explanationSystemPrompt,
+        doubtSystemPrompt: dbPage.doubtSystemPrompt,
     });
     return ok(page);
 }

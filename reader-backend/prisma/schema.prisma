@@ -23,9 +23,12 @@ model page {
   category      String?   @db.VarChar(255)
   sortOrder     Int
   childrenCount Int
-  createdAt     DateTime  @db.DateTime(6)
-  updatedAt     DateTime  @db.DateTime(6)
-  deletedAt     DateTime? @db.DateTime(6)
+  createdAt               DateTime  @db.DateTime(6)
+  updatedAt               DateTime  @db.DateTime(6)
+  deletedAt               DateTime? @db.DateTime(6)
+  meaningSystemPrompt     String?   @db.Text
+  explanationSystemPrompt String?   @db.Text
+  doubtSystemPrompt       String?   @db.Text
 }
 
 model comment {
@@ -36,6 +39,34 @@ model comment {
   selectedText  String   @db.Text
   body          String   @db.Text
   linkedPageId  String?  @db.VarChar(36)
+  isExplanation Boolean  @default(false)
   createdAt     DateTime @db.DateTime(6)
   updatedAt     DateTime @db.DateTime(6)
+}
+
+model vocabulary {
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  pageId    String   @db.VarChar(36)
+  term      String   @db.VarChar(255)
+  createdAt DateTime @db.DateTime(6)
+}
+
+model model_config {
+  id                 String  @id @default(uuid()) @db.VarChar(36)
+  userId             String  @unique @db.VarChar(36)
+  baseUrl            String  @db.VarChar(500)
+  apiKey             String  @db.VarChar(500)
+  explanationModelId      String? @db.VarChar(255)
+  meaningModelId          String? @db.VarChar(255)
+  doubtModelId            String? @db.VarChar(255)
+  meaningSystemPrompt     String? @db.Text
+  explanationSystemPrompt String? @db.Text
+  doubtSystemPrompt       String? @db.Text
+}
+
+model user_model {
+  id      String @id @default(uuid()) @db.VarChar(36)
+  userId  String @db.VarChar(36)
+  name    String @db.VarChar(255)
+  modelId String @db.VarChar(255)
 }

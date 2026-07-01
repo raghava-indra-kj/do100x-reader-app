@@ -11,6 +11,17 @@ export class PageFontSizes {
         this.value = value;
     }
 
+    public static readonly XS = new PageFontSizes('xs', 'XS', {
+        paragraph: 13,
+        h1: 24, h2: 20, h3: 18, h4: 16, h5: 14, h6: 13,
+        code: 12,
+        equation: 13,
+        blockquote: 13,
+        callout: 12,
+        listItem: 13,
+        table: 12,
+    });
+
     public static readonly SM = new PageFontSizes('sm', 'Small', {
         paragraph: 14,
         h1: 26, h2: 22, h3: 19, h4: 17, h5: 15, h6: 14,
@@ -99,7 +110,19 @@ export class PageFontSizes {
         table: 18,
     });
 
+    public static readonly XL6 = new PageFontSizes('6xl', '6XL', {
+        paragraph: 36,
+        h1: 58, h2: 50, h3: 44, h4: 38, h5: 36, h6: 36,
+        code: 24,
+        equation: 36,
+        blockquote: 30,
+        callout: 22,
+        listItem: 36,
+        table: 20,
+    });
+
     public static readonly VALUES: PageFontSizes[] = [
+        PageFontSizes.XS,
         PageFontSizes.SM,
         PageFontSizes.BASE,
         PageFontSizes.LG,
@@ -108,5 +131,6 @@ export class PageFontSizes {
         PageFontSizes.XL3,
         PageFontSizes.XL4,
         PageFontSizes.XL5,
+        PageFontSizes.XL6,
     ];
 }

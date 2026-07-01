@@ -8,6 +8,8 @@ import { PageFontSizes } from '../theme/page-font-sizes';
 import { PageHeadingLevel } from '../theme/page-heading-level';
 import { Observer } from 'mobx-react-lite';
 import { X } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { settingsPageRoute } from '@boot/routes';
 
 const fontFamilyItems = Object.fromEntries(PageFontFamilies.VALUES.map(f => [f.id, f.label]));
 const fontSizeItems = Object.fromEntries(PageFontSizes.VALUES.map(s => [s.id, s.label]));
@@ -82,6 +84,11 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                 <div className="flex flex-col gap-2">
                     <FormLabel>Theme</FormLabel>
                     <ThemeSelector />
+                </div>
+                <div className="border-t border-[var(--color-border-subtle)] pt-4 flex justify-center">
+                    <Link to={settingsPageRoute} onClick={() => onOpenChange(false)} className="text-xs text-[var(--color-brand)] font-medium hover:underline">
+                        Configure AI models &rarr;
+                    </Link>
                 </div>
             </div>
         </Dialog>

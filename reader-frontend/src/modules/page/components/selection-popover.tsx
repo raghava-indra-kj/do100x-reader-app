@@ -5,8 +5,9 @@ import type { Section } from '@domain/page/models/section';
 import { useTextSelection } from '../hooks/use-text-selection';
 import { usePageStore } from '../store';
 import { createComment } from '@domain/comment/services/comments-service';
+import { createVocabulary } from '@domain/vocabulary/services/vocabulary-service';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
-import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote, Copy, Check } from 'lucide-react';
+import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote, Copy, Check, NotebookPen } from 'lucide-react';
 
 const POPOVER_OFFSET = 10;
 const GOOGLE_URL_MAX = 2048;
@@ -66,7 +67,9 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
     const [view, setView] = useState<'menu' | 'doubt' | 'comment'>('menu');
     const [doubt, setDoubt] = useState('');
     const [commentBody, setCommentBody] = useState('');
+    const [isExplanation, setIsExplanation] = useState(false);
     const [isSavingComment, setIsSavingComment] = useState(false);
+    const [isSavingVocab, setIsSavingVocab] = useState(false);
     const [doubtCopied, setDoubtCopied] = useState(false);
     const [popoverHeight, setPopoverHeight] = useState(180);
 
@@ -74,6 +77,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
         setView('menu');
         setDoubt('');
         setCommentBody('');
+        setIsExplanation(false);
         setDoubtCopied(false);
     }, [selection?.text]);
 
@@ -208,13 +212,30 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
             sectionTitle: sectionTitle || null,
             selectedText: trimmedText,
             body: commentBody.trim(),
+            isExplanation,
         });
         setIsSavingComment(false);
         if (result.ok) {
             setCommentBody('');
+            setIsExplanation(false);
             setView('menu');
-            toast.success('Comment saved');
+            toast.success(isExplanation ? 'Explanation saved' : 'Comment saved');
             store.bumpCommentsVersion();
+        }
+    };
+
+    const handleVocabSubmit = async () => {
+        if (!trimmedText || isSavingVocab) return;
+        setIsSavingVocab(true);
+        const result = await createVocabulary({
+            pageId: page.id,
+            term: trimmedText,
+        });
+        setIsSavingVocab(false);
+        if (result.ok) {
+            setView('menu');
+            toast.success('Added to vocabulary');
+            store.bumpVocabVersion();
         }
     };
 
@@ -235,6 +256,28 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                 >
                     <BookOpen size={13} />
                     <span>Meaning</span>
+                </button>
+
+                <button
+                    onClick={() => {
+                        store.meaningStore.open(trimmedText, page.title, sectionTitle);
+                    }}
+                    className={`${btnBase} ${btnEnabled}`}
+                    title="Get AI Meaning"
+                >
+                    <Sparkles size={13} />
+                    <span>AI Meaning</span>
+                </button>
+
+                <button
+                    onClick={() => {
+                        store.explanationStore.open(trimmedText, page.title, sectionTitle);
+                    }}
+                    className={`${btnBase} ${btnEnabled}`}
+                    title="Get AI Explanation"
+                >
+                    <Sparkles size={13} />
+                    <span>AI Explain</span>
                 </button>
 
                 <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
@@ -287,6 +330,19 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                     <StickyNote size={13} />
                     <span>Add Comment</span>
                 </button>
+
+                <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
+
+                {/* Add to Vocabulary */}
+                <button
+                    onClick={handleVocabSubmit}
+                    disabled={isSavingVocab}
+                    className={`${btnBase} ${btnEnabled}`}
+                    title="Add this term to your vocabulary"
+                >
+                    <NotebookPen size={13} />
+                    <span>{isSavingVocab ? 'Adding…' : 'Add to Vocabulary'}</span>
+                </button>
             </div>
         ) : view === 'doubt' ? (
             <div
@@ -332,6 +388,23 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                         </span>
                     </div>
                 </div>
+
+                {/* Ask AI in-app button */}
+                <button
+                    onClick={() => {
+                        store.doubtStore.open(doubt, trimmedText, page.title, sectionTitle);
+                    }}
+                    disabled={!doubt.trim()}
+                    className={`w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${
+                        doubt.trim()
+                            ? 'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-hover)] cursor-pointer active:scale-95'
+                            : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] opacity-40 cursor-not-allowed'
+                    }`}
+                    title="Explain within the app"
+                >
+                    <Sparkles size={13} className="shrink-0" />
+                    <span>Ask AI (In-App)</span>
+                </button>
 
                 {/* Linear Action Buttons */}
                 <div className="flex items-center gap-1.5 w-full">
@@ -407,6 +480,16 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                     className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] resize-none h-20"
                     autoFocus
                 />
+
+                <label className="flex items-center gap-1.5 -mt-0.5 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={isExplanation}
+                        onChange={(e) => setIsExplanation(e.target.checked)}
+                        className="h-3 w-3 rounded border-[var(--color-border-default)] accent-[var(--color-brand)] cursor-pointer"
+                    />
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Mark as my explanation</span>
+                </label>
 
                 <div className="flex items-center justify-end mt-1">
                     <button

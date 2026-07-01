@@ -9,10 +9,17 @@ import { NavRail } from './components/nav-rail';
 import { PageSubpages } from './components/subpages';
 import { PageToc } from './components/toc';
 import { PageComments } from './components/comments-panel';
+import { PageVocabulary } from './components/vocabulary-panel';
+import { PageMeaningPanel } from './components/meaning-panel';
+import { PageDoubtPanel } from './components/doubt-panel';
+import { PageExplanationPanel } from './components/explanation-panel';
 import { PageMain } from './components/main-content';
 import { DictionaryPanel } from './components/dictionary-panel';
 import { UpsertPageDialog } from './components/upsert-page';
+import { Dialog, BaseDialog } from '@modules/core/ui/primitives/dialog';
+import { Button } from '@modules/core/ui/primitives/button';
 import { PageContext, PageStore, usePageStore } from './store';
+import type { Motivation } from './store';
 import { useClipboardPaste } from './hooks/use-clipboard-paste';
 
 const SCROLL_STEP = 80;
@@ -48,6 +55,18 @@ const SidebarPanel = observer(function SidebarPanel() {
     }
     if (uiSettings.sidebarPanel === 'comments') {
         return <PageComments />;
+    }
+    if (uiSettings.sidebarPanel === 'vocabulary') {
+        return <PageVocabulary />;
+    }
+    if (uiSettings.sidebarPanel === 'meaning') {
+        return <PageMeaningPanel />;
+    }
+    if (uiSettings.sidebarPanel === 'doubt') {
+        return <PageDoubtPanel />;
+    }
+    if (uiSettings.sidebarPanel === 'explanation') {
+        return <PageExplanationPanel />;
     }
     return <PageToc />;
 });
@@ -98,6 +117,34 @@ const PageContent = observer(function PageContent() {
             uiSettings.setSidebarPanel('comments');
         }
     }, { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('alt+v', () => {
+        if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'vocabulary') {
+            uiSettings.setSidebarPanelOpen(false);
+        } else {
+            uiSettings.setSidebarPanel('vocabulary');
+        }
+    }, { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('alt+a', () => {
+        if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'meaning') {
+            uiSettings.setSidebarPanelOpen(false);
+        } else {
+            uiSettings.setSidebarPanel('meaning');
+        }
+    }, { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('alt+d', () => {
+        if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'doubt') {
+            uiSettings.setSidebarPanelOpen(false);
+        } else {
+            uiSettings.setSidebarPanel('doubt');
+        }
+    }, { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('alt+e', () => {
+        if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'explanation') {
+            uiSettings.setSidebarPanelOpen(false);
+        } else {
+            uiSettings.setSidebarPanel('explanation');
+        }
+    }, { preventDefault: true, enableOnFormTags: false });
 
     const [createWithPaste, setCreateWithPaste] = useState<{ open: boolean; title: string; content: string; category: string | null }>({ open: false, title: '', content: '', category: null });
 
@@ -112,11 +159,54 @@ const PageContent = observer(function PageContent() {
 
     useClipboardPaste(handleGlobalPaste);
 
+    const [motivations, setMotivations] = useState<Motivation[]>([]);
+    const prevProgressRef = useRef<number | null>(null);
+    const completedPagesRef = useRef<Set<string>>(new Set());
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem('motivation_completed_pages');
+            if (stored) completedPagesRef.current = new Set(JSON.parse(stored));
+        } catch { }
+    }, []);
+
+    useEffect(() => {
+        fetch('/motivations.json').then(r => r.json()).then(setMotivations);
+    }, []);
+
+    useEffect(() => {
+        const progress = store.readingProgress;
+        if (prevProgressRef.current !== null
+            && progress === 100
+            && prevProgressRef.current < 100
+            && motivations.length > 0
+            && !completedPagesRef.current.has(store.pageId)
+        ) {
+            const idx = parseInt(localStorage.getItem('motivation_index') || '0', 10);
+            const quote = motivations[idx % motivations.length];
+            store.triggerMotivation(quote);
+            localStorage.setItem('motivation_index', String(idx + 1));
+            completedPagesRef.current.add(store.pageId);
+            localStorage.setItem('motivation_completed_pages', JSON.stringify([...completedPagesRef.current]));
+        }
+        prevProgressRef.current = progress;
+    });
+
     return (
         <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
             <PageAppbar />
+            <div className="h-1 shrink-0" style={{ backgroundColor: 'var(--color-border-default)', opacity: 0.25 }}>
+                <Observer>
+                    {() => (
+                        <div
+                            className="h-full transition-all duration-500 ease-out"
+                            style={{ width: `${store.readingProgress}%`, backgroundColor: 'var(--color-brand)' }}
+                        />
+                    )}
+                </Observer>
+            </div>
             <div className="flex-1 overflow-hidden">
-                <div className="flex h-full">
+                <div className="flex h-full relative">
                     <NavRail />
                     <Group orientation="horizontal" {...useDefaultLayout({ id: "page-sidebar" })}>
                         <Panel
@@ -142,6 +232,27 @@ const PageContent = observer(function PageContent() {
                         </Panel>
                     </Group>
                     <Observer>
+                        {() => store.meaningStore.isExpanded ? (
+                            <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
+                                <PageMeaningPanel />
+                            </div>
+                        ) : null}
+                    </Observer>
+                    <Observer>
+                        {() => store.doubtStore.isExpanded ? (
+                            <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
+                                <PageDoubtPanel />
+                            </div>
+                        ) : null}
+                    </Observer>
+                    <Observer>
+                        {() => store.explanationStore.isExpanded ? (
+                            <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
+                                <PageExplanationPanel />
+                            </div>
+                        ) : null}
+                    </Observer>
+                    <Observer>
                         {() => store.dictionaryStore.isOpen ? (
                             <div className="w-80 shrink-0 border-l border-[var(--color-border-default)] bg-[var(--color-surface-raised)] h-full overflow-hidden">
                                 <DictionaryPanel />
@@ -158,6 +269,42 @@ const PageContent = observer(function PageContent() {
                 initialContent={createWithPaste.content}
                 initialCategory={createWithPaste.category}
             />
+            <Observer>
+                {() => {
+                    const quote = store.motivationQuote;
+                    if (!quote) return null;
+                    return (
+                        <Dialog open={true} onOpenChange={() => store.dismissMotivation()}>
+                            <div className="flex flex-col gap-5">
+                                <div className="flex items-start justify-between">
+                                    <div className="flex flex-col gap-1">
+                                        <p className="text-sm font-semibold text-[var(--color-brand)]">You completed this page!</p>
+                                    </div>
+                                    <BaseDialog.Close className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
+                                        <span className="text-lg leading-none">&times;</span>
+                                    </BaseDialog.Close>
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    <p className="text-base leading-relaxed font-[family-name:var(--font-serif)] italic text-[var(--color-text-strong)]">
+                                        &ldquo;{quote.quote}&rdquo;
+                                    </p>
+                                    <p className="text-xs leading-relaxed text-[var(--color-text-muted)]">
+                                        {quote.meaning}
+                                    </p>
+                                    <p className="text-xs font-semibold text-[var(--color-text-strong)]">
+                                        &mdash; {quote.by}
+                                    </p>
+                                </div>
+                                <div className="flex justify-end">
+                                    <Button onClick={() => store.dismissMotivation()}>
+                                        Keep reading
+                                    </Button>
+                                </div>
+                            </div>
+                        </Dialog>
+                    );
+                }}
+            </Observer>
         </div>
     );
 });
