@@ -6,7 +6,7 @@ Supported: CommonMark + GFM + math + limited raw HTML (sanitized). Anything else
 
 | Feature | Syntax |
 |---|---|
-| Frontmatter | `---\nkey: val\n---` at file top; stripped, not rendered |
+| Frontmatter | `---\nkey: val\n---` at file top; stripped, not rendered. Parsed as strict YAML — malformed YAML silently drops the *entire* frontmatter (title/category included). **Always double-quote string values**: `title: "Module 2 — Memory Model: How Objects Live and Die"`. Required whenever the value contains `: ` (colon+space), or starts with `- ? : , [ ] { } # & * ! \| > ' " % @` \`, or could be misread as a number/bool/null (`"3"`, `"true"`, `"no"`) |
 | Headings | `#`…`######` (ATX) or `===`/`---` underline (setext H1/H2). **No auto-id/anchor** — add `<h2 id="x">` manually if you need `#x` links |
 | Paragraph break | blank line |
 | Hard line break | trailing `\` or 2 trailing spaces |
@@ -64,3 +64,4 @@ Other default-safe HTML (`sub`, `sup`, `kbd`, `span[class,style]`, `a[id]`, etc.
 2. Blank line before/after content in every `<callout>`/`<details>`.
 3. Mermaid → fence only, never inside raw-HTML blocks.
 4. No `javascript:`/`data:` URLs, no `<script>`.
+5. Frontmatter string values double-quoted, especially `title:` — an unquoted colon inside the value breaks YAML parsing and drops the whole frontmatter block.
