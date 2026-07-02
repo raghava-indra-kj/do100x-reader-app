@@ -41,12 +41,17 @@ export class DoubtStore {
             clearHistory: action,
             fetchDoubt: action,
             reaskDoubt: action,
+            reask: action,
             saveAsSubPage: action,
         });
     }
 
     get activeEntry(): AiDoubtEntry | null {
         return this.history.find(e => e.id === this.activeEntryId) || null;
+    }
+
+    reask(entryId: string, newText: string) {
+        this.reaskDoubt(entryId, newText);
     }
 
     reaskDoubt(entryId: string, newSearchTerm: string) {

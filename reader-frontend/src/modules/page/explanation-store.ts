@@ -35,11 +35,16 @@ export class ExplanationStore {
             clearHistory: action,
             fetchExplanation: action,
             reaskExplanation: action,
+            reask: action,
         });
     }
 
     get activeEntry(): AiExplanationEntry | null {
         return this.history.find(e => e.id === this.activeEntryId) || null;
+    }
+
+    reask(entryId: string, newText: string) {
+        this.reaskExplanation(entryId, newText);
     }
 
     reaskExplanation(entryId: string, newSelectedText: string) {

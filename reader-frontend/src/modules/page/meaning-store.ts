@@ -35,11 +35,16 @@ export class MeaningStore {
             clearHistory: action,
             fetchMeaning: action,
             reaskMeaning: action,
+            reask: action,
         });
     }
 
     get activeEntry(): AiMeaningEntry | null {
         return this.history.find(e => e.id === this.activeEntryId) || null;
+    }
+
+    reask(entryId: string, newText: string) {
+        this.reaskMeaning(entryId, newText);
     }
 
     reaskMeaning(entryId: string, newSearchTerm: string) {
