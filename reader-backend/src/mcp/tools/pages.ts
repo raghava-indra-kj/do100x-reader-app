@@ -632,4 +632,509 @@ export function registerPageTools(server: McpServer, userId: string) {
       };
     }
   );
+
+  // 11. Full-Text Knowledge Search
+  server.tool(
+    "reader_search",
+    "Search for text across all page titles and markdown contents with excerpt snippets and line numbers",
+    {
+      query: z.string().describe("Search term or keyword"),
+      category: z.string().optional().describe("Optional category filter"),
+      limit: z.number().optional().describe("Max matching pages to return (default: 20)"),
+    },
+    async ({ query, category, limit = 20 }) => {
+      const where: Record<string, unknown> = {
+        userId,
+        deletedAt: null,
+      };
+      if (category) where.category = category;
+
+      const pages = await prisma.page.findMany({
+        where,
+        select: {
+          id: true,
+          parentId: true,
+          title: true,
+          category: true,
+          content: true,
+          updatedAt: true,
+        },
+      });
+
+      const qLower = query.toLowerCase();
+      const results: Array<{
+        id: string;
+        title: string;
+        category: string | null;
+        parentId: string | null;
+        titleMatch: boolean;
+        matchesCount: number;
+        snippets: Array<{ line: number; text: string }>;
+      }> = [];
+
+      for (const p of pages) {
+        const titleMatch = p.title.toLowerCase().includes(qLower);
+        const content = p.content || "";
+        const lines = content.split(/\r?\n/);
+        const snippets: Array<{ line: number; text: string }> = [];
+
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].toLowerCase().includes(qLower)) {
+            snippets.push({
+              line: i + 1,
+              text: lines[i].trim(),
+            });
+            if (snippets.length >= 5) break;
+          }
+        }
+
+        if (titleMatch || snippets.length > 0) {
+          results.push({
+            id: p.id,
+            title: p.title,
+            category: p.category,
+            parentId: p.parentId,
+            titleMatch,
+            matchesCount: snippets.length + (titleMatch ? 1 : 0),
+            snippets,
+          });
+        }
+
+        if (results.length >= limit) break;
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ query, totalResults: results.length, results }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 12. Lightweight Outline / Table of Contents
+  server.tool(
+    "reader_get_outline",
+    "Get a lightweight Table of Contents (headings with line numbers and section indices) for a page and its subpages without pulling full body text",
+    {
+      pageId: z.string().describe("Target page ID"),
+      includeSubpages: z.boolean().optional().describe("Whether to include headings from subpages (default: true)"),
+    },
+    async ({ pageId, includeSubpages = true }) => {
+      const rootPage = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+      if (!rootPage) {
+        return { isError: true, content: [{ type: "text", text: `Page not found: ${pageId}` }] };
+      }
+
+      const allPages = includeSubpages
+        ? await prisma.page.findMany({
+            where: { userId, deletedAt: null },
+            orderBy: { sortOrder: "asc" },
+          })
+        : [rootPage];
+
+      function getHeadings(markdown: string) {
+        const sections = parseMarkdownSections(markdown);
+        return sections.map((s) => ({
+          sectionIndex: s.index,
+          level: s.level,
+          heading: s.heading,
+          startLine: s.startLine,
+          endLine: s.endLine,
+        }));
+      }
+
+      interface PageOutline {
+        id: string;
+        title: string;
+        category: string | null;
+        headings: ReturnType<typeof getHeadings>;
+        subpages: PageOutline[];
+      }
+
+      const childrenMap = new Map<string | null, typeof allPages>();
+      for (const p of allPages) {
+        const parent = p.parentId;
+        if (!childrenMap.has(parent)) childrenMap.set(parent, []);
+        childrenMap.get(parent)!.push(p);
+      }
+
+      function buildOutline(p: typeof rootPage): PageOutline {
+        const children = includeSubpages ? (childrenMap.get(p.id) ?? []) : [];
+        return {
+          id: p.id,
+          title: p.title,
+          category: p.category,
+          headings: getHeadings(p.content || ""),
+          subpages: children.map(buildOutline),
+        };
+      }
+
+      const outline = buildOutline(rootPage);
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(outline, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 13. Fast Append Content
+  server.tool(
+    "reader_append_content",
+    "Append markdown content to the end of a page, or to the end of a specific section by index",
+    {
+      pageId: z.string().describe("Target page ID"),
+      content: z.string().describe("Markdown content to append"),
+      sectionIndex: z.number().optional().describe("Optional sectionIndex (from reader_get_page_sections) to append to. If omitted, appends to the end of the entire page."),
+      separator: z.string().optional().describe("Separator before appended content (default: blank lines)"),
+    },
+    async ({ pageId, content, sectionIndex, separator = "\n\n" }) => {
+      const page = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+      if (!page) {
+        return { isError: true, content: [{ type: "text", text: `Page not found: ${pageId}` }] };
+      }
+
+      const existingContent = page.content || "";
+      let updatedContent = "";
+
+      if (sectionIndex !== undefined) {
+        const sections = parseMarkdownSections(existingContent);
+        if (sectionIndex < 0 || sectionIndex >= sections.length) {
+          return { isError: true, content: [{ type: "text", text: `Invalid sectionIndex: ${sectionIndex}` }] };
+        }
+        const target = sections[sectionIndex];
+        const newSectionContent = target.content ? `${target.content}${separator}${content.trim()}` : content.trim();
+        const res = updateSectionByIndex(existingContent, sectionIndex, newSectionContent, true);
+        updatedContent = res.updatedMarkdown;
+      } else {
+        updatedContent = existingContent.trim() ? `${existingContent.trim()}${separator}${content.trim()}` : content.trim();
+      }
+
+      const updated = await prisma.page.update({
+        where: { id: pageId },
+        data: {
+          content: updatedContent,
+          updatedAt: new Date(),
+        },
+      });
+
+      const newSections = parseMarkdownSections(updated.content || "");
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              pageId: updated.id,
+              totalLines: (updated.content || "").split(/\r?\n/).length,
+              totalSections: newSections.length,
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 14. Batch Create Pages
+  server.tool(
+    "reader_batch_create_pages",
+    "Create multiple pages and subpages at once with automated parent-child ID resolution",
+    {
+      pages: z.array(
+        z.object({
+          tempId: z.string().describe("Unique local identifier for this batch (e.g. 'root', 'ch1', 'ch1-sec1')"),
+          title: z.string().describe("Page title"),
+          content: z.string().optional().describe("Markdown content"),
+          category: z.string().optional().describe("Category"),
+          parentTempId: z.string().optional().describe("tempId of the parent page created in this same batch"),
+          parentPageId: z.string().optional().describe("Existing DB page ID of parent (if attaching to existing page)"),
+          sortOrder: z.number().optional().describe("Sort order index"),
+        })
+      ).describe("List of pages to create in dependency order (parents first)"),
+    },
+    async ({ pages }) => {
+      const now = new Date();
+      const idMap = new Map<string, string>();
+      const createdPages: any[] = [];
+
+      for (let i = 0; i < pages.length; i++) {
+        const item = pages[i];
+        let parentId: string | null = null;
+
+        if (item.parentTempId && idMap.has(item.parentTempId)) {
+          parentId = idMap.get(item.parentTempId)!;
+        } else if (item.parentPageId) {
+          parentId = item.parentPageId;
+        }
+
+        const created = await prisma.page.create({
+          data: {
+            userId,
+            parentId,
+            title: item.title,
+            content: item.content ?? null,
+            category: item.category ?? null,
+            sortOrder: item.sortOrder ?? i,
+            childrenCount: 0,
+            isPublic: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+
+        idMap.set(item.tempId, created.id);
+        createdPages.push({ tempId: item.tempId, id: created.id, title: created.title, parentId });
+
+        if (parentId) {
+          await prisma.page.update({
+            where: { id: parentId },
+            data: { childrenCount: { increment: 1 }, updatedAt: now },
+          });
+        }
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ success: true, count: createdPages.length, pages: createdPages }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 15. Move / Reorganize Page
+  server.tool(
+    "reader_move_page",
+    "Move a page to a new parent (or to root) and optionally update its sort order",
+    {
+      pageId: z.string().describe("Target page ID to move"),
+      newParentId: z.string().nullable().optional().describe("New parent page ID, or null / 'null' to move to root"),
+      sortOrder: z.number().optional().describe("New sort order integer"),
+    },
+    async ({ pageId, newParentId, sortOrder }) => {
+      const page = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+      if (!page) {
+        return { isError: true, content: [{ type: "text", text: `Page not found: ${pageId}` }] };
+      }
+
+      const targetParentId = newParentId === "null" || newParentId === undefined ? null : newParentId;
+
+      // Prevent cyclic nesting
+      if (targetParentId) {
+        if (targetParentId === pageId) {
+          return { isError: true, content: [{ type: "text", text: "Cannot move a page to be its own parent" }] };
+        }
+        let checkId: string | null = targetParentId;
+        while (checkId) {
+          const parent = await prisma.page.findFirst({
+            where: { id: checkId, userId, deletedAt: null },
+            select: { parentId: true },
+          });
+          if (!parent) break;
+          if (parent.parentId === pageId) {
+            return { isError: true, content: [{ type: "text", text: "Cannot move a page inside its own descendant" }] };
+          }
+          checkId = parent.parentId;
+        }
+      }
+
+      const now = new Date();
+      const oldParentId = page.parentId;
+
+      const updated = await prisma.page.update({
+        where: { id: pageId },
+        data: {
+          parentId: targetParentId,
+          ...(sortOrder !== undefined ? { sortOrder } : {}),
+          updatedAt: now,
+        },
+      });
+
+      if (oldParentId !== targetParentId) {
+        if (oldParentId) {
+          await prisma.page.update({
+            where: { id: oldParentId },
+            data: { childrenCount: { decrement: 1 }, updatedAt: now },
+          });
+        }
+        if (targetParentId) {
+          await prisma.page.update({
+            where: { id: targetParentId },
+            data: { childrenCount: { increment: 1 }, updatedAt: now },
+          });
+        }
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              pageId: updated.id,
+              oldParentId,
+              newParentId: updated.parentId,
+              sortOrder: updated.sortOrder,
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 16. Duplicate Page
+  server.tool(
+    "reader_duplicate_page",
+    "Duplicate an existing page and optionally all of its nested subpages",
+    {
+      pageId: z.string().describe("Page ID to duplicate"),
+      newTitle: z.string().optional().describe("Custom title for the cloned page (default: '{Original Title} (Copy)')"),
+      includeSubpages: z.boolean().optional().describe("Whether to duplicate nested subpages recursively (default: false)"),
+      targetParentId: z.string().nullable().optional().describe("Target parent page ID (default: same parent as original)"),
+    },
+    async ({ pageId, newTitle, includeSubpages = false, targetParentId }) => {
+      const source = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+      if (!source) {
+        return { isError: true, content: [{ type: "text", text: `Page not found: ${pageId}` }] };
+      }
+
+      const now = new Date();
+      const parentId = targetParentId !== undefined ? (targetParentId === "null" ? null : targetParentId) : source.parentId;
+
+      async function clonePageRecursive(srcPage: typeof source, pId: string | null, customTitle?: string): Promise<any> {
+        const cloned = await prisma.page.create({
+          data: {
+            userId,
+            parentId: pId,
+            title: customTitle || `${srcPage.title} (Copy)`,
+            content: srcPage.content,
+            category: srcPage.category,
+            sortOrder: srcPage.sortOrder + 1,
+            childrenCount: 0,
+            isPublic: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+
+        if (pId) {
+          await prisma.page.update({
+            where: { id: pId },
+            data: { childrenCount: { increment: 1 }, updatedAt: now },
+          });
+        }
+
+        if (includeSubpages) {
+          const children = await prisma.page.findMany({
+            where: { parentId: srcPage.id, userId, deletedAt: null },
+            orderBy: { sortOrder: "asc" },
+          });
+          for (const child of children) {
+            await clonePageRecursive(child, cloned.id, child.title);
+          }
+        }
+
+        return cloned;
+      }
+
+      const rootCloned = await clonePageRecursive(source, parentId, newTitle);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              originalPageId: pageId,
+              clonedPageId: rootCloned.id,
+              clonedTitle: rootCloned.title,
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 17. Compile / Export Bundle
+  server.tool(
+    "reader_compile_bundle",
+    "Compile a parent page and all its nested subpages into a single, cohesive Markdown document with an automated Table of Contents",
+    {
+      pageId: z.string().describe("Root page ID to compile"),
+      includeTableOfContents: z.boolean().optional().describe("Whether to generate a Table of Contents at the top (default: true)"),
+    },
+    async ({ pageId, includeTableOfContents = true }) => {
+      const rootPage = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+      if (!rootPage) {
+        return { isError: true, content: [{ type: "text", text: `Page not found: ${pageId}` }] };
+      }
+
+      const allPages = await prisma.page.findMany({
+        where: { userId, deletedAt: null },
+        orderBy: { sortOrder: "asc" },
+      });
+
+      const childrenMap = new Map<string | null, typeof allPages>();
+      for (const p of allPages) {
+        const parent = p.parentId;
+        if (!childrenMap.has(parent)) childrenMap.set(parent, []);
+        childrenMap.get(parent)!.push(p);
+      }
+
+      const orderedList: Array<{ page: typeof rootPage; depth: number }> = [];
+      function collect(p: typeof rootPage, depth: number) {
+        orderedList.push({ page: p, depth });
+        const children = childrenMap.get(p.id) ?? [];
+        for (const child of children) {
+          collect(child, depth + 1);
+        }
+      }
+      collect(rootPage, 1);
+
+      const tocLines: string[] = [];
+      const sectionsMarkdown: string[] = [];
+
+      for (const { page, depth } of orderedList) {
+        const indent = "  ".repeat(depth - 1);
+        const anchor = page.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        tocLines.push(`${indent}- [${page.title}](#${anchor})`);
+
+        const rawContent = (page.content || "").replace(/^---\n[\s\S]*?\n---\n?/, "").trim();
+        sectionsMarkdown.push(`<h${depth} id="${anchor}">${page.title}</h${depth}>\n\n${rawContent}`);
+      }
+
+      let finalMarkdown = "";
+      if (includeTableOfContents && orderedList.length > 1) {
+        finalMarkdown += `# ${rootPage.title}\n\n## Table of Contents\n\n${tocLines.join("\n")}\n\n---\n\n`;
+      }
+      finalMarkdown += sectionsMarkdown.join("\n\n---\n\n");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: finalMarkdown,
+          },
+        ],
+      };
+    }
+  );
 }
