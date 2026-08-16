@@ -25,30 +25,30 @@ export const TaskSchema = z.object({
   subtaskCount: z.number().default(0),
   completedSubtaskCount: z.number().default(0),
   completedAt: z.string().nullable().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  createdAt: z.string().optional().default(() => new Date().toISOString()),
+  updatedAt: z.string().optional().default(() => new Date().toISOString()),
 });
 
 export type TaskData = z.infer<typeof TaskSchema>;
 
 export class Task {
   readonly id: string;
-  readonly listId?: string | null;
-  readonly list?: TaskListSummary | null;
-  readonly parentId?: string | null;
-  readonly title: string;
-  readonly description?: string | null;
-  readonly status: 'todo' | 'in_progress' | 'done' | 'cancelled';
-  readonly priority: number;
-  readonly dueDate?: string | null;
-  readonly dueTime?: string | null;
-  readonly sortOrder: number;
-  readonly totalTimeSeconds: number;
-  readonly subtaskCount: number;
-  readonly completedSubtaskCount: number;
-  readonly completedAt?: string | null;
-  readonly createdAt: string;
-  readonly updatedAt: string;
+  listId?: string | null;
+  list?: TaskListSummary | null;
+  parentId?: string | null;
+  title: string;
+  description?: string | null;
+  status: 'todo' | 'in_progress' | 'done' | 'cancelled';
+  priority: number;
+  dueDate?: string | null;
+  dueTime?: string | null;
+  sortOrder: number;
+  totalTimeSeconds: number;
+  subtaskCount: number;
+  completedSubtaskCount: number;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
 
   constructor(data: TaskData) {
     this.id = data.id;
@@ -66,8 +66,8 @@ export class Task {
     this.subtaskCount = data.subtaskCount;
     this.completedSubtaskCount = data.completedSubtaskCount;
     this.completedAt = data.completedAt;
-    this.createdAt = data.createdAt;
-    this.updatedAt = data.updatedAt;
+    this.createdAt = data.createdAt || new Date().toISOString();
+    this.updatedAt = data.updatedAt || new Date().toISOString();
   }
 
   get isDone(): boolean {

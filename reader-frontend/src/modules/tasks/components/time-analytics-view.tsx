@@ -1,5 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { Clock, BarChart2, Flame, Award, Layers, Calendar, Filter } from 'lucide-react';
+import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import type { TasksStore } from '../store';
 import { useState } from 'react';
 
@@ -113,7 +114,10 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
       </div>
 
       {store.isLoadingAnalytics || !data ? (
-        <div className="py-20 text-center text-xs text-[var(--color-text-muted)]">Loading analytics...</div>
+        <div className="py-24 flex flex-col items-center justify-center space-y-2 text-[var(--color-text-muted)] select-none">
+          <Loader size={24} className="text-[var(--color-brand)]" />
+          <span className="text-xs font-medium">Calculating productivity insights...</span>
+        </div>
       ) : (
         <>
           {/* Key Metrics Cards */}

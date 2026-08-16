@@ -10,8 +10,8 @@ import {
   MoreVertical,
   Edit2,
   Trash2,
-  ListTodo,
 } from 'lucide-react';
+import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import type { TasksStore } from '../store';
 import { useState } from 'react';
 
@@ -72,19 +72,7 @@ export const TasksSidebar = observer(({ store }: Props) => {
   ];
 
   return (
-    <aside className="w-60 flex-shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col h-full select-none">
-      {/* Header */}
-      <div className="p-3.5 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded-md bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] flex items-center justify-center shadow-xs">
-            <ListTodo className="w-4 h-4" />
-          </div>
-          <div>
-            <span className="font-bold text-xs text-[var(--color-text-strong)] block leading-none">Tasks</span>
-          </div>
-        </div>
-      </div>
-
+    <aside className="w-56 flex-shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col h-full select-none pt-2">
       <div className="flex-1 overflow-y-auto p-2 space-y-4">
         {/* Smart Views Section */}
         <div className="space-y-0.5">
@@ -144,7 +132,11 @@ export const TasksSidebar = observer(({ store }: Props) => {
             </button>
           </div>
 
-          {store.lists.length === 0 ? (
+          {store.isLoadingLists ? (
+            <div className="py-4 flex items-center justify-center">
+              <Loader size={16} className="text-[var(--color-brand)]" />
+            </div>
+          ) : store.lists.length === 0 ? (
             <div className="px-2 py-3 text-xs text-[var(--color-text-muted)] text-center border border-dashed border-[var(--color-border-subtle)] rounded-md bg-[var(--color-surface-soft)]/20">
               <p className="text-[11px]">No custom lists.</p>
               <button

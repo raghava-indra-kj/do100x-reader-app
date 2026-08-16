@@ -31,7 +31,8 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
     const uiSettings = store.uiSettingsStore;
     const authStore = useAuthStore();
 
-    const mcpUrl = `${window.location.origin}/sse/${authStore.currentUser?.id || ''}`;
+    const userId = authStore.optCurrentUser?.id || '';
+    const mcpUrl = userId ? `${window.location.origin}/sse/${userId}` : '';
     const mcpConfigJson = JSON.stringify(
         {
             mcpServers: {

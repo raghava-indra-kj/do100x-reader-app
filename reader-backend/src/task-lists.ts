@@ -155,6 +155,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     color: updated.color,
     icon: updated.icon,
     sortOrder: updated.sortOrder,
+    createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   });
 });

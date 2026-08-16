@@ -202,10 +202,12 @@ router.post("/pause", async (req: Request, res: Response) => {
     timer: {
       id: updated.id,
       taskId: updated.taskId,
+      startTime: updated.startTime.toISOString(),
       accumulatedSeconds: updated.accumulatedSeconds,
       currentElapsedSeconds: updated.accumulatedSeconds,
       isPaused: true,
       pausedAt: updated.pausedAt ? updated.pausedAt.toISOString() : null,
+      notes: updated.notes,
     },
   });
 });
@@ -244,6 +246,8 @@ router.post("/resume", async (req: Request, res: Response) => {
       accumulatedSeconds: updated.accumulatedSeconds,
       currentElapsedSeconds: updated.accumulatedSeconds,
       isPaused: false,
+      pausedAt: null,
+      notes: updated.notes,
     },
   });
 });
@@ -303,6 +307,7 @@ router.post("/stop", async (req: Request, res: Response) => {
       notes: session.notes,
       startTime: session.startTime.toISOString(),
       endTime: session.endTime ? session.endTime.toISOString() : null,
+      createdAt: session.createdAt.toISOString(),
     },
     taskTotalTimeSeconds: newTotalSeconds,
   });
@@ -399,6 +404,7 @@ router.post("/tasks/:taskId/sessions", async (req: Request, res: Response) => {
       endTime: session.endTime ? session.endTime.toISOString() : null,
       durationSeconds: session.durationSeconds,
       notes: session.notes,
+      createdAt: session.createdAt.toISOString(),
     },
     taskTotalTimeSeconds: total,
   });
@@ -448,6 +454,7 @@ router.patch("/sessions/:sessionId", async (req: Request, res: Response) => {
       endTime: updated.endTime ? updated.endTime.toISOString() : null,
       durationSeconds: updated.durationSeconds,
       notes: updated.notes,
+      createdAt: updated.createdAt.toISOString(),
     },
     taskTotalTimeSeconds: total,
   });

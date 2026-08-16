@@ -33,31 +33,29 @@ export default observer(function TasksPage() {
     };
   }, [store]);
 
-  const userInitial = authStore.currentUser?.username
-    ? authStore.currentUser.username.charAt(0).toUpperCase()
+  const userInitial = authStore.optCurrentUser?.username
+    ? authStore.optCurrentUser.username.charAt(0).toUpperCase()
     : 'U';
 
   return (
     <div className="flex flex-col h-screen w-screen bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] overflow-hidden select-none">
       {/* Top Application Bar */}
       <header className="h-14 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)]/80 backdrop-blur px-4 flex items-center justify-between flex-shrink-0 z-20">
-        {/* Left: Brand & Home Navigation */}
-        <div className="flex items-center space-x-3">
+        {/* Left: App Logo & Beta */}
+        <div className="flex items-center space-x-2.5">
           <Link
             to={homePageRoute}
             className="flex items-center space-x-2 text-[var(--color-text-strong)] hover:text-[var(--color-brand)] transition group cursor-pointer"
-            title="Go to Reader Knowledge Base"
+            title="Back to Reader Home"
           >
             <div className="w-8 h-8 rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] flex items-center justify-center font-bold group-hover:scale-105 transition-transform shadow-xs">
               <BookOpen className="w-4 h-4" />
             </div>
-            <span className="font-bold text-sm tracking-tight hidden sm:inline font-[family-name:var(--font-serif)]">Reader</span>
+            <span className="font-bold text-base tracking-tight font-[family-name:var(--font-serif)]">Tasks</span>
           </Link>
 
-          <span className="text-[var(--color-text-subtle)] font-light">/</span>
-
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-xl bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)]">
-            Tasks & Time Tracker
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 uppercase tracking-widest">
+            Beta
           </span>
         </div>
 

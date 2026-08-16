@@ -27,6 +27,7 @@ export function AppBar() {
                     >
                         <ListTodo size={14} className="text-[var(--color-brand)] shrink-0" />
                         <span className="hidden sm:inline font-medium">Tasks</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 uppercase tracking-wider">Beta</span>
                     </Button>
                 </Link>
                 <Button 

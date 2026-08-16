@@ -427,6 +427,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
     sortOrder: updated.sortOrder,
     totalTimeSeconds: updated.totalTimeSeconds,
     completedAt: updated.completedAt ? updated.completedAt.toISOString() : null,
+    createdAt: updated.createdAt.toISOString(),
     updatedAt: updated.updatedAt.toISOString(),
   });
 });

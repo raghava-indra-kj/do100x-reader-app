@@ -43,10 +43,11 @@ export class TasksStore {
   isLoadingTasks: boolean = false;
   isLoadingLists: boolean = false;
 
-  // Selected Task Detail
+  // Selected Task Detail & Drill-down Breadcrumbs
   selectedTaskId: string | null = null;
   selectedTaskDetail: (Task & { subtasks: Task[]; timeSessions: TimeSession[]; isActiveTimerRunning: boolean }) | null = null;
   isLoadingDetail: boolean = false;
+  taskBreadcrumbs: Array<{ id: string; title: string }> = [];
 
   // Quick Task Add Inputs
   quickTaskTitle: string = '';
@@ -55,10 +56,6 @@ export class TasksStore {
 
   // Subtask Add Input
   newSubtaskTitle: string = '';
-
-  // Expanded tasks in main list view
-  expandedTaskIds = new Set<string>();
-  taskSubtasksMap = new Map<string, Task[]>();
 
   // Active Timer
   activeTimer: ActiveTimer | null = null;
@@ -115,16 +112,17 @@ export class TasksStore {
       selectedTaskId: observable,
       selectedTaskDetail: observable,
       isLoadingDetail: observable,
+      taskBreadcrumbs: observable,
       quickTaskTitle: observable,
       quickTaskPriority: observable,
       quickTaskDueDate: observable,
       newSubtaskTitle: observable,
-      expandedTaskIds: observable,
-      taskSubtasksMap: observable,
       activeTimer: observable,
       timerElapsedSeconds: observable,
       isStopTimerDialogOpen: observable,
       stopTimerNotes: observable,
+      stopTimerDurationMinutes: observable,
+      stopTimerOriginalMinutes: observable,
       analyticsData: observable,
       analyticsPeriodDays: observable,
       analyticsPreset: observable,
@@ -162,12 +160,38 @@ export class TasksStore {
       setQuickTaskPriority: action,
       setQuickTaskDueDate: action,
       setNewSubtaskTitle: action,
-      toggleTaskExpanded: action,
-      addInlineSubtask: action,
+      selectTask: action,
+      drillDownSubtask: action,
+      drillUpToParent: action,
+      drillToBreadcrumb: action,
+      createQuickTask: action,
+      toggleTaskStatus: action,
+      updateTaskProperties: action,
+      deleteTask: action,
+      moveTaskOrder: action,
+      addSubtask: action,
       setStopTimerNotes: action,
+      setStopTimerDurationMinutes: action,
+      adjustStopTimerMinutes: action,
+      adjustSessionDuration: action,
+      promptStopTimer: action,
+      completeStopTimer: action,
+      discardActiveTimer: action,
+      startTimerForTask: action,
+      pauseActiveTimer: action,
+      resumeActiveTimer: action,
       setIsStopTimerDialogOpen: action,
       setIsListDialogOpen: action,
+      openCreateListDialog: action,
+      openEditListDialog: action,
+      saveList: action,
+      deleteList: action,
       setIsSessionDialogOpen: action,
+      openAddSessionDialog: action,
+      openEditSessionDialog: action,
+      saveSession: action,
+      deleteSession: action,
+      deleteAllSessionsForTask: action,
       setSessionDurationMinutes: action,
       setSessionNotesInput: action,
       setSessionDateInput: action,
@@ -177,6 +201,10 @@ export class TasksStore {
       setAnalyticsCustomRange: action,
       setAnalyticsListFilter: action,
       setAnalyticsTaskFilter: action,
+      loadAnalytics: action,
+      loadLists: action,
+      loadTasks: action,
+      loadActiveTimer: action,
       setListNameInput: action,
       setListColorInput: action,
       setListIconInput: action,
@@ -502,11 +530,12 @@ export class TasksStore {
     });
   }
 
-  async selectTask(taskId: string | null) {
+  async selectTask(taskId: string | null, options?: { isDrillDown?: boolean }) {
     if (!taskId) {
       runInAction(() => {
         this.selectedTaskId = null;
         this.selectedTaskDetail = null;
+        this.taskBreadcrumbs = [];
       });
       return;
     }
@@ -514,7 +543,6 @@ export class TasksStore {
     runInAction(() => {
       this.selectedTaskId = taskId;
       this.isLoadingDetail = true;
-      this.expandedTaskIds.add(taskId);
     });
 
     const res = await getTask(taskId);
@@ -522,13 +550,53 @@ export class TasksStore {
       this.isLoadingDetail = false;
       if (res.ok) {
         this.selectedTaskDetail = res.data;
-        if (res.data.parentId) {
-          this.expandedTaskIds.add(res.data.parentId);
+
+        if (options?.isDrillDown) {
+          const idx = this.taskBreadcrumbs.findIndex((b) => b.id === taskId);
+          if (idx >= 0) {
+            this.taskBreadcrumbs = this.taskBreadcrumbs.slice(0, idx + 1);
+          } else {
+            this.taskBreadcrumbs = [...this.taskBreadcrumbs, { id: res.data.id, title: res.data.title }];
+          }
+        } else {
+          const existingIdx = this.taskBreadcrumbs.findIndex((b) => b.id === taskId);
+          if (existingIdx >= 0) {
+            // Keep existing trail up to this item and update title if changed
+            const updated = [...this.taskBreadcrumbs.slice(0, existingIdx + 1)];
+            updated[existingIdx] = { id: res.data.id, title: res.data.title };
+            this.taskBreadcrumbs = updated;
+          } else {
+            this.taskBreadcrumbs = [{ id: res.data.id, title: res.data.title }];
+          }
         }
       } else {
         toast.error(res.error.message);
       }
     });
+  }
+
+  async drillDownSubtask(subtaskId: string) {
+    await this.selectTask(subtaskId, { isDrillDown: true });
+  }
+
+  async drillUpToParent() {
+    if (this.taskBreadcrumbs.length > 1) {
+      const target = this.taskBreadcrumbs[this.taskBreadcrumbs.length - 2];
+      this.taskBreadcrumbs = this.taskBreadcrumbs.slice(0, -1);
+      await this.selectTask(target.id, { isDrillDown: false });
+    } else if (this.selectedTaskDetail?.parentId) {
+      await this.selectTask(this.selectedTaskDetail.parentId, { isDrillDown: false });
+    } else {
+      this.selectTask(null);
+    }
+  }
+
+  async drillToBreadcrumb(targetIndex: number) {
+    if (targetIndex >= 0 && targetIndex < this.taskBreadcrumbs.length) {
+      const target = this.taskBreadcrumbs[targetIndex];
+      this.taskBreadcrumbs = this.taskBreadcrumbs.slice(0, targetIndex + 1);
+      await this.selectTask(target.id, { isDrillDown: false });
+    }
   }
 
   async createQuickTask() {
@@ -567,23 +635,85 @@ export class TasksStore {
 
   async toggleTaskStatus(task: Task) {
     const newStatus = task.status === 'done' ? 'todo' : 'done';
+    const oldStatus = task.status;
+
+    // 1. Instant optimistic update
+    runInAction(() => {
+      task.status = newStatus;
+      if (this.selectedTaskDetail) {
+        if (this.selectedTaskDetail.id === task.id) {
+          this.selectedTaskDetail.status = newStatus;
+        }
+        const sub = this.selectedTaskDetail.subtasks.find((s) => s.id === task.id);
+        if (sub) {
+          sub.status = newStatus;
+        }
+      }
+      const topTask = this.tasks.find((t) => t.id === task.id);
+      if (topTask) {
+        topTask.status = newStatus;
+      }
+    });
+
+    // 2. Persist to API
     const res = await updateTask(task.id, { status: newStatus });
     if (res.ok) {
       await Promise.all([this.loadTasks(), this.loadLists()]);
-      if (this.selectedTaskId === task.id) {
-        await this.selectTask(task.id);
+      if (this.selectedTaskId) {
+        const detailRes = await getTask(this.selectedTaskId);
+        if (detailRes.ok) {
+          runInAction(() => {
+            this.selectedTaskDetail = detailRes.data;
+          });
+        }
       }
     } else {
+      // Rollback on failure
+      runInAction(() => {
+        task.status = oldStatus;
+        if (this.selectedTaskDetail) {
+          if (this.selectedTaskDetail.id === task.id) {
+            this.selectedTaskDetail.status = oldStatus;
+          }
+          const sub = this.selectedTaskDetail.subtasks.find((s) => s.id === task.id);
+          if (sub) {
+            sub.status = oldStatus;
+          }
+        }
+      });
       toast.error(res.error.message);
     }
   }
 
   async updateTaskProperties(taskId: string, updates: Parameters<typeof updateTask>[1]) {
+    // 1. Instant optimistic update
+    runInAction(() => {
+      if (this.selectedTaskDetail) {
+        if (this.selectedTaskDetail.id === taskId) {
+          Object.assign(this.selectedTaskDetail, updates);
+        }
+        const sub = this.selectedTaskDetail.subtasks.find((s) => s.id === taskId);
+        if (sub) {
+          Object.assign(sub, updates);
+        }
+      }
+      const task = this.tasks.find((t) => t.id === taskId);
+      if (task) {
+        Object.assign(task, updates);
+      }
+    });
+
+    // 2. Persist to API
     const res = await updateTask(taskId, updates);
     if (res.ok) {
       await Promise.all([this.loadTasks(), this.loadLists()]);
-      if (this.selectedTaskId === taskId) {
-        await this.selectTask(taskId);
+      if (this.selectedTaskId) {
+        const detailRes = await getTask(this.selectedTaskId);
+        if (detailRes.ok) {
+          runInAction(() => {
+            this.selectedTaskDetail = detailRes.data;
+          });
+        }
       }
     } else {
       toast.error(res.error.message);
@@ -596,6 +726,13 @@ export class TasksStore {
       toast.success('Task deleted');
       if (this.selectedTaskId === taskId) {
         this.selectTask(null);
+      } else if (this.selectedTaskId) {
+        const detailRes = await getTask(this.selectedTaskId);
+        if (detailRes.ok) {
+          runInAction(() => {
+            this.selectedTaskDetail = detailRes.data;
+          });
+        }
       }
       await Promise.all([this.loadTasks(), this.loadLists()]);
     } else {
@@ -624,59 +761,6 @@ export class TasksStore {
   // SUBTASKS
   // ==========================================
 
-  async toggleTaskExpanded(taskId: string) {
-    const next = new Set(this.expandedTaskIds);
-    if (next.has(taskId)) {
-      next.delete(taskId);
-      runInAction(() => {
-        this.expandedTaskIds = next;
-      });
-    } else {
-      next.add(taskId);
-      runInAction(() => {
-        this.expandedTaskIds = next;
-      });
-      // Fetch subtasks for this task
-      const res = await getTask(taskId);
-      if (res.ok) {
-        runInAction(() => {
-          const map = new Map(this.taskSubtasksMap);
-          map.set(taskId, res.data.subtasks);
-          this.taskSubtasksMap = map;
-        });
-      }
-    }
-  }
-
-  async addInlineSubtask(parentTaskId: string, title: string) {
-    if (!title.trim()) return;
-
-    const res = await createTask({
-      title: title.trim(),
-      parentId: parentTaskId,
-      priority: 4,
-    });
-
-    if (res.ok) {
-      toast.success('Subtask added');
-      // Refresh subtasks for this parent
-      const detailRes = await getTask(parentTaskId);
-      if (detailRes.ok) {
-        runInAction(() => {
-          const map = new Map(this.taskSubtasksMap);
-          map.set(parentTaskId, detailRes.data.subtasks);
-          this.taskSubtasksMap = map;
-        });
-      }
-      if (this.selectedTaskId === parentTaskId) {
-        await this.selectTask(parentTaskId);
-      }
-      await this.loadTasks();
-    } else {
-      toast.error(res.error.message);
-    }
-  }
-
   async addSubtask(parentTaskId: string, title?: string) {
     const text = (title || this.newSubtaskTitle).trim();
     if (!text) return;
@@ -692,17 +776,8 @@ export class TasksStore {
         this.newSubtaskTitle = '';
       });
       toast.success('Subtask added');
-      // Refresh subtasks for this parent
-      const detailRes = await getTask(parentTaskId);
-      if (detailRes.ok) {
-        runInAction(() => {
-          const map = new Map(this.taskSubtasksMap);
-          map.set(parentTaskId, detailRes.data.subtasks);
-          this.taskSubtasksMap = map;
-        });
-      }
       if (this.selectedTaskId === parentTaskId) {
-        await this.selectTask(parentTaskId);
+        await this.selectTask(parentTaskId, { isDrillDown: false });
       }
       await this.loadTasks();
     } else {

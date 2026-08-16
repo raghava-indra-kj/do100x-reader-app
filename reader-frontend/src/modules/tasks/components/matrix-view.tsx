@@ -1,5 +1,6 @@
 import { observer } from 'mobx-react-lite';
 import { Check, Plus, Clock, Calendar } from 'lucide-react';
+import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import type { TasksStore } from '../store';
 import type { Task } from '@domain/tasks/models/task';
 import { useState } from 'react';
@@ -152,7 +153,13 @@ export const MatrixView = observer(({ store }: Props) => {
       </div>
 
       {/* 2x2 Matrix Grid */}
-      <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-3 min-h-0">
+      {store.isLoadingTasks ? (
+        <div className="flex-1 flex flex-col items-center justify-center space-y-2 text-[var(--color-text-muted)] select-none">
+          <Loader size={24} className="text-[var(--color-brand)]" />
+          <span className="text-xs font-medium">Loading priority matrix...</span>
+        </div>
+      ) : (
+        <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-3 min-h-0">
         {/* Q1: Urgent & Important */}
         {renderQuadrant(
           'Q1: Urgent & Important',
@@ -220,7 +227,8 @@ export const MatrixView = observer(({ store }: Props) => {
             text: 'text-slate-600 dark:text-slate-400',
           }
         )}
-      </div>
+        </div>
+      )}
     </div>
   );
 });

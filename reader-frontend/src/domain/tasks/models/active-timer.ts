@@ -6,7 +6,7 @@ export const ActiveTimerSchema = z.object({
   taskTitle: z.string().optional(),
   taskPriority: z.number().optional(),
   listId: z.string().nullable().optional(),
-  startTime: z.string(),
+  startTime: z.string().optional().default(() => new Date().toISOString()),
   accumulatedSeconds: z.number().default(0),
   currentElapsedSeconds: z.number().default(0),
   isPaused: z.boolean().default(false),
@@ -35,7 +35,7 @@ export class ActiveTimer {
     this.taskTitle = data.taskTitle;
     this.taskPriority = data.taskPriority;
     this.listId = data.listId;
-    this.startTime = data.startTime;
+    this.startTime = data.startTime || new Date().toISOString();
     this.accumulatedSeconds = data.accumulatedSeconds;
     this.currentElapsedSeconds = data.currentElapsedSeconds;
     this.isPaused = data.isPaused;

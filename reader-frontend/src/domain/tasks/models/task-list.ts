@@ -9,8 +9,8 @@ export const TaskListSchema = z.object({
   taskCount: z.number().default(0),
   uncompletedCount: z.number().default(0),
   totalTimeSeconds: z.number().default(0),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  createdAt: z.string().optional().default(() => new Date().toISOString()),
+  updatedAt: z.string().optional().default(() => new Date().toISOString()),
 });
 
 export type TaskListData = z.infer<typeof TaskListSchema>;
@@ -36,8 +36,8 @@ export class TaskList {
     this.taskCount = data.taskCount;
     this.uncompletedCount = data.uncompletedCount;
     this.totalTimeSeconds = data.totalTimeSeconds;
-    this.createdAt = data.createdAt;
-    this.updatedAt = data.updatedAt;
+    this.createdAt = data.createdAt || new Date().toISOString();
+    this.updatedAt = data.updatedAt || new Date().toISOString();
   }
 
   get totalTimeFormatted(): string {
