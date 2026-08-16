@@ -115,9 +115,16 @@ export const PageVocabulary = observer(function PageVocabulary() {
 
     const handleDeleteVocab = useCallback(
         async (vocabId: string) => {
+            setVocabState((prev) => {
+                if (prev.isLoaded) {
+                    return DataState.data(prev.value.filter((v) => v.id !== vocabId));
+                }
+                return prev;
+            });
             const result = await deleteVocabulary({ vocabId });
             if (result.ok) {
                 store.bumpVocabVersion();
+            } else {
                 load();
             }
         },

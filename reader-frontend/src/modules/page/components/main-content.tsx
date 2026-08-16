@@ -5,6 +5,7 @@ import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
 import { MarkdownRenderer } from '@reader/md-view';
 import { SelectionPopover } from './selection-popover';
+import { EmptyPagePlaceholder } from './empty-page-placeholder';
 import '@reader/md-view/md-view.css';
 import '@reader/md-view/md-view-hljs.css';
 
@@ -23,8 +24,8 @@ export const PageMain = observer(function PageMain() {
 
     const page = store.optCurrentPage;
     const section = store.currentSection;
-    if (!section) {
-        return null;
+    if (!section || page.isEmpty) {
+        return <EmptyPagePlaceholder page={page} />;
     }
 
     const uiSettings = store.uiSettingsStore;

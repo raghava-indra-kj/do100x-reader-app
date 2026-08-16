@@ -2,7 +2,11 @@ import axios from 'axios';
 
 export const apiClient = axios.create({
     baseURL: '/backend-api',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+    },
 });
 
 apiClient.interceptors.request.use((config) => {

@@ -22,6 +22,14 @@ if (hasFrontend) {
   app.use(express.static(frontendDist));
 }
 
+app.use("/backend-api", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  res.setHeader("Surrogate-Control", "no-store");
+  next();
+});
+
 app.get("/backend-api/status", (_req, res) => {
   res.json({ success: true });
 });

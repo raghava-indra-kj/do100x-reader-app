@@ -58,7 +58,7 @@ export class Page {
     }
 
     get isEmpty(): boolean {
-        return this.content == null;
+        return !this.content || !this.content.trim();
     }
 
     get hasChildren(): boolean {

@@ -49,7 +49,7 @@ function CommentCard({
     isExpanded: boolean;
     onToggleExpand: () => void;
     onEdited: () => void;
-    onDeleted: () => void;
+    onDeleted: (commentId: string) => void;
 }) {
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
@@ -81,7 +81,7 @@ function CommentCard({
     const handleDelete = useCallback(async () => {
         const result = await deleteComment({ commentId: comment.id });
         if (result.ok) {
-            onDeleted();
+            onDeleted(comment.id);
         }
     }, [comment.id, onDeleted]);
 
@@ -354,6 +354,16 @@ export const PageComments = observer(function PageComments() {
 
     const [isDeletingAll, setIsDeletingAll] = useState(false);
 
+    const handleDeleteComment = useCallback((deletedId: string) => {
+        setDataState((prev) => {
+            if (prev.isLoaded) {
+                return DataState.data(prev.value.filter((c) => c.id !== deletedId));
+            }
+            return prev;
+        });
+        store.bumpCommentsVersion();
+    }, [store]);
+
     const handleDeleteAll = useCallback(async () => {
         if (comments.length === 0 || isDeletingAll) return;
         if (!window.confirm('Are you sure you want to delete all comments on this page?')) return;
@@ -361,10 +371,10 @@ export const PageComments = observer(function PageComments() {
         const result = await deleteAllComments({ pageId: store.pageId });
         setIsDeletingAll(false);
         if (result.ok) {
+            setDataState(DataState.data([]));
             store.bumpCommentsVersion();
-            load();
         }
-    }, [comments.length, isDeletingAll, store, load]);
+    }, [comments.length, isDeletingAll, store]);
 
     const handleCopyAll = useCallback(() => {
         if (comments.length === 0) return;
@@ -452,8 +462,11 @@ export const PageComments = observer(function PageComments() {
                                         comment={comment}
                                         isExpanded={expandedIds.has(comment.id)}
                                         onToggleExpand={() => toggleExpand(comment.id)}
-                                        onEdited={load}
-                                        onDeleted={load}
+                                        onEdited={() => {
+                                            store.bumpCommentsVersion();
+                                            load();
+                                        }}
+                                        onDeleted={handleDeleteComment}
                                     />
                                 ))}
                             </div>
