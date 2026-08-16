@@ -35,13 +35,16 @@ input[type="submit"] {
     outline-offset: var(--focus-ring-offset);
 }
 
-*:where(button, [role="button"], [role="switch"], a, input, textarea, select):focus {
-    outline: none;
-}
-
-*:where(button, [role="button"], [role="switch"], a, input, textarea, select):focus-visible {
+*:where(button, [role="button"], [role="switch"], a):focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);
+}
+
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+    outline: none !important;
 }
 
 * {

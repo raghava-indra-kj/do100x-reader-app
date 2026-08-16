@@ -991,20 +991,154 @@ export function registerTaskTools(server: McpServer, userId: string) {
         }))
         .sort((a, b) => b.durationSeconds - a.durationSeconds);
 
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  period: periodLabel,
+                  startDate: start.toISOString().slice(0, 10),
+                  endDate: end.toISOString().slice(0, 10),
+                  totalTimeTrackedSeconds: totalSeconds,
+                  totalTimeTrackedFormatted: formatSecondsHuman(totalSeconds),
+                  totalSessionsRecorded: sessions.length,
+                  topTasks,
+                  listBreakdown,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      }
+    );
+
+  // 15. Create tasks and nested subtasks in bulk
+  server.tool(
+    "reader_create_tasks_bulk",
+    "Create multiple tasks and their nested subtask trees in a single structured call. Ideal for decomposing project plans, PRDs, or meeting action items into actionable tasks.",
+    {
+      tasks: z
+        .array(
+          z.object({
+            title: z.string().describe("Task title"),
+            description: z.string().optional().describe("Optional Markdown description / notes"),
+            listId: z.string().optional().describe("Optional list UUID (omit for Inbox)"),
+            listName: z.string().optional().describe("Optional list name (if provided and listId omitted, matches or auto-creates list)"),
+            priority: z.number().min(1).max(4).optional().default(4).describe("Priority (1=P1 Urgent, 2=P2 High, 3=P3 Med, 4=P4 Low)"),
+            dueDate: z.string().optional().describe("Due date (YYYY-MM-DD, 'today', 'tomorrow')"),
+            dueTime: z.string().optional().describe("Due time (HH:MM)"),
+            status: z.enum(["todo", "in_progress", "done"]).optional().default("todo"),
+            subtasks: z
+              .array(
+                z.object({
+                  title: z.string().describe("Subtask title"),
+                  description: z.string().optional().describe("Optional description"),
+                  priority: z.number().min(1).max(4).optional().default(4),
+                  dueDate: z.string().optional(),
+                  dueTime: z.string().optional(),
+                  status: z.enum(["todo", "in_progress", "done"]).optional().default("todo"),
+                  subtasks: z.array(z.any()).optional().describe("Optional nested subtasks"),
+                })
+              )
+              .optional()
+              .describe("Nested subtasks to create under this task"),
+          })
+        )
+        .describe("List of tasks to create"),
+    },
+    async ({ tasks }) => {
+      const createdSummary: Array<{
+        id: string;
+        title: string;
+        priority: string;
+        listName: string;
+        subtasksCount: number;
+      }> = [];
+
+      const listCache = new Map<string, string>();
+      const existingLists = await prisma.task_list.findMany({
+        where: { userId, deletedAt: null },
+      });
+      for (const l of existingLists) {
+        listCache.set(l.name.toLowerCase().trim(), l.id);
+      }
+
+      for (let i = 0; i < tasks.length; i++) {
+        const item = tasks[i];
+        let targetListId: string | null = null;
+
+        if (item.listId && item.listId !== "inbox" && item.listId !== "null") {
+          targetListId = item.listId;
+        } else if (item.listName && item.listName.trim() && item.listName.toLowerCase() !== "inbox") {
+          const normName = item.listName.toLowerCase().trim();
+          if (listCache.has(normName)) {
+            targetListId = listCache.get(normName)!;
+          } else {
+            const now = new Date();
+            const newList = await prisma.task_list.create({
+              data: {
+                userId,
+                name: item.listName.trim(),
+                color: "#3b82f6",
+                icon: "List",
+                sortOrder: listCache.size + 1,
+                createdAt: now,
+                updatedAt: now,
+              },
+            });
+            targetListId = newList.id;
+            listCache.set(normName, newList.id);
+          }
+        }
+
+        const now = new Date();
+        const dueDate = parseSmartDueDate(item.dueDate);
+        const parentTask = await prisma.task.create({
+          data: {
+            userId,
+            listId: targetListId,
+            parentId: null,
+            title: item.title.trim(),
+            description: item.description || null,
+            priority: Math.max(1, Math.min(4, item.priority || 4)),
+            status: item.status || "todo",
+            dueDate,
+            dueTime: item.dueTime || null,
+            sortOrder: i + 1,
+            totalTimeSeconds: 0,
+            completedAt: item.status === "done" ? now : null,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+
+        let subtaskCount = 0;
+        if (item.subtasks && item.subtasks.length > 0) {
+          const createdSubs = await createRecursiveSubtasks(item.subtasks, parentTask.id, targetListId, userId);
+          subtaskCount = createdSubs.length;
+        }
+
+        createdSummary.push({
+          id: parentTask.id,
+          title: parentTask.title,
+          priority: `P${parentTask.priority}`,
+          listName: item.listName || "Inbox",
+          subtasksCount: subtaskCount,
+        });
+      }
+
       return {
         content: [
           {
             type: "text",
             text: JSON.stringify(
               {
-                period: periodLabel,
-                startDate: start.toISOString().slice(0, 10),
-                endDate: end.toISOString().slice(0, 10),
-                totalTimeTrackedSeconds: totalSeconds,
-                totalTimeTrackedFormatted: formatSecondsHuman(totalSeconds),
-                totalSessionsRecorded: sessions.length,
-                topTasks,
-                listBreakdown,
+                success: true,
+                createdCount: createdSummary.length,
+                tasks: createdSummary,
               },
               null,
               2
@@ -1014,6 +1148,163 @@ export function registerTaskTools(server: McpServer, userId: string) {
       };
     }
   );
+
+  // 16. Batch update tasks
+  server.tool(
+    "reader_batch_update_tasks",
+    "Update multiple tasks or subtasks simultaneously (e.g., mark a set of tasks as done, change priorities, reschedule due dates, or move to a list)",
+    {
+      taskIds: z.array(z.string()).describe("Array of task UUIDs to update"),
+      status: z.enum(["todo", "in_progress", "done", "cancelled"]).optional().describe("New status to apply"),
+      priority: z.number().min(1).max(4).optional().describe("New priority to apply (1=P1, 4=P4)"),
+      listId: z.string().optional().describe("Target list UUID (or 'inbox' / 'null')"),
+      dueDate: z.string().optional().describe("New due date (YYYY-MM-DD, 'today', 'tomorrow', or 'null' to clear)"),
+    },
+    async ({ taskIds, status, priority, listId, dueDate }) => {
+      const now = new Date();
+      const updateData: Record<string, unknown> = { updatedAt: now };
+
+      if (status !== undefined) {
+        updateData.status = status;
+        updateData.completedAt = status === "done" ? now : null;
+      }
+      if (priority !== undefined) {
+        updateData.priority = Math.max(1, Math.min(4, priority));
+      }
+      if (listId !== undefined) {
+        updateData.listId = listId === "inbox" || listId === "null" || !listId ? null : listId;
+      }
+      if (dueDate !== undefined) {
+        updateData.dueDate = parseSmartDueDate(dueDate);
+      }
+
+      const res = await prisma.task.updateMany({
+        where: { id: { in: taskIds }, userId, deletedAt: null },
+        data: updateData,
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                updatedCount: res.count,
+                taskIds,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  // 17. Batch delete tasks
+  server.tool(
+    "reader_batch_delete_tasks",
+    "Soft-delete multiple tasks and their nested subtask trees in bulk",
+    {
+      taskIds: z.array(z.string()).describe("Array of task UUIDs to soft-delete"),
+    },
+    async ({ taskIds }) => {
+      const now = new Date();
+      const res = await prisma.task.updateMany({
+        where: { id: { in: taskIds }, userId, deletedAt: null },
+        data: { deletedAt: now, updatedAt: now },
+      });
+
+      // Also soft delete direct subtasks
+      await prisma.task.updateMany({
+        where: { parentId: { in: taskIds }, userId, deletedAt: null },
+        data: { deletedAt: now, updatedAt: now },
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                deletedCount: res.count,
+                taskIds,
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+}
+
+function parseSmartDueDate(dateStr?: string | null): Date | null {
+  if (!dateStr || dateStr === "null" || dateStr === "") return null;
+  const lower = dateStr.toLowerCase().trim();
+  const now = new Date();
+  if (lower === "today") {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  }
+  if (lower === "tomorrow") {
+    const tom = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    return new Date(tom.getFullYear(), tom.getMonth(), tom.getDate(), 0, 0, 0);
+  }
+  const d = new Date(dateStr);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+async function createRecursiveSubtasks(
+  items: Array<{
+    title: string;
+    description?: string;
+    priority?: number;
+    dueDate?: string;
+    dueTime?: string;
+    status?: "todo" | "in_progress" | "done";
+    subtasks?: any[];
+  }>,
+  parentId: string,
+  listId: string | null,
+  userId: string
+): Promise<Array<{ id: string; title: string }>> {
+  const results: Array<{ id: string; title: string }> = [];
+  const now = new Date();
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const dueDate = parseSmartDueDate(item.dueDate);
+    const created = await prisma.task.create({
+      data: {
+        userId,
+        parentId,
+        listId,
+        title: item.title.trim(),
+        description: item.description || null,
+        priority: Math.max(1, Math.min(4, item.priority || 4)),
+        status: item.status || "todo",
+        dueDate,
+        dueTime: item.dueTime || null,
+        sortOrder: i + 1,
+        totalTimeSeconds: 0,
+        completedAt: item.status === "done" ? now : null,
+        createdAt: now,
+        updatedAt: now,
+      },
+    });
+
+    results.push({ id: created.id, title: created.title });
+
+    if (item.subtasks && item.subtasks.length > 0) {
+      const nested = await createRecursiveSubtasks(item.subtasks, created.id, listId, userId);
+      results.push(...nested);
+    }
+  }
+
+  return results;
 }
 
 function formatSecondsHuman(totalSeconds: number): string {

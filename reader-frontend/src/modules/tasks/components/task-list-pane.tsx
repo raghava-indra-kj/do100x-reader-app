@@ -32,6 +32,7 @@ export const TaskListPane = observer(({ store }: Props) => {
   const activeTimerTaskId = store.activeTimer?.taskId;
 
   const [isPriorityMenuOpen, setIsPriorityMenuOpen] = useState(false);
+  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
   const [inlineSubtaskInputs, setInlineSubtaskInputs] = useState<Record<string, string>>({});
 
   const currentPriorityMeta = PRIORITY_META[store.quickTaskPriority] || PRIORITY_META[4];
@@ -62,10 +63,14 @@ export const TaskListPane = observer(({ store }: Props) => {
         </div>
 
         {/* Quick Add Task Bar */}
-        <div className="flex items-center space-x-2 bg-[var(--color-surface-raised)] p-2 rounded-2xl border border-[var(--color-border-default)] shadow-xs transition-focus focus-within:ring-2 focus-within:ring-[var(--color-brand)]/40 focus-within:border-[var(--color-brand)]">
+        <div className="flex items-center space-x-2 bg-[var(--color-surface-raised)] px-3 py-2 rounded-2xl border border-[var(--color-border-default)] shadow-xs transition-all focus-within:border-[var(--color-brand)] focus-within:ring-2 focus-within:ring-[var(--color-brand)]/25">
+          <div className="text-[var(--color-brand)] shrink-0">
+            <Plus className="w-4 h-4" />
+          </div>
+
           <input
             type="text"
-            placeholder={`+ Add a task to ${store.activeListName}... (Press Enter to save)`}
+            placeholder={`Add a task to ${store.activeListName}... (Press Enter)`}
             value={store.quickTaskTitle}
             onChange={(e) => store.setQuickTaskTitle(e.target.value)}
             onKeyDown={(e) => {
@@ -73,15 +78,18 @@ export const TaskListPane = observer(({ store }: Props) => {
                 store.createQuickTask();
               }
             }}
-            className="flex-1 bg-transparent text-xs px-2.5 py-1 focus:outline-none text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] font-medium"
+            className="flex-1 bg-transparent text-xs px-1 py-1 border-none ring-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] font-medium"
           />
 
           {/* Custom Priority Dropdown Popover */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               type="button"
-              onClick={() => setIsPriorityMenuOpen(!isPriorityMenuOpen)}
-              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${currentPriorityMeta.bg} ${currentPriorityMeta.text} ${currentPriorityMeta.border}`}
+              onClick={() => {
+                setIsPriorityMenuOpen(!isPriorityMenuOpen);
+                setIsDateMenuOpen(false);
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${currentPriorityMeta.bg} ${currentPriorityMeta.text} ${currentPriorityMeta.border}`}
             >
               <Flag className="w-3 h-3" style={{ color: currentPriorityMeta.flagColor }} />
               <span>{currentPriorityMeta.label}</span>
@@ -102,7 +110,7 @@ export const TaskListPane = observer(({ store }: Props) => {
                         store.setQuickTaskPriority(p);
                         setIsPriorityMenuOpen(false);
                       }}
-                      className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-left font-medium transition ${
+                      className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-left font-medium transition cursor-pointer ${
                         store.quickTaskPriority === p
                           ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-bold'
                           : 'hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)]'
@@ -117,15 +125,88 @@ export const TaskListPane = observer(({ store }: Props) => {
             )}
           </div>
 
-          {/* Quick Due Date Input */}
-          <div className="flex items-center space-x-1 bg-[var(--color-surface-soft)] border border-[var(--color-border-subtle)] px-2 py-1 rounded-lg text-xs">
-            <Calendar className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-            <input
-              type="date"
-              value={store.quickTaskDueDate}
-              onChange={(e) => store.setQuickTaskDueDate(e.target.value)}
-              className="bg-transparent text-xs text-[var(--color-text-strong)] focus:outline-none cursor-pointer"
-            />
+          {/* Custom Due Date Dropdown Popover */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDateMenuOpen(!isDateMenuOpen);
+                setIsPriorityMenuOpen(false);
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition cursor-pointer ${
+                store.quickTaskDueDate
+                  ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] border-[var(--color-brand)]/40 font-bold'
+                  : 'bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] border-[var(--color-border-subtle)]'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>
+                {store.quickTaskDueDate
+                  ? store.quickTaskDueDate === new Date().toISOString().slice(0, 10)
+                    ? 'Today'
+                    : store.quickTaskDueDate === new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+                    ? 'Tomorrow'
+                    : store.quickTaskDueDate
+                  : 'Set Date'}
+              </span>
+            </button>
+
+            {isDateMenuOpen && (
+              <div
+                className="absolute right-0 top-full mt-1.5 z-40 w-52 bg-[var(--color-surface-raised)] rounded-2xl border border-[var(--color-border-default)] shadow-2xl p-2 text-xs space-y-2 animate-in fade-in zoom-in-95 duration-100"
+                onMouseLeave={() => setIsDateMenuOpen(false)}
+              >
+                <div className="grid grid-cols-2 gap-1 pb-1 border-b border-[var(--color-border-subtle)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      store.setQuickTaskDueDate(new Date().toISOString().slice(0, 10));
+                      setIsDateMenuOpen(false);
+                    }}
+                    className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-soft)] hover:bg-[var(--color-brand-soft)] hover:text-[var(--color-brand-on-soft)] text-center font-semibold cursor-pointer transition"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tom = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+                      store.setQuickTaskDueDate(tom);
+                      setIsDateMenuOpen(false);
+                    }}
+                    className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-soft)] hover:bg-[var(--color-brand-soft)] hover:text-[var(--color-brand-on-soft)] text-center font-semibold cursor-pointer transition"
+                  >
+                    Tomorrow
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">Custom Date</span>
+                  <input
+                    type="date"
+                    value={store.quickTaskDueDate}
+                    onChange={(e) => {
+                      store.setQuickTaskDueDate(e.target.value);
+                      setIsDateMenuOpen(false);
+                    }}
+                    className="w-full bg-[var(--color-surface-canvas)] border border-[var(--color-border-default)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--color-text-strong)] focus:outline-none cursor-pointer"
+                  />
+                </div>
+
+                {store.quickTaskDueDate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      store.setQuickTaskDueDate('');
+                      setIsDateMenuOpen(false);
+                    }}
+                    className="w-full py-1 text-center text-[11px] text-[var(--color-error)] hover:underline font-medium cursor-pointer"
+                  >
+                    Clear Date
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Add Button */}
@@ -133,7 +214,7 @@ export const TaskListPane = observer(({ store }: Props) => {
             type="button"
             onClick={() => store.createQuickTask()}
             disabled={!store.quickTaskTitle.trim()}
-            className="px-3.5 py-1.5 bg-[var(--color-brand)] text-white text-xs font-bold rounded-xl hover:bg-[var(--color-brand-hover)] disabled:opacity-35 transition shadow-xs flex items-center space-x-1"
+            className="px-4 py-1.5 bg-[var(--color-brand)] text-white text-xs font-bold rounded-xl hover:bg-[var(--color-brand-hover)] disabled:opacity-35 transition shadow-xs flex items-center space-x-1.5 cursor-pointer shrink-0"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Add</span>
