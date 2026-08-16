@@ -1,6 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
+import {
+  parseMarkdownSections,
+  updateSectionByIndex,
+  replaceLines,
+  insertSectionAfterIndex,
+} from "../utils/sectionizer";
 
 export function registerPageTools(server: McpServer, userId: string) {
   // 1. List pages
@@ -73,14 +79,15 @@ export function registerPageTools(server: McpServer, userId: string) {
     }
   );
 
-  // 2. Get single page
+  // 2. Get single page (with raw markdown and line count)
   server.tool(
     "reader_get_page",
-    "Fetch full content, markdown text, and metadata of a reader page by ID",
+    "Fetch full content, line-numbered markdown, and metadata of a reader page by ID",
     {
       pageId: z.string().describe("The UUID of the page to retrieve"),
+      includeLineNumbers: z.boolean().optional().default(false).describe("If true, returns line-numbered markdown lines for precision edits"),
     },
-    async ({ pageId }) => {
+    async ({ pageId, includeLineNumbers }) => {
       const page = await prisma.page.findFirst({
         where: { id: pageId, userId, deletedAt: null },
       });
@@ -92,6 +99,14 @@ export function registerPageTools(server: McpServer, userId: string) {
         };
       }
 
+      const rawContent = page.content ?? "";
+      let formattedContent = rawContent;
+
+      if (includeLineNumbers) {
+        const lines = rawContent.split(/\r?\n/);
+        formattedContent = lines.map((l, i) => `${i + 1}: ${l}`).join("\n");
+      }
+
       return {
         content: [
           {
@@ -101,7 +116,8 @@ export function registerPageTools(server: McpServer, userId: string) {
                 id: page.id,
                 parentPageId: page.parentId,
                 title: page.title,
-                content: page.content ?? "",
+                content: formattedContent,
+                totalLines: rawContent.split(/\r?\n/).length,
                 category: page.category,
                 sortOrder: page.sortOrder,
                 childrenCount: page.childrenCount,
@@ -121,7 +137,243 @@ export function registerPageTools(server: McpServer, userId: string) {
     }
   );
 
-  // 3. Create page
+  // 3. Get Page Sections (Deterministic Index-based structure)
+  server.tool(
+    "reader_get_page_sections",
+    "Get a structured list of all sections in a page with numeric indices, headings, line ranges, and previews",
+    {
+      pageId: z.string().describe("The UUID of the page to inspect"),
+    },
+    async ({ pageId }) => {
+      const page = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+
+      if (!page) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Page not found: ${pageId}` }],
+        };
+      }
+
+      const sections = parseMarkdownSections(page.content ?? "");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              sections.map((s) => ({
+                index: s.index,
+                level: s.level,
+                heading: s.heading,
+                startLine: s.startLine,
+                endLine: s.endLine,
+                characterCount: s.content.length,
+                preview: s.content.slice(0, 150) + (s.content.length > 150 ? "..." : ""),
+              })),
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  // 4. Update Section by Numeric Index (100% immune to duplicate titles or double quotes)
+  server.tool(
+    "reader_update_section",
+    "Update a specific section's body content using its numeric sectionIndex (from reader_get_page_sections). 100% immune to duplicate titles, quotes, or formatting quirks.",
+    {
+      pageId: z.string().describe("The UUID of the page to update"),
+      sectionIndex: z.number().int().min(0).describe("0-based numeric index of the section to update (from reader_get_page_sections)"),
+      newContent: z.string().describe("The new markdown body text for this section"),
+      preserveHeading: z.boolean().optional().default(true).describe("Whether to keep the existing # heading line and replace only the body below it (default: true)"),
+    },
+    async ({ pageId, sectionIndex, newContent, preserveHeading }) => {
+      const page = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+
+      if (!page) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Page not found: ${pageId}` }],
+        };
+      }
+
+      try {
+        const { updatedMarkdown, section } = updateSectionByIndex(
+          page.content ?? "",
+          sectionIndex,
+          newContent,
+          preserveHeading ?? true
+        );
+
+        await prisma.page.update({
+          where: { id: pageId },
+          data: {
+            content: updatedMarkdown,
+            updatedAt: new Date(),
+          },
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: true,
+                  pageId,
+                  sectionIndex,
+                  updatedHeading: section.heading,
+                  headingLevel: section.level,
+                  updatedAt: new Date().toISOString(),
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Failed to update section: ${err.message}` }],
+        };
+      }
+    }
+  );
+
+  // 5. Replace Line Range (Surgical Line-by-Line editing)
+  server.tool(
+    "reader_replace_lines",
+    "Replace a specific line range [startLine, endLine] with new content. Includes optional safety check against expectedContent.",
+    {
+      pageId: z.string().describe("The UUID of the page to edit"),
+      startLine: z.number().int().min(1).describe("Starting line number (1-indexed, inclusive)"),
+      endLine: z.number().int().min(1).describe("Ending line number (1-indexed, inclusive)"),
+      replacementContent: z.string().describe("The new text to replace the specified line range"),
+      expectedContent: z.string().optional().describe("Optional safety check: expected text currently occupying lines [startLine..endLine]"),
+    },
+    async ({ pageId, startLine, endLine, replacementContent, expectedContent }) => {
+      const page = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+
+      if (!page) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Page not found: ${pageId}` }],
+        };
+      }
+
+      try {
+        const updatedMarkdown = replaceLines(
+          page.content ?? "",
+          startLine,
+          endLine,
+          replacementContent,
+          expectedContent
+        );
+
+        await prisma.page.update({
+          where: { id: pageId },
+          data: {
+            content: updatedMarkdown,
+            updatedAt: new Date(),
+          },
+        });
+
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                {
+                  success: true,
+                  pageId,
+                  startLine,
+                  endLine,
+                  totalLines: updatedMarkdown.split(/\r?\n/).length,
+                  updatedAt: new Date().toISOString(),
+                },
+                null,
+                2
+              ),
+            },
+          ],
+        };
+      } catch (err: any) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Failed to replace lines: ${err.message}` }],
+        };
+      }
+    }
+  );
+
+  // 6. Insert Section (Append or insert after specific section index)
+  server.tool(
+    "reader_insert_section",
+    "Insert a new section and heading at a specific position (e.g. after section index 2 or at the end)",
+    {
+      pageId: z.string().describe("The UUID of the page"),
+      heading: z.string().describe("The markdown heading line (e.g. '## 2.5 Security Considerations')"),
+      content: z.string().describe("The body content for the new section"),
+      afterSectionIndex: z.number().int().optional().describe("0-based section index to insert after (omit to append at the bottom)"),
+    },
+    async ({ pageId, heading, content, afterSectionIndex }) => {
+      const page = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+
+      if (!page) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Page not found: ${pageId}` }],
+        };
+      }
+
+      const updatedMarkdown = insertSectionAfterIndex(
+        page.content ?? "",
+        afterSectionIndex,
+        heading,
+        content
+      );
+
+      await prisma.page.update({
+        where: { id: pageId },
+        data: {
+          content: updatedMarkdown,
+          updatedAt: new Date(),
+        },
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(
+              {
+                success: true,
+                pageId,
+                heading,
+                insertedAfterIndex: afterSectionIndex ?? "end",
+                updatedAt: new Date().toISOString(),
+              },
+              null,
+              2
+            ),
+          },
+        ],
+      };
+    }
+  );
+
+  // 7. Create page
   server.tool(
     "reader_create_page",
     "Create a new top-level page or nested subpage in Reader",
@@ -188,14 +440,14 @@ export function registerPageTools(server: McpServer, userId: string) {
     }
   );
 
-  // 4. Update page
+  // 8. Update page metadata / entire content
   server.tool(
     "reader_update_page",
-    "Update an existing page's title, markdown content, category, or AI prompts",
+    "Update an existing page's title, full markdown content, category, or AI prompts",
     {
       pageId: z.string().describe("The UUID of the page to update"),
       title: z.string().optional().describe("Updated title"),
-      content: z.string().optional().describe("Updated Markdown body content"),
+      content: z.string().optional().describe("Updated Markdown body content (overwrites full page)"),
       category: z.string().nullable().optional().describe("Updated category"),
       meaningSystemPrompt: z.string().nullable().optional().describe("Updated custom AI prompt for meanings"),
       explanationSystemPrompt: z.string().nullable().optional().describe("Updated custom AI prompt for explanations"),
@@ -248,7 +500,7 @@ export function registerPageTools(server: McpServer, userId: string) {
     }
   );
 
-  // 5. Delete page
+  // 9. Delete page
   server.tool(
     "reader_delete_page",
     "Soft-delete a reader page and its descendants",
@@ -303,7 +555,7 @@ export function registerPageTools(server: McpServer, userId: string) {
     }
   );
 
-  // 6. Get page tree
+  // 10. Get page tree
   server.tool(
     "reader_get_page_tree",
     "Retrieve the full hierarchical tree of pages and subpages",
