@@ -5,6 +5,7 @@ import type { ICommentsRepo } from '@domain/comment/repos/comments-repo';
 import type { IVocabularyRepo } from '@domain/vocabulary/repos/vocabulary-repo';
 import type { ISettingsRepo } from '@domain/settings/repos/settings-repo';
 import type { IChatRepo } from '@domain/chat/repos/chat-repo';
+import type { ITaskRepo } from '@domain/tasks/repos/task-repo';
 
 export const TYPES = {
     IAuthRepo: Symbol.for('IAuthRepo') as ServiceIdentifier<IAuthRepo>,
@@ -13,4 +14,5 @@ export const TYPES = {
     IVocabularyRepo: Symbol.for('IVocabularyRepo') as ServiceIdentifier<IVocabularyRepo>,
     ISettingsRepo: Symbol.for('ISettingsRepo') as ServiceIdentifier<ISettingsRepo>,
     IChatRepo: Symbol.for('IChatRepo') as ServiceIdentifier<IChatRepo>,
+    ITaskRepo: Symbol.for('ITaskRepo') as ServiceIdentifier<ITaskRepo>,
 };

@@ -8,8 +8,10 @@ import pagesRouter from "./pages";
 import commentsRouter from "./comments";
 import vocabularyRouter from "./vocabulary";
 import modelConfigRouter from "./model-config";
-import userModelsRouter from "./user-models";
 import chatRouter from "./chat";
+import tasksRouter from "./tasks";
+import taskListsRouter from "./task-lists";
+import timerRouter from "./timer";
 import { createMcpSseRouter } from "./mcp/sse-router";
 
 const app = express();
@@ -47,6 +49,9 @@ app.use("/backend-api/vocabulary", vocabularyRouter);
 app.use("/backend-api/model-config", modelConfigRouter);
 app.use("/backend-api/user-models", userModelsRouter);
 app.use("/backend-api/chat", chatRouter);
+app.use("/backend-api/tasks", tasksRouter);
+app.use("/backend-api/task-lists", taskListsRouter);
+app.use("/backend-api/timer", timerRouter);
 
 if (hasFrontend) {
   app.get("*splat", (_req, res) => {

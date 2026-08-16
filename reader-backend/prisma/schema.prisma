@@ -15,15 +15,15 @@ model appuser {
 }
 
 model page {
-  id            String    @id @default(uuid()) @db.VarChar(36)
-  userId        String    @db.VarChar(36)
-  parentId      String?   @db.VarChar(36)
-  title         String    @db.VarChar(1000)
-  content       String?   @db.LongText
-  category      String?   @db.VarChar(255)
-  sortOrder     Int
-  childrenCount Int
-  isPublic      Boolean   @default(false)
+  id                      String    @id @default(uuid()) @db.VarChar(36)
+  userId                  String    @db.VarChar(36)
+  parentId                String?   @db.VarChar(36)
+  title                   String    @db.VarChar(1000)
+  content                 String?   @db.LongText
+  category                String?   @db.VarChar(255)
+  sortOrder               Int
+  childrenCount           Int
+  isPublic                Boolean   @default(false)
   createdAt               DateTime  @db.DateTime(6)
   updatedAt               DateTime  @db.DateTime(6)
   deletedAt               DateTime? @db.DateTime(6)
@@ -55,10 +55,10 @@ model vocabulary {
 }
 
 model model_config {
-  id                 String  @id @default(uuid()) @db.VarChar(36)
-  userId             String  @unique @db.VarChar(36)
-  baseUrl            String  @db.VarChar(500)
-  apiKey             String  @db.VarChar(500)
+  id                      String  @id @default(uuid()) @db.VarChar(36)
+  userId                  String  @unique @db.VarChar(36)
+  baseUrl                 String  @db.VarChar(500)
+  apiKey                  String  @db.VarChar(500)
   explanationModelId      String? @db.VarChar(255)
   meaningModelId          String? @db.VarChar(255)
   doubtModelId            String? @db.VarChar(255)
@@ -76,3 +76,76 @@ model user_model {
   apiKey  String? @db.VarChar(500)
 }
 
+// ----------------------------------------------------
+// TASK MANAGEMENT & TIME TRACKING MODELS
+// ----------------------------------------------------
+
+model task_list {
+  id        String    @id @default(uuid()) @db.VarChar(36)
+  userId    String    @db.VarChar(36)
+  name      String    @db.VarChar(255)
+  color     String?   @db.VarChar(50)
+  icon      String?   @db.VarChar(50)
+  sortOrder Int       @default(0)
+  createdAt DateTime  @db.DateTime(6)
+  updatedAt DateTime  @db.DateTime(6)
+  deletedAt DateTime? @db.DateTime(6)
+
+  @@index([userId])
+}
+
+model task {
+  id               String    @id @default(uuid()) @db.VarChar(36)
+  userId           String    @db.VarChar(36)
+  listId           String?   @db.VarChar(36)
+  parentId         String?   @db.VarChar(36)
+  title            String    @db.VarChar(1000)
+  description      String?   @db.LongText
+  status           String    @default("todo") @db.VarChar(50) // "todo", "in_progress", "done", "cancelled"
+  priority         Int       @default(4) // 1=P1 Urgent/Important, 2=P2 High, 3=P3 Medium, 4=P4 Low/None
+  dueDate          DateTime? @db.DateTime(6)
+  dueTime          String?   @db.VarChar(10)
+  sortOrder        Int       @default(0)
+  totalTimeSeconds Int       @default(0)
+  completedAt      DateTime? @db.DateTime(6)
+  createdAt        DateTime  @db.DateTime(6)
+  updatedAt        DateTime  @db.DateTime(6)
+  deletedAt        DateTime? @db.DateTime(6)
+
+  @@index([userId])
+  @@index([listId])
+  @@index([parentId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model time_session {
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  userId          String   @db.VarChar(36)
+  taskId          String   @db.VarChar(36)
+  startTime       DateTime @db.DateTime(6)
+  endTime         DateTime? @db.DateTime(6)
+  durationSeconds Int      @default(0)
+  notes           String?  @db.Text
+  createdAt       DateTime @db.DateTime(6)
+  updatedAt       DateTime @db.DateTime(6)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([startTime])
+}
+
+model active_timer {
+  id                 String    @id @default(uuid()) @db.VarChar(36)
+  userId             String    @unique @db.VarChar(36)
+  taskId             String    @db.VarChar(36)
+  startTime          DateTime  @db.DateTime(6)
+  accumulatedSeconds Int       @default(0)
+  isPaused           Boolean   @default(false)
+  pausedAt           DateTime? @db.DateTime(6)
+  notes              String?   @db.Text
+  createdAt          DateTime  @db.DateTime(6)
+  updatedAt          DateTime  @db.DateTime(6)
+
+  @@index([taskId])
+}

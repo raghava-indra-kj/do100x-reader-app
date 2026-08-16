@@ -5,6 +5,7 @@ import { CommentsRepoApi } from '@domain/comment/repos/comments-repo-api';
 import { VocabularyRepoApi } from '@domain/vocabulary/repos/vocabulary-repo-api';
 import { SettingsRepoApi } from '@domain/settings/repos/settings-repo-api';
 import { ChatRepoApi } from '@domain/chat/repos/chat-repo-api';
+import { TaskRepoApi } from '@domain/tasks/repos/task-repo-api';
 import { TYPES } from './types';
 
 const container = new Container();
@@ -15,5 +16,6 @@ container.bind(TYPES.ICommentsRepo).to(CommentsRepoApi);
 container.bind(TYPES.IVocabularyRepo).to(VocabularyRepoApi);
 container.bind(TYPES.ISettingsRepo).to(SettingsRepoApi);
 container.bind(TYPES.IChatRepo).to(ChatRepoApi);
+container.bind(TYPES.ITaskRepo).to(TaskRepoApi);
 
 export { container, TYPES };

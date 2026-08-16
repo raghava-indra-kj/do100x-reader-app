@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider, AuthGuard } from '@modules/auth/provider';
-import { homePageRoute, loginPageRoute, mdParserLibDemoRoute, mdViewLibDemoRoute, pagesPageWithIdRoute, signupPageRoute, settingsPageRoute } from './routes';
+import { homePageRoute, loginPageRoute, mdParserLibDemoRoute, mdViewLibDemoRoute, pagesPageWithIdRoute, signupPageRoute, settingsPageRoute, tasksPageRoute } from './routes';
 
 const HomePage = lazy(() => import('../modules/home/page'));
 const MdViewLibDemoPage = lazy(() => import('../lib/md-view-demo'));
@@ -10,6 +10,7 @@ const LoginPage = lazy(() => import('../modules/auth/login/page'));
 const SignupPage = lazy(() => import('../modules/auth/signup/page'));
 const PagePage = lazy(() => import('../modules/page/page'));
 const SettingsPage = lazy(() => import('../modules/settings/page'));
+const TasksPage = lazy(() => import('../modules/tasks/page'));
 
 export function AppRouter() {
     return (
@@ -23,6 +24,7 @@ export function AppRouter() {
                     <Route path={loginPageRoute} element={<LoginPage />} />
                     <Route path={signupPageRoute} element={<SignupPage />} />
                     <Route path={settingsPageRoute} element={<AuthGuard><SettingsPage /></AuthGuard>} />
+                    <Route path={tasksPageRoute} element={<AuthGuard><TasksPage /></AuthGuard>} />
                 </Routes>
             </AuthProvider>
         </BrowserRouter>
