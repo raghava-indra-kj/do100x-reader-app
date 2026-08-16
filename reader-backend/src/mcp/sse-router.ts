@@ -68,14 +68,9 @@ export function createMcpSseRouter(): Router {
     }
   }
 
-  // SSE Connect Endpoints (supports /sse, /sse/:token, and root /:token if mounted at /mcp)
+  // SSE Connect Endpoints (specifically scoped to /sse and /sse/:token)
   router.get("/sse/:token", handleSseConnect);
   router.get("/sse", handleSseConnect);
-  router.get("/:token", (req, res, next) => {
-    // If param is 'messages', forward to next
-    if (req.params.token === "messages") return next();
-    return handleSseConnect(req, res);
-  });
 
   // POST /messages - Handles tool calls and client JSON-RPC messages for authenticated sessions
   router.post("/messages", async (req: Request, res: Response) => {

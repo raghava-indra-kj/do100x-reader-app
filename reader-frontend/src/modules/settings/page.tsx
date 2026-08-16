@@ -8,7 +8,7 @@ import { Button } from '@modules/core/ui/primitives/button';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Select } from '@modules/core/ui/primitives/select';
 import { SettingsStore } from './store';
-import { Trash2, Eye, EyeOff, Copy, Check, Hourglass, FileCode, Pencil, Globe, Key, X } from 'lucide-react';
+import { Trash2, Eye, EyeOff, Copy, Check, Hourglass, FileCode, Pencil, Globe, Key, X, Server } from 'lucide-react';
 import { getLifePerspectiveConfig, saveLifePerspectiveConfig } from '@modules/core/utils/time-perspective';
 import { FORMAT_LLM_MD_CONTENT } from '@modules/core/constants/format-llm-guide';
 
@@ -20,6 +20,8 @@ export default function SettingsPage() {
     const [showApiKey, setShowApiKey] = useState(false);
     const [copiedApiKey, setCopiedApiKey] = useState(false);
     const [copiedGuide, setCopiedGuide] = useState(false);
+    const [copiedMcpUrl, setCopiedMcpUrl] = useState(false);
+    const [copiedMcpJson, setCopiedMcpJson] = useState(false);
     const [showNewModelApiKey, setShowNewModelApiKey] = useState(false);
     const [showEditModelApiKey, setShowEditModelApiKey] = useState(false);
 
@@ -98,6 +100,82 @@ export default function SettingsPage() {
                                                     </button>
                                                 )}
                                             </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* Model Context Protocol (MCP) Server Section */}
+                                <section className="p-6 rounded-[var(--radius-lg)] bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex items-center justify-center w-7 h-7 rounded-md bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)]">
+                                                <Server size={15} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-base font-semibold text-[var(--color-text-strong)]">Model Context Protocol (MCP) Server</h2>
+                                                <p className="text-xs text-[var(--color-text-muted)]">Connect external AI agents (Antigravity IDE, Claude, Cursor) directly to your Reader workspace</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-3 pt-1">
+                                        <div>
+                                            <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Your Unique MCP Server URL</span>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <p className="text-xs font-mono text-[var(--color-text-strong)] bg-[var(--color-surface-canvas)] px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--color-border-default)] select-all flex-1 truncate">
+                                                    {`${window.location.origin}/sse/${authStore.currentUser.id}`}
+                                                </p>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const url = `${window.location.origin}/sse/${authStore.currentUser.id}`;
+                                                        navigator.clipboard.writeText(url);
+                                                        setCopiedMcpUrl(true);
+                                                        setTimeout(() => setCopiedMcpUrl(false), 1500);
+                                                    }}
+                                                    className="flex items-center gap-1.5 shrink-0 text-xs"
+                                                >
+                                                    {copiedMcpUrl ? <Check size={14} className="text-[var(--color-brand)]" /> : <Copy size={14} />}
+                                                    <span>{copiedMcpUrl ? 'Copied URL!' : 'Copy URL'}</span>
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        const json = JSON.stringify(
+                                                            {
+                                                                mcpServers: {
+                                                                    reader: {
+                                                                        serverUrl: `${window.location.origin}/sse/${authStore.currentUser.id}`,
+                                                                    },
+                                                                },
+                                                            },
+                                                            null,
+                                                            2
+                                                        );
+                                                        navigator.clipboard.writeText(json);
+                                                        setCopiedMcpJson(true);
+                                                        setTimeout(() => setCopiedMcpJson(false), 1500);
+                                                    }}
+                                                    className="flex items-center gap-1.5 shrink-0 text-xs"
+                                                >
+                                                    {copiedMcpJson ? <Check size={14} /> : <Copy size={14} />}
+                                                    <span>{copiedMcpJson ? 'Copied JSON Config!' : 'Copy JSON Config'}</span>
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        <div className="rounded-[var(--radius-md)] bg-[var(--color-surface-canvas)] p-3 border border-[var(--color-border-subtle)] text-xs text-[var(--color-text-muted)] space-y-1.5">
+                                            <p className="font-medium text-[var(--color-text-strong)]">Configuration snippet for <code>.agents/mcp_config.json</code> or Claude Desktop:</p>
+                                            <pre className="font-mono text-[11px] text-[var(--color-text-body)] overflow-x-auto p-2 rounded bg-[var(--color-surface-raised)]">
+{`{
+  "mcpServers": {
+    "reader": {
+      "serverUrl": "${window.location.origin}/sse/${authStore.currentUser.id}"
+    }
+  }
+}`}
+                                            </pre>
                                         </div>
                                     </div>
                                 </section>

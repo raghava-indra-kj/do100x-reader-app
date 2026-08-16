@@ -14,6 +14,9 @@ import { settingsPageRoute } from '@boot/routes';
 import { toast } from 'sonner';
 import { FORMAT_LLM_MD_CONTENT } from '@modules/core/constants/format-llm-guide';
 
+import { useAuthStore } from '@modules/auth/provider/store';
+import { Server } from 'lucide-react';
+
 const fontFamilyItems = Object.fromEntries(PageFontFamilies.VALUES.map(f => [f.id, f.label]));
 const fontSizeItems = Object.fromEntries(PageFontSizes.VALUES.map(s => [s.id, s.label]));
 const headingLevelItems = Object.fromEntries(PageHeadingLevel.VALUES.filter(h => h.value !== null).map(h => [h.id, h.label]));
@@ -26,6 +29,20 @@ export interface PageSettingsDialogProps {
 export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogProps) {
     const store = usePageStore();
     const uiSettings = store.uiSettingsStore;
+    const authStore = useAuthStore();
+
+    const mcpUrl = `${window.location.origin}/sse/${authStore.currentUser?.id || ''}`;
+    const mcpConfigJson = JSON.stringify(
+        {
+            mcpServers: {
+                reader: {
+                    serverUrl: mcpUrl,
+                },
+            },
+        },
+        null,
+        2
+    );
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -89,6 +106,20 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     <ThemeSelector />
                 </div>
                 <div className="border-t border-[var(--color-border-subtle)] pt-4 flex flex-col gap-2.5">
+                    {authStore.isAuthenticated && (
+                        <Button
+                            variant="outlined"
+                            size="sm"
+                            onClick={() => {
+                                navigator.clipboard.writeText(mcpConfigJson);
+                                toast.success('MCP Server configuration copied to clipboard');
+                            }}
+                            className="flex items-center justify-center gap-1.5 text-xs w-full"
+                        >
+                            <Server size={13} className="text-[var(--color-brand)]" />
+                            <span>Copy MCP Server Config (JSON)</span>
+                        </Button>
+                    )}
                     <Button
                         variant="outlined"
                         size="sm"
@@ -103,7 +134,7 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     </Button>
                     <div className="flex justify-center">
                         <Link to={settingsPageRoute} onClick={() => onOpenChange(false)} className="text-xs text-[var(--color-brand)] font-medium hover:underline">
-                            Configure AI models &amp; Lifespan &rarr;
+                            Configure AI models, MCP &amp; Lifespan &rarr;
                         </Link>
                     </div>
                 </div>
