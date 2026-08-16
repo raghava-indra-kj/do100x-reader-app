@@ -387,7 +387,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
   // 5. Delete task
   server.tool(
     "reader_delete_task",
-    "Soft-delete a task and all of its nested subtasks",
+    "Soft-delete a task and all of its nested subtasks, and delete their related time sessions",
     {
       taskId: z.string().describe("Task UUID to delete"),
     },
@@ -400,25 +400,35 @@ export function registerTaskTools(server: McpServer, userId: string) {
       }
 
       const now = new Date();
-      async function deleteRecursive(tId: string) {
+      async function getAllDescendantTaskIds(tId: string): Promise<string[]> {
+        const ids: string[] = [tId];
         const children = await prisma.task.findMany({
           where: { parentId: tId, userId, deletedAt: null },
           select: { id: true },
         });
         for (const c of children) {
-          await deleteRecursive(c.id);
+          const subIds = await getAllDescendantTaskIds(c.id);
+          ids.push(...subIds);
         }
-        await prisma.task.update({
-          where: { id: tId },
-          data: { deletedAt: now, updatedAt: now },
-        });
+        return ids;
       }
 
-      await deleteRecursive(taskId);
+      const allTargetIds = await getAllDescendantTaskIds(taskId);
 
-      // Discard active timer if running on this task
+      // 1. Delete all related time sessions
+      await prisma.time_session.deleteMany({
+        where: { taskId: { in: allTargetIds }, userId },
+      });
+
+      // 2. Soft-delete all tasks
+      await prisma.task.updateMany({
+        where: { id: { in: allTargetIds }, userId },
+        data: { deletedAt: now, updatedAt: now },
+      });
+
+      // 3. Discard active timer if running on any of these tasks
       const active = await prisma.active_timer.findUnique({ where: { userId } });
-      if (active?.taskId === taskId) {
+      if (active && allTargetIds.includes(active.taskId)) {
         await prisma.active_timer.delete({ where: { userId } });
       }
 
@@ -426,7 +436,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
         content: [
           {
             type: "text",
-            text: JSON.stringify({ success: true, deletedTaskId: taskId }, null, 2),
+            text: JSON.stringify({ success: true, deletedTaskId: taskId, affectedTaskIds: allTargetIds }, null, 2),
           },
         ],
       };
@@ -744,8 +754,9 @@ export function registerTaskTools(server: McpServer, userId: string) {
     "Stop the active timer, record the time session with optional notes, and update task total time",
     {
       notes: z.string().optional().describe("Optional note/summary of work done during this session"),
+      durationMinutes: z.number().min(1).optional().describe("Optional adjusted duration in minutes (e.g. to subtract away time before saving)"),
     },
-    async ({ notes }) => {
+    async ({ notes, durationMinutes }) => {
       const active = await prisma.active_timer.findUnique({ where: { userId } });
       if (!active) {
         return { isError: true, content: [{ type: "text", text: "No active timer to stop" }] };
@@ -755,6 +766,10 @@ export function registerTaskTools(server: McpServer, userId: string) {
       let finalDuration = active.accumulatedSeconds;
       if (!active.isPaused) {
         finalDuration += Math.max(0, Math.floor((now.getTime() - active.startTime.getTime()) / 1000));
+      }
+
+      if (durationMinutes !== undefined && durationMinutes > 0) {
+        finalDuration = durationMinutes * 60;
       }
 
       const session = await prisma.time_session.create({
@@ -1205,22 +1220,49 @@ export function registerTaskTools(server: McpServer, userId: string) {
   // 17. Batch delete tasks
   server.tool(
     "reader_batch_delete_tasks",
-    "Soft-delete multiple tasks and their nested subtask trees in bulk",
+    "Soft-delete multiple tasks and their nested subtask trees in bulk, and delete all associated time sessions",
     {
       taskIds: z.array(z.string()).describe("Array of task UUIDs to soft-delete"),
     },
     async ({ taskIds }) => {
       const now = new Date();
+
+      async function getAllDescendantTaskIds(tId: string): Promise<string[]> {
+        const ids: string[] = [tId];
+        const children = await prisma.task.findMany({
+          where: { parentId: tId, userId, deletedAt: null },
+          select: { id: true },
+        });
+        for (const c of children) {
+          const subIds = await getAllDescendantTaskIds(c.id);
+          ids.push(...subIds);
+        }
+        return ids;
+      }
+
+      const allTargetIdsSet = new Set<string>();
+      for (const tId of taskIds) {
+        const ids = await getAllDescendantTaskIds(tId);
+        ids.forEach((id) => allTargetIdsSet.add(id));
+      }
+      const allTargetIds = Array.from(allTargetIdsSet);
+
+      // 1. Delete all time sessions
+      await prisma.time_session.deleteMany({
+        where: { taskId: { in: allTargetIds }, userId },
+      });
+
+      // 2. Soft-delete all tasks
       const res = await prisma.task.updateMany({
-        where: { id: { in: taskIds }, userId, deletedAt: null },
+        where: { id: { in: allTargetIds }, userId, deletedAt: null },
         data: { deletedAt: now, updatedAt: now },
       });
 
-      // Also soft delete direct subtasks
-      await prisma.task.updateMany({
-        where: { parentId: { in: taskIds }, userId, deletedAt: null },
-        data: { deletedAt: now, updatedAt: now },
-      });
+      // 3. Discard active timer if running on any of these tasks
+      const active = await prisma.active_timer.findUnique({ where: { userId } });
+      if (active && allTargetIds.includes(active.taskId)) {
+        await prisma.active_timer.delete({ where: { userId } });
+      }
 
       return {
         content: [
@@ -1230,7 +1272,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
               {
                 success: true,
                 deletedCount: res.count,
-                taskIds,
+                affectedTaskIds: allTargetIds,
               },
               null,
               2

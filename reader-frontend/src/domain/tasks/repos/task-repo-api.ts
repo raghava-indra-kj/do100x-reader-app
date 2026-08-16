@@ -176,9 +176,9 @@ export class TaskRepoApi implements ITaskRepo {
     }
   }
 
-  async stopTimer(notes?: string): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError> {
+  async stopTimer(notes?: string, durationSeconds?: number): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError> {
     try {
-      const { data } = await apiClient.post('/timer/stop', { notes });
+      const { data } = await apiClient.post('/timer/stop', { notes, durationSeconds });
       return ok({
         session: TimeSessionSchema.parse(data.session),
         taskTotalTimeSeconds: data.taskTotalTimeSeconds,

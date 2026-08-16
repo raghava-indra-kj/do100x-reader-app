@@ -256,7 +256,7 @@ router.post("/stop", async (req: Request, res: Response) => {
     return;
   }
 
-  const { notes } = req.body;
+  const { notes, durationSeconds } = req.body;
 
   const active = await prisma.active_timer.findUnique({ where: { userId } });
   if (!active) {
@@ -268,6 +268,10 @@ router.post("/stop", async (req: Request, res: Response) => {
   let finalDuration = active.accumulatedSeconds;
   if (!active.isPaused) {
     finalDuration += Math.max(0, Math.floor((now.getTime() - active.startTime.getTime()) / 1000));
+  }
+
+  if (typeof durationSeconds === 'number' && durationSeconds > 0) {
+    finalDuration = durationSeconds;
   }
 
   // Create historical session

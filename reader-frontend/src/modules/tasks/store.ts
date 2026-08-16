@@ -66,6 +66,8 @@ export class TasksStore {
   private timerInterval: any = null;
   isStopTimerDialogOpen: boolean = false;
   stopTimerNotes: string = '';
+  stopTimerDurationMinutes: number = 1;
+  stopTimerOriginalMinutes: number = 1;
 
   // Analytics
   analyticsData: TimeAnalytics | null = null;
@@ -781,11 +783,30 @@ export class TasksStore {
   }
 
   promptStopTimer() {
-    this.setIsStopTimerDialogOpen(true);
+    const elapsedMins = Math.max(1, Math.round(this.timerElapsedSeconds / 60));
+    runInAction(() => {
+      this.stopTimerOriginalMinutes = elapsedMins;
+      this.stopTimerDurationMinutes = elapsedMins;
+      this.stopTimerNotes = '';
+      this.isStopTimerDialogOpen = true;
+    });
+  }
+
+  setStopTimerDurationMinutes(mins: number) {
+    this.stopTimerDurationMinutes = Math.max(1, mins);
+  }
+
+  adjustStopTimerMinutes(deltaMinutes: number) {
+    this.stopTimerDurationMinutes = Math.max(1, this.stopTimerDurationMinutes + deltaMinutes);
+  }
+
+  adjustSessionDuration(deltaMinutes: number) {
+    this.sessionDurationMinutes = Math.max(1, this.sessionDurationMinutes + deltaMinutes);
   }
 
   async completeStopTimer() {
-    const res = await stopTimer(this.stopTimerNotes.trim() || undefined);
+    const durationSeconds = this.stopTimerDurationMinutes * 60;
+    const res = await stopTimer(this.stopTimerNotes.trim() || undefined, durationSeconds);
     if (res.ok) {
       runInAction(() => {
         this.activeTimer = null;

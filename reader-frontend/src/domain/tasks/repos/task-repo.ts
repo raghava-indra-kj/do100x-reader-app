@@ -55,7 +55,7 @@ export interface ITaskRepo {
   startTimer(taskId: string, notes?: string): AsyncResult<ActiveTimerData, AppError>;
   pauseTimer(): AsyncResult<ActiveTimerData, AppError>;
   resumeTimer(): AsyncResult<ActiveTimerData, AppError>;
-  stopTimer(notes?: string): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError>;
+  stopTimer(notes?: string, durationSeconds?: number): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError>;
   discardTimer(): AsyncResult<void, AppError>;
 
   // Manual Sessions

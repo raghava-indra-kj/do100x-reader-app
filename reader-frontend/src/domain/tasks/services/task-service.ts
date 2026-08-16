@@ -160,9 +160,9 @@ export async function resumeTimer(): AsyncResult<ActiveTimer, AppError> {
   return ok(toActiveTimer(res.data));
 }
 
-export async function stopTimer(notes?: string): AsyncResult<{ session: TimeSession; taskTotalTimeSeconds: number }, AppError> {
+export async function stopTimer(notes?: string, durationSeconds?: number): AsyncResult<{ session: TimeSession; taskTotalTimeSeconds: number }, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  const res = await repo.stopTimer(notes);
+  const res = await repo.stopTimer(notes, durationSeconds);
   if (!res.ok) return res;
   return ok({
     session: toTimeSession(res.data.session),

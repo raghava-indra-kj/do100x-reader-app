@@ -431,7 +431,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
   });
 });
 
-// DELETE /backend-api/tasks/:id - Soft delete task and subtasks
+// DELETE /backend-api/tasks/:id - Soft delete task, all descendant subtasks, and clean up time sessions
 router.delete("/:id", async (req: Request, res: Response) => {
   const userId = getUserId(req);
   if (!userId) {
@@ -451,30 +451,40 @@ router.delete("/:id", async (req: Request, res: Response) => {
 
   const now = new Date();
 
-  // Recursive soft delete
-  async function softDeleteTaskRecursive(taskId: string) {
+  // Recursive collection of all descendant task IDs
+  async function getAllDescendantTaskIds(taskId: string): Promise<string[]> {
+    const ids: string[] = [taskId];
     const children = await prisma.task.findMany({
       where: { parentId: taskId, userId, deletedAt: null },
       select: { id: true },
     });
     for (const child of children) {
-      await softDeleteTaskRecursive(child.id);
+      const subIds = await getAllDescendantTaskIds(child.id);
+      ids.push(...subIds);
     }
-    await prisma.task.update({
-      where: { id: taskId },
-      data: { deletedAt: now, updatedAt: now },
-    });
+    return ids;
   }
 
-  await softDeleteTaskRecursive(id);
+  const allTargetIds = await getAllDescendantTaskIds(id);
 
-  // If this task was currently active in timer, discard it
+  // 1. Delete all time sessions associated with task and its subtasks
+  await prisma.time_session.deleteMany({
+    where: { taskId: { in: allTargetIds }, userId },
+  });
+
+  // 2. Soft delete the tasks and all subtasks
+  await prisma.task.updateMany({
+    where: { id: { in: allTargetIds }, userId },
+    data: { deletedAt: now, updatedAt: now },
+  });
+
+  // 3. If active timer was running on any of these tasks, delete it
   const active = await prisma.active_timer.findUnique({ where: { userId } });
-  if (active && active.taskId === id) {
+  if (active && allTargetIds.includes(active.taskId)) {
     await prisma.active_timer.delete({ where: { userId } });
   }
 
-  res.json({ success: true, deletedTaskId: id });
+  res.json({ success: true, deletedTaskId: id, affectedTaskIds: allTargetIds });
 });
 
 // POST /backend-api/tasks/reorder - Reorder task sortOrders
