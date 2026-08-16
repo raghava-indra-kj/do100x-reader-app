@@ -1,15 +1,16 @@
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePageStore } from '../store';
+import { useAuthStore } from '@modules/auth/provider/store';
 import { getComments, editComment, deleteComment, deleteAllComments } from '@domain/comment/services/comments-service';
 import type { Comment } from '@domain/comment/models/comment';
 import { DataState } from '@lib/utils/data-state';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Input } from '@modules/core/ui/primitives/input';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
-import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link, Unlink, NotebookPen } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { pagesPageWithIdRouteValue } from '@boot/routes';
+import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link as LinkIcon, Unlink, NotebookPen, ShieldCheck } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { pagesPageWithIdRouteValue, loginPageRoute } from '@boot/routes';
 
 function formatRelativeTime(date: Date): string {
     const now = Date.now();
@@ -156,7 +157,7 @@ function CommentCard({
                     </div>
                 </div>
                 {comment.linkedPageId && (
-                    <Link size={11} className="shrink-0 text-[var(--color-brand)]" />
+                    <LinkIcon size={11} className="shrink-0 text-[var(--color-brand)]" />
                 )}
                 {comment.isExplanation && (
                     <Tooltip content="Marked as my explanation">
@@ -240,7 +241,7 @@ function CommentCard({
                         </div>
                     ) : comment.linkedPageId ? (
                         <div className="flex items-center gap-1.5 mt-2">
-                            <Link size={11} className="shrink-0 text-[var(--color-brand)]" />
+                            <LinkIcon size={11} className="shrink-0 text-[var(--color-brand)]" />
                             <button
                                 onClick={() => navigate(pagesPageWithIdRouteValue(comment.linkedPageId!))}
                                 className="text-[10px] text-[var(--color-brand)] hover:underline cursor-pointer truncate"
@@ -270,7 +271,7 @@ function CommentCard({
                                         onClick={() => { setLinkPageId(comment.linkedPageId ?? ''); setIsLinking(true); }}
                                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-brand)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
                                     >
-                                        <Link size={12} />
+                                        <LinkIcon size={12} />
                                     </button>
                                 </Tooltip>
                                 <Tooltip content="Edit comment">
@@ -300,6 +301,7 @@ function CommentCard({
 
 export const PageComments = observer(function PageComments() {
     const store = usePageStore();
+    const authStore = useAuthStore();
     const [dataState, setDataState] = useState<DataState<Comment[]>>(DataState.init);
     const mountedRef = useRef(true);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -374,6 +376,14 @@ export const PageComments = observer(function PageComments() {
 
     return (
         <div className="flex h-full flex-col">
+            {!authStore.isAuthenticated && (
+                <div className="mx-3 mt-3 p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] flex items-start gap-2 leading-relaxed">
+                    <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <span>
+                        Comments are private to each user. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save personal notes on this page.
+                    </span>
+                </div>
+            )}
             <div className="flex items-center justify-between shrink-0 px-3 pt-3 pb-0">
                 <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
                     Comments

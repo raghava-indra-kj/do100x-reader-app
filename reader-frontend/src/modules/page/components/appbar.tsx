@@ -2,7 +2,20 @@ import { pagesPageWithIdRouteValue, homePageRoute } from '@boot/routes';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
-import { Minus, Plus, ArrowLeft, ChevronLeft, ChevronRight, Settings, Copy, ClipboardList, BookOpen, Sparkles } from 'lucide-react';
+import { 
+    Minus, 
+    Plus, 
+    ArrowLeft, 
+    ChevronLeft, 
+    ChevronRight, 
+    Settings, 
+    Copy, 
+    ClipboardList, 
+    BookOpen, 
+    Sparkles, 
+    Share2, 
+    Globe 
+} from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -11,6 +24,7 @@ import { usePageStore } from '../store';
 import { PageHeadingLevel } from '../theme/page-heading-level';
 import type { Section } from '@domain/page/models/section';
 import { PageSettingsDialog } from './settings';
+import { ShareDialog } from './share-dialog';
 import { MotivationReelsDialog } from '@modules/core/ui/components/motivation-reels';
 
 function collectLevels(sections: Section[]): Set<number> {
@@ -30,6 +44,7 @@ export function PageAppbar() {
     const uiSettings = store.uiSettingsStore;
     const navigate = useNavigate();
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [shareOpen, setShareOpen] = useState(false);
     const [reelsOpen, setReelsOpen] = useState(false);
 
     useHotkeys('-', () => uiSettings.decreaseFontSize(), { useKey: true, preventDefault: true });
@@ -79,6 +94,12 @@ export function PageAppbar() {
                                 <span className="truncate font-semibold text-[var(--color-text-strong)] max-w-[160px]" title={page.title}>
                                     {page.title}
                                 </span>
+                                {page.isPublic && (
+                                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                                        <Globe size={10} />
+                                        <span>Public</span>
+                                    </span>
+                                )}
                                 {section?.title && (
                                     <>
                                         <ChevronRight size={10} className="shrink-0 text-[var(--color-text-muted)]" />
@@ -92,7 +113,7 @@ export function PageAppbar() {
                     }}
                 </Observer>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
                 <Observer>
                     {() => {
                         const section = store.currentSection;
@@ -194,6 +215,26 @@ export function PageAppbar() {
                         );
                     }}
                 </Observer>
+                <Observer>
+                    {() => {
+                        const isOwner = store.isOwner;
+                        if (!isOwner) return null;
+                        return (
+                            <Button 
+                                variant={store.isPublic ? 'secondary' : 'outlined'}
+                                size="sm" 
+                                onClick={() => setShareOpen(true)} 
+                                tooltip="Share page & subpages publicly"
+                                className="flex items-center gap-1.5 px-2.5 text-xs"
+                            >
+                                <Share2 size={14} className={store.isPublic ? 'text-emerald-500' : ''} />
+                                <span className="hidden sm:inline font-medium">
+                                    {store.isPublic ? 'Shared' : 'Share'}
+                                </span>
+                            </Button>
+                        );
+                    }}
+                </Observer>
                 <Button 
                     variant="outlined" 
                     size="sm" 
@@ -208,6 +249,7 @@ export function PageAppbar() {
                     <Settings size={16} />
                 </Button>
                 <PageSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+                <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />
                 <MotivationReelsDialog open={reelsOpen} onOpenChange={setReelsOpen} />
             </div>
         </header>

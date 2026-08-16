@@ -9,6 +9,8 @@ export const DbPageSchema = z.object({
     category: z.string().nullable(),
     sortOrder: z.number(),
     childrenCount: z.number(),
+    isPublic: z.boolean().optional().default(false),
+    isOwner: z.boolean().optional().default(true),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
     meaningSystemPrompt: z.string().nullable().optional(),

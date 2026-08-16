@@ -11,7 +11,9 @@
     "build:frontend": "cd reader-frontend && npm run build",
     "build:backend": "cd reader-backend && npm run build",
     "build": "npm run build:frontend && npm run build:backend",
+    "db:push": "npx prisma db push --schema=reader-backend/prisma/schema.prisma",
+    "setup": "npm install && npm run db:push && npm run build",
     "start": "cd reader-backend && npm run start",
-    "prod": "npm run build && npm run start"
+    "prod": "npm run setup && cd reader-backend && node dist/index.js"
   }
 }

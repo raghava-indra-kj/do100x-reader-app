@@ -4,6 +4,7 @@ export { Section } from './section';
 
 export class Page {
     readonly id: string;
+    readonly userId: string;
     readonly parentPageId: string | null;
     readonly title: string;
     readonly content: string;
@@ -12,12 +13,15 @@ export class Page {
     readonly updatedAt: Date;
     readonly sections: Section[];
     readonly childrenCount: number;
+    readonly isPublic: boolean;
+    readonly isOwner: boolean;
     readonly meaningSystemPrompt: string | null;
     readonly explanationSystemPrompt: string | null;
     readonly doubtSystemPrompt: string | null;
 
     constructor(params: {
         id: string;
+        userId?: string;
         parentPageId: string | null;
         title: string;
         content: string;
@@ -26,11 +30,14 @@ export class Page {
         updatedAt: Date;
         sections: Section[];
         childrenCount: number;
+        isPublic?: boolean;
+        isOwner?: boolean;
         meaningSystemPrompt?: string | null;
         explanationSystemPrompt?: string | null;
         doubtSystemPrompt?: string | null;
     }) {
         this.id = params.id;
+        this.userId = params.userId ?? '';
         this.parentPageId = params.parentPageId;
         this.title = params.title;
         this.content = params.content;
@@ -39,6 +46,8 @@ export class Page {
         this.updatedAt = params.updatedAt;
         this.sections = params.sections;
         this.childrenCount = params.childrenCount;
+        this.isPublic = params.isPublic ?? false;
+        this.isOwner = params.isOwner ?? true;
         this.meaningSystemPrompt = params.meaningSystemPrompt ?? null;
         this.explanationSystemPrompt = params.explanationSystemPrompt ?? null;
         this.doubtSystemPrompt = params.doubtSystemPrompt ?? null;

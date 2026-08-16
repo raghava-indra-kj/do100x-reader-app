@@ -3,9 +3,30 @@ import { prisma } from "./prisma";
 
 const router = Router();
 
+/**
+ * Recursively checks if a page or any of its ancestors is marked as public.
+ */
+async function isPagePubliclyAccessible(page: { id: string; isPublic: boolean; parentId: string | null }): Promise<boolean> {
+  if (page.isPublic) return true;
+  if (!page.parentId) return false;
+
+  let currentParentId: string | null = page.parentId;
+  while (currentParentId) {
+    const parent: { id: string; isPublic: boolean; parentId: string | null } | null = await prisma.page.findFirst({
+      where: { id: currentParentId, deletedAt: null },
+      select: { id: true, isPublic: true, parentId: true },
+    });
+    if (!parent) return false;
+    if (parent.isPublic) return true;
+    currentParentId = parent.parentId;
+  }
+  return false;
+}
+
 // GET /pages/:pageId
 router.get("/:pageId", async (req, res) => {
   const { pageId } = req.params;
+  const reqUserId = req.headers["x-user-id"] as string | undefined;
 
   const page = await prisma.page.findFirst({
     where: { id: pageId, deletedAt: null },
@@ -18,6 +39,7 @@ router.get("/:pageId", async (req, res) => {
       category: true,
       sortOrder: true,
       childrenCount: true,
+      isPublic: true,
       createdAt: true,
       updatedAt: true,
       meaningSystemPrompt: true,
@@ -31,6 +53,15 @@ router.get("/:pageId", async (req, res) => {
     return;
   }
 
+  const isOwner = Boolean(reqUserId && page.userId === reqUserId);
+  const isPublic = await isPagePubliclyAccessible(page);
+
+  // If not owner and not public, deny access
+  if (!isOwner && !isPublic) {
+    res.status(404).json({ message: "Page not found" });
+    return;
+  }
+
   res.json({
     id: page.id,
     userId: page.userId,
@@ -40,6 +71,8 @@ router.get("/:pageId", async (req, res) => {
     category: page.category ?? null,
     sortOrder: page.sortOrder,
     childrenCount: page.childrenCount,
+    isPublic: page.isPublic,
+    isOwner,
     createdAt: page.createdAt,
     updatedAt: page.updatedAt,
     meaningSystemPrompt: page.meaningSystemPrompt ?? null,
@@ -54,12 +87,34 @@ router.get("/", async (req, res) => {
     parentPageId?: string;
     searchQuery?: string;
   };
+  const reqUserId = req.headers["x-user-id"] as string | undefined;
+
+  // If parentPageId is specified, ensure it is accessible
+  if (parentPageId && parentPageId !== "null") {
+    const parentPage = await prisma.page.findFirst({
+      where: { id: parentPageId, deletedAt: null },
+      select: { id: true, userId: true, isPublic: true, parentId: true },
+    });
+    if (!parentPage) {
+      res.status(404).json({ message: "Parent page not found" });
+      return;
+    }
+    const isOwner = Boolean(reqUserId && parentPage.userId === reqUserId);
+    const isPublic = await isPagePubliclyAccessible(parentPage);
+    if (!isOwner && !isPublic) {
+      res.status(404).json({ message: "Parent page not found" });
+      return;
+    }
+  }
 
   const pages = await prisma.page.findMany({
     where: {
       deletedAt: null,
       ...(parentPageId !== undefined
         ? { parentId: parentPageId === "null" ? null : parentPageId }
+        : {}),
+      ...(parentPageId === "null" || parentPageId === undefined
+        ? (reqUserId ? { userId: reqUserId } : { isPublic: true })
         : {}),
       ...(searchQuery ? { title: { contains: searchQuery } } : {}),
     },
@@ -71,6 +126,7 @@ router.get("/", async (req, res) => {
       category: true,
       sortOrder: true,
       childrenCount: true,
+      isPublic: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -86,6 +142,7 @@ router.get("/", async (req, res) => {
       category: p.category ?? null,
       sortOrder: p.sortOrder,
       childrenCount: p.childrenCount,
+      isPublic: p.isPublic,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
     }))
@@ -132,6 +189,7 @@ router.post("/", async (req, res) => {
       category: category ?? null,
       sortOrder: nextSortOrder,
       childrenCount: 0,
+      isPublic: false,
       createdAt: now,
       updatedAt: now,
       meaningSystemPrompt: meaningSystemPrompt || null,
@@ -150,9 +208,41 @@ router.post("/", async (req, res) => {
   res.status(201).json(newPage.id);
 });
 
+// PATCH /pages/:pageId/share
+router.patch("/:pageId/share", async (req, res) => {
+  const { pageId } = req.params;
+  const { isPublic } = req.body as { isPublic: boolean };
+  const reqUserId = req.headers["x-user-id"] as string | undefined;
+
+  const page = await prisma.page.findFirst({
+    where: { id: pageId, deletedAt: null },
+  });
+
+  if (!page) {
+    res.status(404).json({ message: "Page not found" });
+    return;
+  }
+
+  if (reqUserId && page.userId !== reqUserId) {
+    res.status(403).json({ message: "Only the page owner can change sharing settings" });
+    return;
+  }
+
+  await prisma.page.update({
+    where: { id: pageId },
+    data: {
+      isPublic: Boolean(isPublic),
+      updatedAt: new Date(),
+    },
+  });
+
+  res.json({ success: true, isPublic: Boolean(isPublic) });
+});
+
 // PUT /pages/:pageId
 router.put("/:pageId", async (req, res) => {
   const { pageId } = req.params;
+  const reqUserId = req.headers["x-user-id"] as string | undefined;
   const {
     title,
     content,
@@ -168,6 +258,20 @@ router.put("/:pageId", async (req, res) => {
     explanationSystemPrompt?: string;
     doubtSystemPrompt?: string;
   };
+
+  const page = await prisma.page.findFirst({
+    where: { id: pageId, deletedAt: null },
+  });
+
+  if (!page) {
+    res.status(404).json({ message: "Page not found" });
+    return;
+  }
+
+  if (reqUserId && page.userId !== reqUserId) {
+    res.status(403).json({ message: "Only the page owner can edit this page" });
+    return;
+  }
 
   await prisma.page.update({
     where: { id: pageId },
@@ -188,6 +292,7 @@ router.put("/:pageId", async (req, res) => {
 // DELETE /pages/:pageId  (soft delete)
 router.delete("/:pageId", async (req, res) => {
   const { pageId } = req.params;
+  const reqUserId = req.headers["x-user-id"] as string | undefined;
   const now = new Date();
 
   const page = await prisma.page.findFirst({
@@ -196,6 +301,11 @@ router.delete("/:pageId", async (req, res) => {
 
   if (!page) {
     res.status(404).json({ message: "Page not found" });
+    return;
+  }
+
+  if (reqUserId && page.userId !== reqUserId) {
+    res.status(403).json({ message: "Only the page owner can delete this page" });
     return;
   }
 

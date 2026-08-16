@@ -6,7 +6,29 @@ import { PageColorSchema } from '../theme/page-color-schema';
 import { MarkdownRenderer } from '@reader/md-view';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Button } from '@modules/core/ui/primitives/button';
-import { X, Maximize2, Minimize2, Trash2 } from 'lucide-react';
+import { toast } from '@modules/core/ui/primitives/toast';
+import { 
+    X, 
+    Maximize2, 
+    Minimize2, 
+    Trash2, 
+    RotateCcw, 
+    Square, 
+    KeyRound, 
+    AlertTriangle, 
+    ServerCrash, 
+    Clock, 
+    Settings, 
+    Code2, 
+    Copy, 
+    Check, 
+    ChevronDown, 
+    ChevronRight,
+    Ban
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { settingsPageRoute } from '@boot/routes';
+import type { ChatErrorDetails } from '@domain/chat/models/chat-types';
 import '@reader/md-view/md-view.css';
 import '@reader/md-view/md-view-hljs.css';
 
@@ -21,6 +43,8 @@ export interface IAiLookupStore {
     setActiveEntry(id: string): void;
     removeEntry(id: string): void;
     reask(entryId: string, newText: string): void;
+    cancel?(entryId: string): void;
+    retry?(entryId: string): void;
 }
 
 interface PageAiLookupPanelProps {
@@ -33,6 +57,200 @@ interface PageAiLookupPanelProps {
     emptyStateLabel: string;
     loadingLabel: string;
     extraHeaderActions?: (activeEntry: any) => React.ReactNode;
+}
+
+function ErrorCard({ 
+    errorDetails, 
+    fallbackError, 
+    onRetry 
+}: { 
+    errorDetails: ChatErrorDetails | null; 
+    fallbackError: string; 
+    onRetry: () => void;
+}) {
+    const navigate = useNavigate();
+    const [showRawJson, setShowRawJson] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    const type = errorDetails?.errorType || 'UNKNOWN';
+    const message = errorDetails?.message || fallbackError;
+    const description = errorDetails?.description;
+    const rawError = errorDetails?.rawError;
+
+    let badgeIcon = <AlertTriangle size={15} className="text-amber-500 shrink-0 mt-0.5" />;
+    let badgeColor = 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400';
+    let isConfigIssue = false;
+
+    if (type === 'INVALID_API_KEY') {
+        badgeIcon = <KeyRound size={15} className="text-red-500 shrink-0 mt-0.5" />;
+        badgeColor = 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400';
+        isConfigIssue = true;
+    } else if (type === 'MODEL_NOT_FOUND' || type === 'CONFIG_ERROR') {
+        badgeIcon = <Settings size={15} className="text-amber-500 shrink-0 mt-0.5" />;
+        badgeColor = 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400';
+        isConfigIssue = true;
+    } else if (type === 'RATE_LIMIT') {
+        badgeIcon = <Clock size={15} className="text-orange-500 shrink-0 mt-0.5" />;
+        badgeColor = 'border-orange-500/30 bg-orange-500/10 text-orange-600 dark:text-orange-400';
+    } else if (type === 'NETWORK_ERROR' || type === 'PROVIDER_ERROR') {
+        badgeIcon = <ServerCrash size={15} className="text-red-500 shrink-0 mt-0.5" />;
+        badgeColor = 'border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400';
+    } else if (type === 'CANCELLED') {
+        badgeIcon = <Ban size={15} className="text-[var(--color-text-muted)] shrink-0 mt-0.5" />;
+        badgeColor = 'border-[var(--color-border-subtle)] bg-[var(--color-surface-soft)] text-[var(--color-text-muted)]';
+    }
+
+    const rawJsonStr = rawError 
+        ? typeof rawError === 'string' 
+            ? rawError 
+            : JSON.stringify(rawError, null, 2)
+        : null;
+
+    const handleCopyJson = () => {
+        if (!rawJsonStr) return;
+        navigator.clipboard.writeText(rawJsonStr);
+        setCopied(true);
+        toast.success('Raw error copied');
+        setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+        <div className="rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-card)] p-4 shadow-xs space-y-3.5 animate-in fade-in duration-200">
+            <div className="flex items-start gap-2.5">
+                {badgeIcon}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-xs font-semibold text-[var(--color-text-strong)]">{message}</h4>
+                        <span className={`px-2 py-0.5 text-[10px] font-mono font-medium rounded-md border ${badgeColor}`}>
+                            {type}
+                        </span>
+                    </div>
+                    {description && (
+                        <p className="mt-1.5 text-xs leading-relaxed text-[var(--color-text-muted)]">
+                            {description}
+                        </p>
+                    )}
+                </div>
+            </div>
+
+            {/* Action Bar */}
+            <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border-subtle)] flex-wrap">
+                <Button size="sm" variant="secondary" onClick={onRetry} className="flex items-center gap-1.5 text-xs">
+                    <RotateCcw size={13} />
+                    <span>Retry Request</span>
+                </Button>
+
+                {isConfigIssue && (
+                    <Button 
+                        size="sm" 
+                        variant="outlined" 
+                        onClick={() => navigate(settingsPageRoute)}
+                        className="flex items-center gap-1.5 text-xs"
+                    >
+                        <Settings size={13} />
+                        <span>Open Settings</span>
+                    </Button>
+                )}
+
+                {rawJsonStr && (
+                    <button
+                        onClick={() => setShowRawJson(!showRawJson)}
+                        className="ml-auto flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer py-1"
+                    >
+                        <Code2 size={12} />
+                        <span>{showRawJson ? 'Hide Raw Error' : 'View Raw Response'}</span>
+                        {showRawJson ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </button>
+                )}
+            </div>
+
+            {/* Expandable Raw Error Viewer */}
+            {showRawJson && rawJsonStr && (
+                <div className="rounded-lg bg-[var(--color-surface-canvas)] border border-[var(--color-border-subtle)] p-2.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-[var(--color-text-subtle)] uppercase">Raw Error Payload</span>
+                        <button
+                            onClick={handleCopyJson}
+                            className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-brand)] transition-colors cursor-pointer"
+                        >
+                            {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+                            <span>{copied ? 'Copied' : 'Copy'}</span>
+                        </button>
+                    </div>
+                    <pre className="text-[11px] font-mono text-[var(--color-text-muted)] overflow-x-auto p-2 rounded bg-[var(--color-surface-soft)] leading-relaxed max-h-48 overflow-y-auto">
+                        {rawJsonStr}
+                    </pre>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function RawResponseViewer({ rawResponse }: { rawResponse: any }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    if (!rawResponse) return null;
+
+    const rawJsonStr = JSON.stringify(rawResponse, null, 2);
+    const usage = rawResponse.usage;
+    const model = rawResponse.model;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(rawJsonStr);
+        setCopied(true);
+        toast.success('Raw JSON copied to clipboard');
+        setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+        <div className="border border-[var(--color-border-subtle)] rounded-lg bg-[var(--color-surface-soft)] overflow-hidden text-xs">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="w-full flex items-center justify-between px-3 py-2 text-left text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-raised)] transition-colors cursor-pointer"
+            >
+                <div className="flex items-center gap-2">
+                    <Code2 size={13} className="text-[var(--color-brand)]" />
+                    <span className="font-medium">Raw Model Response</span>
+                    {model && (
+                        <span className="font-mono text-[10px] text-[var(--color-text-subtle)]">({model})</span>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    {usage && (
+                        <span className="text-[10px] text-[var(--color-text-subtle)] font-mono tabular-nums">
+                            {usage.total_tokens ?? usage.totalTokens ?? 0} tokens
+                        </span>
+                    )}
+                    {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                </div>
+            </button>
+
+            {isOpen && (
+                <div className="p-3 border-t border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] space-y-2">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-subtle)] font-mono">
+                            {usage && (
+                                <span>
+                                    Prompt: {usage.prompt_tokens ?? 0} | Completion: {usage.completion_tokens ?? 0}
+                                </span>
+                            )}
+                        </div>
+                        <button
+                            onClick={handleCopy}
+                            className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-brand)] transition-colors cursor-pointer"
+                        >
+                            {copied ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+                            <span>{copied ? 'Copied' : 'Copy JSON'}</span>
+                        </button>
+                    </div>
+                    <pre className="text-[10px] font-mono text-[var(--color-text-muted)] overflow-x-auto p-2.5 rounded bg-[var(--color-surface-soft)] leading-relaxed max-h-56 overflow-y-auto">
+                        {rawJsonStr}
+                    </pre>
+                </div>
+            )}
+        </div>
+    );
 }
 
 export const PageAiLookupPanel = observer(function PageAiLookupPanel({
@@ -127,6 +345,9 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                             {entry.isLoading && (
                                 <span className="inline-block animate-pulse text-[8px]">⏳</span>
                             )}
+                            {entry.error && (
+                                <span className="text-[10px] text-red-500 font-bold leading-none">!</span>
+                            )}
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
@@ -146,14 +367,34 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
             <div className="flex-1 overflow-y-auto p-4">
                 {activeEntry ? (
                     activeEntry.isLoading ? (
-                        <div className="flex flex-col items-center justify-center h-48 gap-3">
-                            <Loader size={24} />
-                            <span className="text-xs text-[var(--color-text-subtle)]">{loadingLabel}</span>
+                        <div className="flex flex-col items-center justify-center h-64 gap-4 animate-in fade-in duration-150">
+                            <Loader size={26} />
+                            <span className="text-xs text-[var(--color-text-subtle)] text-center px-4 max-w-sm">
+                                {loadingLabel}
+                            </span>
+                            <Button
+                                size="sm"
+                                variant="outlined"
+                                onClick={() => storeInstance.cancel?.(activeEntry.id)}
+                                className="flex items-center gap-1.5 text-xs text-[var(--color-error)] border-[var(--color-error)]/40 hover:bg-[var(--color-error-soft)]/30 hover:border-[var(--color-error)] transition-colors"
+                            >
+                                <Square size={11} className="fill-current" />
+                                <span>Cancel Request</span>
+                            </Button>
                         </div>
                     ) : activeEntry.error ? (
-                        <div className="rounded-lg bg-[var(--color-surface-soft)] border border-[var(--color-border-subtle)] p-3 text-xs text-[var(--color-text-body)]">
-                            <p className="font-semibold text-[var(--color-text-strong)]">Lookup Issue</p>
-                            <p className="mt-1 leading-relaxed text-[var(--color-text-muted)]">{activeEntry.error}</p>
+                        <div className="space-y-4">
+                            <div>
+                                <span className="text-[10px] text-[var(--color-text-subtle)] font-semibold uppercase tracking-wider block mb-1">{queryLabel}:</span>
+                                <p className="text-xs italic text-[var(--color-text-strong)] bg-[var(--color-surface-soft)] border-l-2 border-[var(--color-brand)] px-2.5 py-1.5 rounded leading-relaxed">
+                                    "{getPillLabel(activeEntry)}"
+                                </p>
+                            </div>
+                            <ErrorCard 
+                                errorDetails={activeEntry.errorDetails} 
+                                fallbackError={activeEntry.error} 
+                                onRetry={() => storeInstance.retry?.(activeEntry.id)} 
+                            />
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -164,7 +405,30 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                                 </p>
                             </div>
                             <div className="border-t border-[var(--color-border-subtle)] pt-4">
-                                <span className="text-[10px] text-[var(--color-text-subtle)] font-semibold uppercase tracking-wider block mb-2">AI Response:</span>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] text-[var(--color-text-subtle)] font-semibold uppercase tracking-wider">AI Response:</span>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            onClick={() => storeInstance.retry?.(activeEntry.id)}
+                                            className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] p-1 rounded transition-colors cursor-pointer"
+                                            title="Regenerate response"
+                                        >
+                                            <RotateCcw size={12} />
+                                            <span>Regenerate</span>
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(activeEntry.responseMarkdown);
+                                                toast.success('Response copied');
+                                            }}
+                                            className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] p-1 rounded transition-colors cursor-pointer"
+                                            title="Copy response markdown"
+                                        >
+                                            <Copy size={12} />
+                                            <span>Copy</span>
+                                        </button>
+                                    </div>
+                                </div>
                                 <MarkdownRenderer
                                     markdown={activeEntry.responseMarkdown}
                                     colors={colors}
@@ -172,6 +436,10 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                                     fonts={uiSettings.fontFamilies.value}
                                 />
                             </div>
+
+                            {/* Raw Model Response Inspector */}
+                            <RawResponseViewer rawResponse={activeEntry.rawResponse} />
+
                             <div className="border-t border-[var(--color-border-subtle)] pt-4 space-y-2 shrink-0">
                                 <span className="text-[10px] text-[var(--color-text-subtle)] font-semibold uppercase tracking-wider block">{rephraseLabel}:</span>
                                 <div className="flex gap-2 items-stretch">

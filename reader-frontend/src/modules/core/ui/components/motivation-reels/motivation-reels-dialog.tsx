@@ -16,10 +16,12 @@ import {
     BookOpen,
     DoorOpen,
     Heart,
-    ArrowLeft
+    ArrowLeft,
+    Wind
 } from 'lucide-react';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { TimePerspectivePanel } from './time-perspective-panel';
+import { DeepBreathPanel } from './deep-breath-panel';
 
 export interface Motivation {
     quote: string;
@@ -72,6 +74,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
     const [copied, setCopied] = useState(false);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [isTiredBreakMode, setIsTiredBreakMode] = useState(false);
+    const [isDeepBreathMode, setIsDeepBreathMode] = useState(false);
     const [breakQuoteIndex, setBreakQuoteIndex] = useState(0);
 
     // Touch & Drag state
@@ -82,6 +85,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
     useEffect(() => {
         if (!open) return;
         setIsTiredBreakMode(false);
+        setIsDeepBreathMode(false);
         setBreakQuoteIndex(Math.floor(Math.random() * BREAK_QUOTES.length));
         fetch('/motivations.json')
             .then(res => res.json())
@@ -101,10 +105,10 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
             window.speechSynthesis.cancel();
             setIsSpeaking(false);
         }
-    }, [currentIndex, open, isTiredBreakMode]);
+    }, [currentIndex, open, isTiredBreakMode, isDeepBreathMode]);
 
     const goToNext = useCallback(() => {
-        if (quotes.length === 0 || isAnimating || isTiredBreakMode) return;
+        if (quotes.length === 0 || isAnimating || isTiredBreakMode || isDeepBreathMode) return;
         setIsAnimating(true);
         setDirection('up');
         setTimeout(() => {
@@ -115,10 +119,10 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
             });
             setIsAnimating(false);
         }, 220);
-    }, [quotes.length, isAnimating, isTiredBreakMode]);
+    }, [quotes.length, isAnimating, isTiredBreakMode, isDeepBreathMode]);
 
     const goToPrev = useCallback(() => {
-        if (quotes.length === 0 || isAnimating || isTiredBreakMode) return;
+        if (quotes.length === 0 || isAnimating || isTiredBreakMode || isDeepBreathMode) return;
         setIsAnimating(true);
         setDirection('down');
         setTimeout(() => {
@@ -129,10 +133,10 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
             });
             setIsAnimating(false);
         }, 220);
-    }, [quotes.length, isAnimating, isTiredBreakMode]);
+    }, [quotes.length, isAnimating, isTiredBreakMode, isDeepBreathMode]);
 
     const goToRandom = useCallback(() => {
-        if (quotes.length <= 1 || isAnimating || isTiredBreakMode) return;
+        if (quotes.length <= 1 || isAnimating || isTiredBreakMode || isDeepBreathMode) return;
         setIsAnimating(true);
         setDirection('up');
         setTimeout(() => {
@@ -144,7 +148,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
             localStorage.setItem('motivation_reels_index', String(next));
             setIsAnimating(false);
         }, 220);
-    }, [quotes.length, isAnimating, currentIndex, isTiredBreakMode]);
+    }, [quotes.length, isAnimating, currentIndex, isTiredBreakMode, isDeepBreathMode]);
 
     // Copy Quote to clipboard
     const handleCopy = useCallback(() => {
@@ -183,7 +187,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
 
     // Wheel listener for swipe feel
     const handleWheel = useCallback((e: React.WheelEvent) => {
-        if (isTiredBreakMode) return;
+        if (isTiredBreakMode || isDeepBreathMode) return;
         const now = Date.now();
         if (now - lastWheelTime.current < 450) return;
         if (Math.abs(e.deltaY) < 30) return;
@@ -194,16 +198,16 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
         } else {
             goToPrev();
         }
-    }, [goToNext, goToPrev, isTiredBreakMode]);
+    }, [goToNext, goToPrev, isTiredBreakMode, isDeepBreathMode]);
 
     // Touch swipe handlers
     const handleTouchStart = (e: React.TouchEvent) => {
-        if (isTiredBreakMode) return;
+        if (isTiredBreakMode || isDeepBreathMode) return;
         touchStartY.current = e.touches[0].clientY;
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
-        if (isTiredBreakMode || touchStartY.current === null) return;
+        if (isTiredBreakMode || isDeepBreathMode || touchStartY.current === null) return;
         const diffY = touchStartY.current - e.changedTouches[0].clientY;
         touchStartY.current = null;
 
@@ -218,7 +222,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
 
     // Keyboard shortcuts
     useEffect(() => {
-        if (!open) return;
+        if (!open || isDeepBreathMode) return;
         const handleKeyDown = (e: KeyboardEvent) => {
             if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
 
@@ -239,7 +243,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [open, goToNext, goToPrev, goToRandom, handleCopy]);
+    }, [open, goToNext, goToPrev, goToRandom, handleCopy, isDeepBreathMode]);
 
     if (!open) return null;
 
@@ -276,22 +280,43 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
 
                         {/* Top Action Controls */}
                         <div className="flex items-center gap-2">
+                            {/* "Deep Breath" Button */}
+                            <button
+                                onClick={() => {
+                                    setIsDeepBreathMode(prev => !prev);
+                                    if (!isDeepBreathMode) {
+                                        setIsTiredBreakMode(false);
+                                    }
+                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border shadow-xs ${
+                                    isDeepBreathMode
+                                        ? 'bg-sky-500 hover:bg-sky-600 text-white border-sky-400 shadow-sm'
+                                        : 'bg-[var(--color-surface-card)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:border-sky-500/50'
+                                }`}
+                                title="Mindful deep breathing exercise"
+                            >
+                                <Wind size={14} className={isDeepBreathMode ? 'text-white animate-pulse' : 'text-sky-400'} />
+                                <span className="hidden sm:inline">Deep Breath</span>
+                                <span className="sm:hidden">Breathe</span>
+                            </button>
+
                             {/* "Take a Break" Soft Break Button */}
                             <button
                                 onClick={() => {
                                     setIsTiredBreakMode(prev => !prev);
                                     if (!isTiredBreakMode) {
+                                        setIsDeepBreathMode(false);
                                         setBreakQuoteIndex(Math.floor(Math.random() * BREAK_QUOTES.length));
                                     }
                                 }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border ${
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer border shadow-xs ${
                                     isTiredBreakMode
-                                        ? 'bg-amber-500 text-white border-amber-600 shadow-xs'
-                                        : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                                        ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 shadow-sm'
+                                        : 'bg-[var(--color-surface-card)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:border-amber-500/50'
                                 }`}
                                 title="Step away and rest your mind"
                             >
-                                <Coffee size={13} className={isTiredBreakMode ? 'animate-bounce' : ''} />
+                                <Coffee size={14} className={isTiredBreakMode ? 'text-white animate-bounce' : 'text-amber-400'} />
                                 <span className="hidden sm:inline">Take a Break</span>
                                 <span className="sm:hidden">Break</span>
                             </button>
@@ -332,7 +357,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                             <TimePerspectivePanel />
                         </div>
 
-                        {/* Right Column: Center Quote Workspace (7 cols) */}
+                        {/* Right Column: Center Quote / Deep Breath Workspace (7 cols) */}
                         <div 
                             className="lg:col-span-7 h-full flex flex-col justify-between overflow-hidden relative select-none w-full max-w-full"
                             onWheel={handleWheel}
@@ -345,9 +370,14 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                 <div className={`absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-gradient-to-tr ${currentTheme.from} ${currentTheme.via} ${currentTheme.to} blur-3xl opacity-60 transition-all duration-700`} />
                             </div>
 
-                            {/* MAIN CENTER CONTENT (The Quote & Practical Takeaway) */}
+                            {/* MAIN CENTER CONTENT (Quotes / Deep Breath / Break Screen) */}
                             <div className="relative z-10 flex-1 flex flex-col justify-center items-center p-6 sm:p-8 lg:p-10 overflow-y-auto overflow-x-hidden scrollbar-none w-full">
-                                {isTiredBreakMode ? (
+                                {isDeepBreathMode ? (
+                                    <DeepBreathPanel 
+                                        onClose={() => onOpenChange(false)} 
+                                        onBackToQuotes={() => setIsDeepBreathMode(false)} 
+                                    />
+                                ) : isTiredBreakMode ? (
                                     /* Rest & Permission to Step Away Screen */
                                     <div className="max-w-xl mx-auto w-full space-y-6 animate-fade-in text-center py-2">
                                         <div className="flex flex-col items-center gap-2.5">
@@ -471,7 +501,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                             </div>
 
                             {/* 3. FIXED FOOTER ACTIONS TOOLBAR */}
-                            {!isTiredBreakMode && (
+                            {!isTiredBreakMode && !isDeepBreathMode && (
                                 <footer className="relative z-20 px-6 py-3 border-t border-[var(--color-border-default)] bg-[var(--color-surface-raised)]/95 backdrop-blur-md shrink-0 w-full">
                                     <div className="max-w-xl mx-auto w-full flex items-center justify-between gap-3">
                                         <div className="flex items-center gap-2">

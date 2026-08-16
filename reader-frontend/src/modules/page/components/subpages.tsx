@@ -107,7 +107,7 @@ export const PageSubpages = observer(function PageSubpages() {
 
     const sorted = useMemo(() => sortPages(filtered, uiSettings.subpageSort), [filtered, uiSettings.subpageSort]);
     const isGrouped = uiSettings.subpageGroup.groupByCategory && !hasSearch;
-    const canDragReorder = !isGrouped && uiSettings.subpageSort === PageSubpageSort.SORT_ORDER;
+    const canDragReorder = store.isOwner && !isGrouped && uiSettings.subpageSort === PageSubpageSort.SORT_ORDER;
 
     const grouped = useMemo(() => {
         if (!isGrouped) return null;
@@ -128,9 +128,11 @@ export const PageSubpages = observer(function PageSubpages() {
                         className="pl-8"
                     />
                 </div>
-                <Button size="sm" iconOnly onClick={() => setUpsertOpen(true)} tooltip="New page">
-                    <Plus size={14} />
-                </Button>
+                {store.isOwner && (
+                    <Button size="sm" iconOnly onClick={() => setUpsertOpen(true)} tooltip="New subpage">
+                        <Plus size={14} />
+                    </Button>
+                )}
             </div>
             <div className="flex items-center gap-2 px-3 pb-2">
                 <Select

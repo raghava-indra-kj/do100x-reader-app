@@ -16,6 +16,7 @@ export function toPageListItem(db: DbPageListItem): PageListItem {
         title: db.title,
         category: db.category,
         sortOrder: db.sortOrder,
+        isPublic: db.isPublic,
         createdAt: db.createdAt,
         updatedAt: db.updatedAt
     });
@@ -34,6 +35,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
     const doc = parseResult.data;
     const page = new Page({
         id: dbPage.id,
+        userId: dbPage.userId,
         parentPageId: dbPage.parentPageId,
         title: dbPage.title,
         content: dbPage.content,
@@ -42,6 +44,8 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         updatedAt: dbPage.updatedAt,
         sections: doc.sections.map((s) => toSection({ mdSection: s, pageId: dbPage.id })),
         childrenCount: dbPage.childrenCount,
+        isPublic: dbPage.isPublic,
+        isOwner: dbPage.isOwner,
         meaningSystemPrompt: dbPage.meaningSystemPrompt,
         explanationSystemPrompt: dbPage.explanationSystemPrompt,
         doubtSystemPrompt: dbPage.doubtSystemPrompt,

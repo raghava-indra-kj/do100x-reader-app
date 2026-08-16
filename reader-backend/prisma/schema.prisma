@@ -23,6 +23,7 @@ model page {
   category      String?   @db.VarChar(255)
   sortOrder     Int
   childrenCount Int
+  isPublic      Boolean   @default(false)
   createdAt               DateTime  @db.DateTime(6)
   updatedAt               DateTime  @db.DateTime(6)
   deletedAt               DateTime? @db.DateTime(6)
@@ -33,6 +34,7 @@ model page {
 
 model comment {
   id            String   @id @default(uuid()) @db.VarChar(36)
+  userId        String?  @db.VarChar(36)
   pageId        String   @db.VarChar(36)
   pageTitle     String   @db.VarChar(1000)
   sectionTitle  String?  @db.VarChar(1000)
@@ -46,6 +48,7 @@ model comment {
 
 model vocabulary {
   id        String   @id @default(uuid()) @db.VarChar(36)
+  userId    String?  @db.VarChar(36)
   pageId    String   @db.VarChar(36)
   term      String   @db.VarChar(255)
   createdAt DateTime @db.DateTime(6)

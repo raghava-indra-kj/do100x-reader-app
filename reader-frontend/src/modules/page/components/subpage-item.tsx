@@ -1,12 +1,14 @@
 import { pagesPageWithIdRouteValue } from '@boot/routes';
 import type { PageListItem } from '@domain/page/models/page-list-item';
-import { Trash2, GripVertical, Pencil } from 'lucide-react';
+import { Trash2, GripVertical, Pencil, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DeletePageDialog } from './delete-page';
 import { UpsertPageDialog } from './upsert-page';
+import { usePageStore } from '../store';
+import { observer } from 'mobx-react-lite';
 
 export interface SubpageItemProps {
     page: PageListItem;
@@ -15,7 +17,9 @@ export interface SubpageItemProps {
     hideDrag?: boolean;
 }
 
-export function SubpageItem({ page, onDeleted, parentPageId, hideDrag }: SubpageItemProps) {
+export const SubpageItem = observer(function SubpageItem({ page, onDeleted, parentPageId, hideDrag }: SubpageItemProps) {
+    const store = usePageStore();
+    const isOwner = store.isOwner;
     const navigate = useNavigate();
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [editOpen, setEditOpen] = useState(false);
@@ -27,7 +31,7 @@ export function SubpageItem({ page, onDeleted, parentPageId, hideDrag }: Subpage
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: page.id });
+    } = useSortable({ id: page.id, disabled: !isOwner || hideDrag });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -42,7 +46,7 @@ export function SubpageItem({ page, onDeleted, parentPageId, hideDrag }: Subpage
                 style={style}
                 className="group flex items-center gap-2 rounded-[var(--radius-sm)] px-3 py-1.5 hover:bg-[var(--color-surface-soft)] transition-colors"
             >
-                {!hideDrag && (
+                {isOwner && !hideDrag && (
                     <button
                         {...attributes}
                         {...listeners}
@@ -56,40 +60,58 @@ export function SubpageItem({ page, onDeleted, parentPageId, hideDrag }: Subpage
                     onClick={() => navigate(pagesPageWithIdRouteValue(page.id))}
                     className="flex flex-col flex-1 text-left cursor-pointer min-w-0"
                 >
-                    <span className="text-sm text-[var(--color-text-body)] hover:text-[var(--color-text-strong)] break-words">{page.title}</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-sm text-[var(--color-text-body)] hover:text-[var(--color-text-strong)] break-words">
+                            {page.title}
+                        </span>
+                        {page.isPublic && (
+                            <span className="inline-flex items-center text-[10px] text-emerald-600 dark:text-emerald-400" title="Public subpage">
+                                <Globe size={11} />
+                            </span>
+                        )}
+                    </div>
                     {page.category && (
                         <span className="text-[11px] text-[var(--color-text-subtle)] leading-tight">{page.category}</span>
                     )}
                 </button>
-                <button
-                    onClick={() => setEditOpen(true)}
-                    className="shrink-0 p-1 opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-all cursor-pointer"
-                    title="Edit page"
-                >
-                    <Pencil size={14} />
-                </button>
-                <button
-                    onClick={() => setDeleteOpen(true)}
-                    className="shrink-0 p-1 opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-all cursor-pointer"
-                >
-                    <Trash2 size={14} />
-                </button>
+                {isOwner && (
+                    <>
+                        <button
+                            onClick={() => setEditOpen(true)}
+                            className="shrink-0 p-1 opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-all cursor-pointer"
+                            title="Edit page"
+                        >
+                            <Pencil size={14} />
+                        </button>
+                        <button
+                            onClick={() => setDeleteOpen(true)}
+                            className="shrink-0 p-1 opacity-0 group-hover:opacity-100 text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition-all cursor-pointer"
+                            title="Delete page"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                    </>
+                )}
             </div>
-            <UpsertPageDialog
-                open={editOpen}
-                onOpenChange={setEditOpen}
-                parentPageId={parentPageId}
-                editPageId={page.id}
-                initialTitle={page.title}
-                initialCategory={page.category}
-            />
-            <DeletePageDialog
-                open={deleteOpen}
-                onOpenChange={setDeleteOpen}
-                pageId={page.id}
-                pageTitle={page.title}
-                onDeleted={onDeleted}
-            />
+            {isOwner && (
+                <>
+                    <UpsertPageDialog
+                        open={editOpen}
+                        onOpenChange={setEditOpen}
+                        parentPageId={parentPageId}
+                        editPageId={page.id}
+                        initialTitle={page.title}
+                        initialCategory={page.category}
+                    />
+                    <DeletePageDialog
+                        open={deleteOpen}
+                        onOpenChange={setDeleteOpen}
+                        pageId={page.id}
+                        pageTitle={page.title}
+                        onDeleted={onDeleted}
+                    />
+                </>
+            )}
         </>
     );
-}
+});

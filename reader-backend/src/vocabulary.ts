@@ -11,6 +11,13 @@ router.get("/", async (req, res) => {
     pageId?: string;
     date?: string;
   };
+  const reqUserId = req.headers["x-user-id"] as string | undefined;
+
+  // Unauthenticated guests have no personal vocabulary
+  if (!reqUserId) {
+    res.json([]);
+    return;
+  }
 
   if (!pageId && !date) {
     res
@@ -19,7 +26,12 @@ router.get("/", async (req, res) => {
     return;
   }
 
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = {
+    OR: [
+      { userId: reqUserId },
+      { userId: null }, // Support legacy vocabulary entries
+    ],
+  };
   if (pageId) where.pageId = pageId;
 
   if (date) {
@@ -49,7 +61,18 @@ router.get("/", async (req, res) => {
 
 // POST /vocabulary
 router.post("/", async (req, res) => {
-  const { pageId, term } = req.body as { pageId: string; term: string };
+  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const { pageId, term, userId } = req.body as {
+    pageId: string;
+    term: string;
+    userId?: string;
+  };
+
+  const finalUserId = userId || reqUserId;
+  if (!finalUserId) {
+    res.status(401).json({ message: "Sign in required to save vocabulary terms" });
+    return;
+  }
 
   if (!pageId || !term || !term.trim()) {
     res
@@ -60,6 +83,7 @@ router.post("/", async (req, res) => {
 
   const newVocab = await prisma.vocabulary.create({
     data: {
+      userId: finalUserId,
       pageId,
       term: term.trim(),
       createdAt: new Date(),
@@ -72,6 +96,7 @@ router.post("/", async (req, res) => {
 // DELETE /vocabulary/:vocabId
 router.delete("/:vocabId", async (req, res) => {
   const { vocabId } = req.params;
+  const reqUserId = req.headers["x-user-id"] as string | undefined;
 
   const existing = await prisma.vocabulary.findFirst({
     where: { id: vocabId },
@@ -79,6 +104,11 @@ router.delete("/:vocabId", async (req, res) => {
 
   if (!existing) {
     res.status(404).json({ message: "Vocabulary entry not found" });
+    return;
+  }
+
+  if (existing.userId && reqUserId && existing.userId !== reqUserId) {
+    res.status(403).json({ message: "Forbidden" });
     return;
   }
 

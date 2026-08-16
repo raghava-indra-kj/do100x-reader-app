@@ -28,6 +28,11 @@ export interface IPagesRepo {
         doubtSystemPrompt?: string;
     }): AsyncResult<void, AppError>;
 
+    updateShareStatus(params: {
+        pageId: string;
+        isPublic: boolean;
+    }): AsyncResult<{ isPublic: boolean }, AppError>;
+
     deletePage(params: { pageId: string }): AsyncResult<void, AppError>;
 
     queryPages(params: {

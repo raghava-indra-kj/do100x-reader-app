@@ -149,13 +149,14 @@ const PageContent = observer(function PageContent() {
     const [createWithPaste, setCreateWithPaste] = useState<{ open: boolean; title: string; content: string; category: string | null }>({ open: false, title: '', content: '', category: null });
 
     const handleGlobalPaste = useCallback((data: ExtractedPaste) => {
+        if (!store.isOwner) return;
         setCreateWithPaste({
             open: true,
             title: data.title ?? '',
             content: data.content,
             category: data.category,
         });
-    }, []);
+    }, [store.isOwner]);
 
     useClipboardPaste(handleGlobalPaste);
 

@@ -5,6 +5,21 @@ export const apiClient = axios.create({
     headers: { 'Content-Type': 'application/json' },
 });
 
+apiClient.interceptors.request.use((config) => {
+    try {
+        const raw = localStorage.getItem('current_user');
+        if (raw) {
+            const user = JSON.parse(raw);
+            if (user?.id) {
+                config.headers['x-user-id'] = user.id;
+            }
+        }
+    } catch {
+        // ignore
+    }
+    return config;
+});
+
 export function getApiErrorMessage(error: unknown, fallback: string): string {
     if (axios.isAxiosError(error)) {
         return error.response?.data?.message ?? fallback;

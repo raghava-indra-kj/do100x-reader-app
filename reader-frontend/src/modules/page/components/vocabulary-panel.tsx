@@ -1,6 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePageStore } from '../store';
+import { useAuthStore } from '@modules/auth/provider/store';
 import {
     getVocabulary,
     deleteVocabulary,
@@ -17,7 +18,10 @@ import {
     Sparkles,
     Calendar,
     FileText,
+    ShieldCheck,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { loginPageRoute } from '@boot/routes';
 
 function formatRelativeTime(date: Date): string {
     const now = Date.now();
@@ -42,6 +46,7 @@ const TODAY = toIsoDay(new Date());
 
 export const PageVocabulary = observer(function PageVocabulary() {
     const store = usePageStore();
+    const authStore = useAuthStore();
     const mountedRef = useRef(true);
 
     const [mode, setMode] = useState<'page' | 'day'>('page');
@@ -105,26 +110,41 @@ export const PageVocabulary = observer(function PageVocabulary() {
         };
     }, [load]);
 
-    const vocab = vocabState.ifLoadedOr({ loaded: (c) => c, or: () => [] as Vocabulary[] });
-    const explanations = explState.ifLoadedOr({ loaded: (c) => c, or: () => [] as Comment[] });
+    const vocab = vocabState.ifLoadedOr({ loaded: (v) => v, or: () => [] as Vocabulary[] });
+    const explanations = explState.ifLoadedOr({ loaded: (e) => e, or: () => [] as Comment[] });
 
-    const handleDeleteVocab = useCallback(async (vocabId: string) => {
-        const result = await deleteVocabulary({ vocabId });
-        if (result.ok) {
-            store.bumpVocabVersion();
-        }
-    }, [store]);
+    const handleDeleteVocab = useCallback(
+        async (vocabId: string) => {
+            const result = await deleteVocabulary({ vocabId });
+            if (result.ok) {
+                store.bumpVocabVersion();
+                load();
+            }
+        },
+        [store, load]
+    );
 
     const resolvePageTitle = useCallback(
-        (pageId: string): string => {
-            if (pageId === store.pageId) return store.optCurrentPage?.title ?? pageId;
+        (pageId: string) => {
+            if (pageId === store.pageId && store.optCurrentPage) {
+                return store.optCurrentPage.title;
+            }
             return titleCache[pageId] ?? pageId;
         },
         [store, titleCache]
     );
 
+
     return (
         <div className="flex h-full flex-col">
+            {!authStore.isAuthenticated && (
+                <div className="mx-3 mt-3 p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] flex items-start gap-2 leading-relaxed">
+                    <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
+                    <span>
+                        Vocabulary is private to your account. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save vocabulary terms on this page.
+                    </span>
+                </div>
+            )}
             <div className="flex flex-col gap-1.5 shrink-0 px-3 pt-3 pb-2 border-b border-[var(--color-border-subtle)]">
                 <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
                     Vocabulary

@@ -8,6 +8,7 @@ export const DbPageListItemSchema = z.object({
     category: z.string().nullable(),
     sortOrder: z.number(),
     childrenCount: z.number(),
+    isPublic: z.boolean().optional().default(false),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
 });
