@@ -6,6 +6,21 @@ import { validateUserToken, AuthenticatedMcpUser } from "./user-context";
 export function createMcpSseRouter(): Router {
   const router = Router();
 
+  // CORS & Reverse Proxy Streaming Headers
+  router.use((req, res, next) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-id, x-mcp-token");
+    res.setHeader("X-Accel-Buffering", "no"); // Disables Nginx response buffering for SSE
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+
+    if (req.method === "OPTIONS") {
+      res.sendStatus(200);
+      return;
+    }
+    next();
+  });
+
   // Active transports and session user mappings
   const transports = new Map<string, SSEServerTransport>();
   const sessionUsers = new Map<string, AuthenticatedMcpUser>();
@@ -46,6 +61,11 @@ export function createMcpSseRouter(): Router {
     }
 
     try {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.flushHeaders?.();
+
       const postEndpoint = req.baseUrl ? `${req.baseUrl}/messages` : "/messages";
       const transport = new SSEServerTransport(postEndpoint, res);
 
