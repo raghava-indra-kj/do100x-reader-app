@@ -352,15 +352,59 @@
 
 /* ---- Mermaid ---- */
 
-.md-view .md-mermaid {
+.md-view .md-mermaid-wrapper {
+  position: relative;
   margin: 1rem 0;
+}
+
+.md-view .md-mermaid-fullscreen-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.375rem;
+  border: 1px solid var(--md-color-border, rgba(255, 255, 255, 0.15));
+  background-color: var(--md-color-codeBlockBg, rgba(15, 23, 42, 0.75));
+  color: var(--md-color-body, #e2e8f0);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  opacity: 0.75;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.md-view .md-mermaid-wrapper:hover .md-mermaid-fullscreen-btn,
+.md-view .md-mermaid-fullscreen-btn:focus-visible {
+  opacity: 1;
+}
+
+.md-view .md-mermaid-fullscreen-btn:hover {
+  background-color: var(--md-color-surfaceBg, #1e293b);
+  border-color: var(--md-color-borderStrong, #38bdf8);
+  color: var(--md-color-h1, #ffffff);
+}
+
+.md-view .md-mermaid-fullscreen-btn svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.md-view .md-mermaid {
+  margin: 0;
   display: flex;
   justify-content: center;
   overflow-x: auto;
+  cursor: pointer;
 }
 
 .md-view .md-mermaid svg {
   height: auto;
+  max-width: 100%;
 }
 
 .md-view .md-mermaid--loading {
@@ -373,6 +417,160 @@
 @keyframes md-mermaid-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
+}
+
+/* ---- Mermaid Fullscreen Modal ---- */
+
+.md-mermaid-fullscreen-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--md-font-family-prose, system-ui, sans-serif);
+  user-select: none;
+}
+
+.md-mermaid-fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+
+.md-mermaid-fullscreen-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.md-mermaid-fullscreen-title .md-mermaid-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  opacity: 0.85;
+}
+
+.md-mermaid-fullscreen-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.md-mermaid-control-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  height: 2rem;
+  min-width: 2rem;
+  padding: 0 0.5rem;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.md-mermaid-control-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.md-mermaid-control-btn svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.md-mermaid-zoom-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.25rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--md-font-family-code, monospace);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.375rem;
+}
+
+.md-mermaid-control-divider {
+  width: 1px;
+  height: 1.25rem;
+  background-color: rgba(255, 255, 255, 0.15);
+  margin: 0 0.25rem;
+}
+
+.md-mermaid-close-btn {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.md-mermaid-close-btn:hover {
+  background: rgba(239, 68, 68, 0.35);
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.md-mermaid-fullscreen-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+
+.md-mermaid-fullscreen-canvas.md-mermaid-canvas--dragging {
+  cursor: grabbing;
+}
+
+.md-mermaid-fullscreen-content {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.md-mermaid-fullscreen-content svg {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
+}
+
+.md-mermaid-fullscreen-chip {
+  position: absolute;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+  padding: 0.4rem 0.875rem;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.md-mermaid-fullscreen-chip b {
+  color: #ffffff;
 }
 
 /* ---- KaTeX ---- */

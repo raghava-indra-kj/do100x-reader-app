@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { MermaidConfig } from "mermaid";
+import { Maximize2 } from "lucide-react";
 import { useMdViewColors, useMdViewMermaidTheme } from "../../context/md-view-context";
 import type { MdViewColors, MdViewMermaidTheme } from "../../types/theme";
+import { MermaidFullscreenModal } from "./mermaid-fullscreen-modal";
 
 type MermaidModule = typeof import("mermaid").default;
 
@@ -76,6 +78,7 @@ export function MermaidBlock({ children }: { children?: unknown }) {
   const ref = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -124,10 +127,33 @@ export function MermaidBlock({ children }: { children?: unknown }) {
   }
 
   return (
-    <div
-      ref={ref}
-      className="md-mermaid"
-      dangerouslySetInnerHTML={{ __html: svg }}
-    />
+    <div className="md-mermaid-wrapper">
+      <button
+        type="button"
+        className="md-mermaid-fullscreen-btn"
+        onClick={() => setIsFullscreen(true)}
+        title="View in full screen"
+        aria-label="View mind map in full screen"
+      >
+        <Maximize2 size={14} />
+        <span>Full screen</span>
+      </button>
+
+      <div
+        ref={ref}
+        className="md-mermaid"
+        onDoubleClick={() => setIsFullscreen(true)}
+        dangerouslySetInnerHTML={{ __html: svg }}
+      />
+
+      {isFullscreen && (
+        <MermaidFullscreenModal
+          svg={svg}
+          colors={colors}
+          onClose={() => setIsFullscreen(false)}
+        />
+      )}
+    </div>
   );
 }
+

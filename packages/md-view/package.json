@@ -9,6 +9,7 @@
         "./md-view-hljs.css": "./src/md-view-hljs.css"
     },
     "dependencies": {
+        "lucide-react": "^1.18.0",
         "mermaid": "^11.15.0",
         "react-markdown": "^10.1.0",
         "rehype-highlight": "^7.0.2",
@@ -22,9 +23,11 @@
     },
     "devDependencies": {
         "@types/react": "^19.2.17",
+        "@types/react-dom": "^19.2.3",
         "typescript": "^6.0.3"
     },
     "peerDependencies": {
-        "react": "^19.0.0"
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0"
     }
 }
