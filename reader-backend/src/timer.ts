@@ -498,7 +498,7 @@ router.delete("/tasks/:taskId/sessions", async (req: Request, res: Response) => 
 // 3. TIME ANALYTICS & BREAKDOWN
 // ==========================================
 
-// GET /backend-api/timer/analytics - Comprehensive time metrics
+// GET /backend-api/timer/analytics - Comprehensive time metrics with flexible date ranges and scopes
 router.get("/analytics", async (req: Request, res: Response) => {
   const userId = getUserId(req);
   if (!userId) {
@@ -506,19 +506,63 @@ router.get("/analytics", async (req: Request, res: Response) => {
     return;
   }
 
-  const { days = "7" } = req.query;
-  const dayCount = parseInt(days as string, 10) || 7;
+  const {
+    days,
+    preset = "7",
+    startDate,
+    endDate,
+    listId,
+    taskId,
+  } = req.query;
 
-  const sinceDate = new Date();
-  sinceDate.setDate(sinceDate.getDate() - dayCount);
+  const now = new Date();
+  let start: Date;
+  let end: Date = now;
+  let periodLabel = `${preset} days`;
+
+  if (startDate && endDate) {
+    start = new Date(`${startDate}T00:00:00.000`);
+    end = new Date(`${endDate}T23:59:59.999`);
+    periodLabel = `${startDate} to ${endDate}`;
+  } else if (preset === "today" || days === "1") {
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    periodLabel = "Today";
+  } else if (preset === "yesterday") {
+    const y = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    start = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0);
+    end = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
+    periodLabel = "Yesterday";
+  } else if (preset === "all") {
+    start = new Date(0);
+    periodLabel = "All Time";
+  } else {
+    const dayCount = parseInt((days || preset) as string, 10) || 7;
+    start = new Date(now.getTime() - dayCount * 24 * 60 * 60 * 1000);
+    periodLabel = `Last ${dayCount} Days`;
+  }
+
+  const sessionWhere: Record<string, unknown> = {
+    userId,
+    startTime: { gte: start, lte: end },
+  };
+
+  if (taskId && typeof taskId === "string") {
+    sessionWhere.taskId = taskId;
+  }
 
   const sessions = await prisma.time_session.findMany({
-    where: { userId, startTime: { gte: sinceDate } },
+    where: sessionWhere,
     orderBy: { startTime: "desc" },
   });
 
+  const taskWhere: Record<string, unknown> = { userId, deletedAt: null };
+  if (listId && typeof listId === "string" && listId !== "all") {
+    taskWhere.listId = listId === "inbox" || listId === "null" ? null : listId;
+  }
+
   const tasks = await prisma.task.findMany({
-    where: { userId, deletedAt: null },
+    where: taskWhere,
     select: { id: true, title: true, listId: true, priority: true },
   });
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
@@ -535,11 +579,16 @@ router.get("/analytics", async (req: Request, res: Response) => {
   const dailyTimeline = new Map<string, number>();
 
   for (const s of sessions) {
-    totalSeconds += s.durationSeconds;
     const task = taskMap.get(s.taskId);
+    // If filtering by list and task not matching list, skip
+    if (listId && listId !== "all" && !task) {
+      continue;
+    }
+
+    totalSeconds += s.durationSeconds;
     const title = task?.title || "Deleted Task";
-    const listId = task?.listId || null;
-    const list = listId ? listMap.get(listId) : null;
+    const tListId = task?.listId || null;
+    const list = tListId ? listMap.get(tListId) : null;
     const listName = list?.name || "Inbox";
     const listColor = list?.color || "#3b82f6";
 
@@ -550,9 +599,9 @@ router.get("/analytics", async (req: Request, res: Response) => {
     taskBreakdown.get(s.taskId)!.seconds += s.durationSeconds;
 
     // List breakdown
-    const listKey = listId || "inbox";
+    const listKey = tListId || "inbox";
     if (!listBreakdown.has(listKey)) {
-      listBreakdown.set(listKey, { listId, name: listName, color: listColor, seconds: 0 });
+      listBreakdown.set(listKey, { listId: tListId, name: listName, color: listColor, seconds: 0 });
     }
     listBreakdown.get(listKey)!.seconds += s.durationSeconds;
 
@@ -562,7 +611,9 @@ router.get("/analytics", async (req: Request, res: Response) => {
   }
 
   res.json({
-    periodDays: dayCount,
+    periodLabel,
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
     totalSeconds,
     sessionsCount: sessions.length,
     byTask: Array.from(taskBreakdown.values()).sort((a, b) => b.seconds - a.seconds),

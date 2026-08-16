@@ -19,6 +19,17 @@ body {
     font-family: var(--font-sans);
 }
 
+button,
+[role="button"],
+a,
+select,
+input[type="checkbox"],
+input[type="radio"],
+input[type="button"],
+input[type="submit"] {
+    cursor: pointer;
+}
+
 :focus-visible {
     outline: var(--focus-ring-width) solid var(--focus-ring-color);
     outline-offset: var(--focus-ring-offset);

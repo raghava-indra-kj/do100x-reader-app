@@ -66,5 +66,12 @@ export interface ITaskRepo {
   deleteAllTaskSessions(taskId: string): AsyncResult<void, AppError>;
 
   // Analytics
-  getTimeAnalytics(days?: number): AsyncResult<TimeAnalyticsData, AppError>;
+  getTimeAnalytics(params?: {
+    days?: number;
+    preset?: string;
+    startDate?: string;
+    endDate?: string;
+    listId?: string;
+    taskId?: string;
+  }): AsyncResult<TimeAnalyticsData, AppError>;
 }

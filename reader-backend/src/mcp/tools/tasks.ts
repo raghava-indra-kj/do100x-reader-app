@@ -887,21 +887,60 @@ export function registerTaskTools(server: McpServer, userId: string) {
   // 14. Time analytics & productivity breakdown
   server.tool(
     "reader_get_time_analytics",
-    "Analyze where time was spent across tasks, lists, and days to review productivity and focus areas",
+    "Analyze where time was spent across tasks, lists, and days with support for today, yesterday, custom date ranges, and project scopes",
     {
-      days: z.number().optional().default(7).describe("Number of past days to inspect (default: 7)"),
+      preset: z.enum(["today", "yesterday", "7", "14", "30", "all"]).optional().describe("Time period preset (default: '7')"),
+      startDate: z.string().optional().describe("Optional start date (YYYY-MM-DD)"),
+      endDate: z.string().optional().describe("Optional end date (YYYY-MM-DD)"),
+      listId: z.string().optional().describe("Optional list ID or 'inbox' to scope analysis"),
+      taskId: z.string().optional().describe("Optional task ID to inspect single task focus"),
     },
-    async ({ days = 7 }) => {
-      const sinceDate = new Date();
-      sinceDate.setDate(sinceDate.getDate() - days);
+    async ({ preset = "7", startDate, endDate, listId, taskId }) => {
+      const now = new Date();
+      let start: Date;
+      let end: Date = now;
+      let periodLabel = `${preset} days`;
+
+      if (startDate && endDate) {
+        start = new Date(`${startDate}T00:00:00.000`);
+        end = new Date(`${endDate}T23:59:59.999`);
+        periodLabel = `${startDate} to ${endDate}`;
+      } else if (preset === "today") {
+        start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+        periodLabel = "Today";
+      } else if (preset === "yesterday") {
+        const y = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        start = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0);
+        end = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
+        periodLabel = "Yesterday";
+      } else if (preset === "all") {
+        start = new Date(0);
+        periodLabel = "All Time";
+      } else {
+        const days = parseInt(preset, 10) || 7;
+        start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        periodLabel = `Last ${days} Days`;
+      }
+
+      const sessionWhere: Record<string, unknown> = {
+        userId,
+        startTime: { gte: start, lte: end },
+      };
+      if (taskId) sessionWhere.taskId = taskId;
 
       const sessions = await prisma.time_session.findMany({
-        where: { userId, startTime: { gte: sinceDate } },
+        where: sessionWhere,
         orderBy: { startTime: "desc" },
       });
 
+      const taskWhere: Record<string, unknown> = { userId, deletedAt: null };
+      if (listId && listId !== "all") {
+        taskWhere.listId = listId === "inbox" || listId === "null" ? null : listId;
+      }
+
       const tasks = await prisma.task.findMany({
-        where: { userId, deletedAt: null },
+        where: taskWhere,
         select: { id: true, title: true, listId: true, priority: true },
       });
       const taskMap = new Map(tasks.map((t) => [t.id, t]));
@@ -917,8 +956,10 @@ export function registerTaskTools(server: McpServer, userId: string) {
       const listTotals = new Map<string, number>();
 
       for (const s of sessions) {
-        totalSeconds += s.durationSeconds;
         const task = taskMap.get(s.taskId);
+        if (listId && listId !== "all" && !task) continue;
+
+        totalSeconds += s.durationSeconds;
         const title = task?.title || "Deleted Task";
         const listName = task?.listId ? listMap.get(task.listId) || "List" : "Inbox";
 
@@ -956,7 +997,9 @@ export function registerTaskTools(server: McpServer, userId: string) {
             type: "text",
             text: JSON.stringify(
               {
-                periodDays: days,
+                period: periodLabel,
+                startDate: start.toISOString().slice(0, 10),
+                endDate: end.toISOString().slice(0, 10),
                 totalTimeTrackedSeconds: totalSeconds,
                 totalTimeTrackedFormatted: formatSecondsHuman(totalSeconds),
                 totalSessionsRecorded: sessions.length,

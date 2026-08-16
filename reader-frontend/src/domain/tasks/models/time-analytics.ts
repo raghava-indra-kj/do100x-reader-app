@@ -15,7 +15,10 @@ export const ListTimeAnalyticsSchema = z.object({
 });
 
 export const TimeAnalyticsSchema = z.object({
-  periodDays: z.number().default(7),
+  periodLabel: z.string().default('Last 7 Days'),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  periodDays: z.number().optional().default(7),
   totalSeconds: z.number().default(0),
   sessionsCount: z.number().default(0),
   byTask: z.array(TaskTimeAnalyticsSchema).default([]),
@@ -26,6 +29,9 @@ export const TimeAnalyticsSchema = z.object({
 export type TimeAnalyticsData = z.infer<typeof TimeAnalyticsSchema>;
 
 export class TimeAnalytics {
+  readonly periodLabel: string;
+  readonly startDate?: string;
+  readonly endDate?: string;
   readonly periodDays: number;
   readonly totalSeconds: number;
   readonly sessionsCount: number;
@@ -34,7 +40,10 @@ export class TimeAnalytics {
   readonly dailyTimeline: Record<string, number>;
 
   constructor(data: TimeAnalyticsData) {
-    this.periodDays = data.periodDays;
+    this.periodLabel = data.periodLabel || 'Last 7 Days';
+    this.startDate = data.startDate;
+    this.endDate = data.endDate;
+    this.periodDays = data.periodDays || 7;
     this.totalSeconds = data.totalSeconds;
     this.sessionsCount = data.sessionsCount;
     this.byTask = data.byTask;

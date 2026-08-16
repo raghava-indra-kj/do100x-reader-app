@@ -250,9 +250,16 @@ export class TaskRepoApi implements ITaskRepo {
   }
 
   // Analytics
-  async getTimeAnalytics(days?: number): AsyncResult<TimeAnalyticsData, AppError> {
+  async getTimeAnalytics(params?: {
+    days?: number;
+    preset?: string;
+    startDate?: string;
+    endDate?: string;
+    listId?: string;
+    taskId?: string;
+  }): AsyncResult<TimeAnalyticsData, AppError> {
     try {
-      const { data } = await apiClient.get('/timer/analytics', { params: { days } });
+      const { data } = await apiClient.get('/timer/analytics', { params });
       return ok(TimeAnalyticsSchema.parse(data));
     } catch (error) {
       return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch time analytics'), cause: error }));

@@ -213,9 +213,16 @@ export async function deleteAllTaskSessions(taskId: string): AsyncResult<void, A
   return repo.deleteAllTaskSessions(taskId);
 }
 
-export async function getTimeAnalytics(days?: number): AsyncResult<TimeAnalytics, AppError> {
+export async function getTimeAnalytics(params?: {
+  days?: number;
+  preset?: string;
+  startDate?: string;
+  endDate?: string;
+  listId?: string;
+  taskId?: string;
+}): AsyncResult<TimeAnalytics, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  const res = await repo.getTimeAnalytics(days);
+  const res = await repo.getTimeAnalytics(params);
   if (!res.ok) return res;
   return ok(toTimeAnalytics(res.data));
 }

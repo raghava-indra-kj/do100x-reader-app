@@ -24,7 +24,7 @@ export const MatrixView = observer(({ store }: Props) => {
     colorClasses: { bg: string; border: string; headerBg: string; badge: string; text: string }
   ) => {
     return (
-      <div className={`flex flex-col h-full rounded-2xl border ${colorClasses.border} ${colorClasses.bg} overflow-hidden shadow-sm`}>
+      <div className={`flex flex-col h-full rounded-2xl border ${colorClasses.border} ${colorClasses.bg} overflow-hidden shadow-xs`}>
         {/* Quadrant Header */}
         <div className={`p-3.5 border-b ${colorClasses.border} ${colorClasses.headerBg} flex items-center justify-between`}>
           <div>
@@ -34,12 +34,12 @@ export const MatrixView = observer(({ store }: Props) => {
                 {tasks.length}
               </span>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{subtitle}</p>
+            <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{subtitle}</p>
           </div>
         </div>
 
         {/* Quick Add Input */}
-        <div className="p-2.5 border-b border-border/60 bg-background/50">
+        <div className="p-2.5 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)]/50">
           <div className="flex items-center space-x-2">
             <input
               type="text"
@@ -48,15 +48,13 @@ export const MatrixView = observer(({ store }: Props) => {
               onChange={(e) => setInputVal(e.target.value)}
               onKeyDown={async (e) => {
                 if (e.key === 'Enter' && inputVal.trim()) {
-                  await store.updateTaskProperties(
-                    (
-                      await store.createQuickTask()
-                    ) as any,
-                    {}
-                  );
+                  store.setQuickTaskTitle(inputVal.trim());
+                  store.setQuickTaskPriority(priority);
+                  await store.createQuickTask();
+                  setInputVal('');
                 }
               }}
-              className="flex-1 bg-background text-xs px-2.5 py-1.5 rounded-lg border border-border focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+              className="flex-1 bg-[var(--color-surface-canvas)] text-xs px-2.5 py-1.5 rounded-xl border border-[var(--color-border-default)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)]"
             />
             <button
               type="button"
@@ -68,7 +66,7 @@ export const MatrixView = observer(({ store }: Props) => {
                 setInputVal('');
               }}
               disabled={!inputVal.trim()}
-              className="p-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-semibold hover:opacity-90 disabled:opacity-40 transition"
+              className="p-1.5 bg-[var(--color-brand)] text-white rounded-xl text-xs font-bold hover:bg-[var(--color-brand-hover)] disabled:opacity-35 transition cursor-pointer shadow-xs"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
@@ -78,7 +76,7 @@ export const MatrixView = observer(({ store }: Props) => {
         {/* Tasks List */}
         <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
           {tasks.length === 0 ? (
-            <div className="py-8 text-center text-xs text-muted-foreground/60 italic">
+            <div className="py-8 text-center text-xs text-[var(--color-text-muted)] italic">
               No tasks in this quadrant
             </div>
           ) : (
@@ -88,10 +86,10 @@ export const MatrixView = observer(({ store }: Props) => {
                 <div
                   key={task.id}
                   onClick={() => store.selectTask(task.id)}
-                  className={`p-2.5 rounded-xl border transition cursor-pointer select-none bg-card ${
+                  className={`p-2.5 rounded-xl border transition cursor-pointer select-none bg-[var(--color-surface-raised)] ${
                     isSelected
-                      ? 'border-primary shadow-sm ring-1 ring-primary/20'
-                      : 'border-border hover:border-foreground/20 hover:bg-muted/30'
+                      ? 'border-[var(--color-brand)] shadow-sm ring-1 ring-[var(--color-brand)]/20'
+                      : 'border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] hover:shadow-2xs'
                   }`}
                 >
                   <div className="flex items-start space-x-2.5">
@@ -101,29 +99,33 @@ export const MatrixView = observer(({ store }: Props) => {
                         e.stopPropagation();
                         store.toggleTaskStatus(task);
                       }}
-                      className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center transition-all flex-shrink-0 ${
+                      className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center transition-all shrink-0 cursor-pointer ${
                         task.isDone
                           ? 'bg-emerald-500 border-emerald-500 text-white'
-                          : 'border-muted-foreground/40 hover:border-emerald-500'
+                          : 'border-[var(--color-border-strong)] hover:border-emerald-500'
                       }`}
                     >
                       {task.isDone && <Check className="w-2.5 h-2.5 stroke-[3]" />}
                     </button>
 
                     <div className="min-w-0 flex-1">
-                      <p className={`text-xs font-medium leading-snug truncate ${task.isDone ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                      <p
+                        className={`text-xs font-semibold leading-snug truncate ${
+                          task.isDone ? 'line-through text-[var(--color-text-muted)]' : 'text-[var(--color-text-strong)]'
+                        }`}
+                      >
                         {task.title}
                       </p>
 
                       <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                         {task.dueDate && (
-                          <span className="flex items-center space-x-1 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                          <span className="flex items-center space-x-1 text-[10px] text-[var(--color-text-muted)] bg-[var(--color-surface-soft)] px-2 py-0.5 rounded-md font-medium">
                             <Calendar className="w-2.5 h-2.5" />
                             <span>{new Date(task.dueDate).toISOString().slice(0, 10)}</span>
                           </span>
                         )}
                         {task.totalTimeFormatted && (
-                          <span className="flex items-center space-x-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-medium">
+                          <span className="flex items-center space-x-1 text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md font-bold font-mono">
                             <Clock className="w-2.5 h-2.5" />
                             <span>{task.totalTimeFormatted}</span>
                           </span>
@@ -141,10 +143,10 @@ export const MatrixView = observer(({ store }: Props) => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-background min-w-0 border-r border-border p-4 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-[var(--color-surface-canvas)] min-w-0 border-r border-[var(--color-border-subtle)] p-4 overflow-hidden">
       <div className="mb-4">
-        <h1 className="text-xl font-bold tracking-tight">Eisenhower Priority Matrix</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-strong)]">Eisenhower Priority Matrix</h1>
+        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
           Organize and prioritize your daily focus based on urgency and importance.
         </p>
       </div>

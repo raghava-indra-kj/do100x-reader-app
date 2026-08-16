@@ -56,6 +56,10 @@ export class TasksStore {
   // Subtask Add Input
   newSubtaskTitle: string = '';
 
+  // Expanded tasks in main list view
+  expandedTaskIds = new Set<string>();
+  taskSubtasksMap = new Map<string, Task[]>();
+
   // Active Timer
   activeTimer: ActiveTimer | null = null;
   timerElapsedSeconds: number = 0;
@@ -66,7 +70,22 @@ export class TasksStore {
   // Analytics
   analyticsData: TimeAnalytics | null = null;
   analyticsPeriodDays: number = 7;
+  analyticsPreset: string = '7';
+  analyticsStartDate: string = '';
+  analyticsEndDate: string = '';
+  analyticsListId: string = 'all';
+  analyticsTaskId: string = 'all';
   isLoadingAnalytics: boolean = false;
+
+  // Custom In-App Confirmation Modal (Never use browser alert/confirm)
+  confirmationModal: {
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    confirmVariant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void | Promise<void>;
+  } | null = null;
 
   // List Dialogs
   isListDialogOpen: boolean = false;
@@ -98,13 +117,21 @@ export class TasksStore {
       quickTaskPriority: observable,
       quickTaskDueDate: observable,
       newSubtaskTitle: observable,
+      expandedTaskIds: observable,
+      taskSubtasksMap: observable,
       activeTimer: observable,
       timerElapsedSeconds: observable,
       isStopTimerDialogOpen: observable,
       stopTimerNotes: observable,
       analyticsData: observable,
       analyticsPeriodDays: observable,
+      analyticsPreset: observable,
+      analyticsStartDate: observable,
+      analyticsEndDate: observable,
+      analyticsListId: observable,
+      analyticsTaskId: observable,
       isLoadingAnalytics: observable,
+      confirmationModal: observable,
       isListDialogOpen: observable,
       editingListId: observable,
       listNameInput: observable,
@@ -133,6 +160,8 @@ export class TasksStore {
       setQuickTaskPriority: action,
       setQuickTaskDueDate: action,
       setNewSubtaskTitle: action,
+      toggleTaskExpanded: action,
+      addInlineSubtask: action,
       setStopTimerNotes: action,
       setIsStopTimerDialogOpen: action,
       setIsListDialogOpen: action,
@@ -140,6 +169,12 @@ export class TasksStore {
       setSessionDurationMinutes: action,
       setSessionNotesInput: action,
       setSessionDateInput: action,
+      requestConfirmation: action,
+      closeConfirmation: action,
+      setAnalyticsPreset: action,
+      setAnalyticsCustomRange: action,
+      setAnalyticsListFilter: action,
+      setAnalyticsTaskFilter: action,
       setListNameInput: action,
       setListColorInput: action,
       setListIconInput: action,
@@ -583,6 +618,59 @@ export class TasksStore {
   // SUBTASKS
   // ==========================================
 
+  async toggleTaskExpanded(taskId: string) {
+    const next = new Set(this.expandedTaskIds);
+    if (next.has(taskId)) {
+      next.delete(taskId);
+      runInAction(() => {
+        this.expandedTaskIds = next;
+      });
+    } else {
+      next.add(taskId);
+      runInAction(() => {
+        this.expandedTaskIds = next;
+      });
+      // Fetch subtasks for this task
+      const res = await getTask(taskId);
+      if (res.ok) {
+        runInAction(() => {
+          const map = new Map(this.taskSubtasksMap);
+          map.set(taskId, res.data.subtasks);
+          this.taskSubtasksMap = map;
+        });
+      }
+    }
+  }
+
+  async addInlineSubtask(parentTaskId: string, title: string) {
+    if (!title.trim()) return;
+
+    const res = await createTask({
+      title: title.trim(),
+      parentId: parentTaskId,
+      priority: 4,
+    });
+
+    if (res.ok) {
+      toast.success('Subtask added');
+      // Refresh subtasks for this parent
+      const detailRes = await getTask(parentTaskId);
+      if (detailRes.ok) {
+        runInAction(() => {
+          const map = new Map(this.taskSubtasksMap);
+          map.set(parentTaskId, detailRes.data.subtasks);
+          this.taskSubtasksMap = map;
+        });
+      }
+      if (this.selectedTaskId === parentTaskId) {
+        await this.selectTask(parentTaskId);
+      }
+      await this.loadTasks();
+    } else {
+      toast.error(res.error.message);
+    }
+  }
+
   async addSubtask(parentTaskId: string) {
     if (!this.newSubtaskTitle.trim()) return;
 
@@ -596,6 +684,7 @@ export class TasksStore {
       runInAction(() => {
         this.newSubtaskTitle = '';
       });
+      toast.success('Subtask added');
       await this.selectTask(parentTaskId);
       await this.loadTasks();
     } else {
@@ -793,16 +882,85 @@ export class TasksStore {
   }
 
   // ==========================================
+  // CONFIRMATION MODAL (No native alerts)
+  // ==========================================
+
+  requestConfirmation(options: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    confirmVariant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void | Promise<void>;
+  }) {
+    runInAction(() => {
+      this.confirmationModal = {
+        isOpen: true,
+        title: options.title,
+        message: options.message,
+        confirmLabel: options.confirmLabel,
+        confirmVariant: options.confirmVariant || 'danger',
+        onConfirm: options.onConfirm,
+      };
+    });
+  }
+
+  closeConfirmation() {
+    runInAction(() => {
+      this.confirmationModal = null;
+    });
+  }
+
+  // ==========================================
   // ANALYTICS
   // ==========================================
 
-  async loadAnalytics(days: number = this.analyticsPeriodDays) {
+  async setAnalyticsPreset(preset: string) {
+    runInAction(() => {
+      this.analyticsPreset = preset;
+      if (preset !== 'custom') {
+        this.analyticsStartDate = '';
+        this.analyticsEndDate = '';
+      }
+    });
+    await this.loadAnalytics();
+  }
+
+  async setAnalyticsCustomRange(startDate: string, endDate: string) {
+    runInAction(() => {
+      this.analyticsPreset = 'custom';
+      this.analyticsStartDate = startDate;
+      this.analyticsEndDate = endDate;
+    });
+    await this.loadAnalytics();
+  }
+
+  async setAnalyticsListFilter(listId: string) {
+    runInAction(() => {
+      this.analyticsListId = listId;
+    });
+    await this.loadAnalytics();
+  }
+
+  async setAnalyticsTaskFilter(taskId: string) {
+    runInAction(() => {
+      this.analyticsTaskId = taskId;
+    });
+    await this.loadAnalytics();
+  }
+
+  async loadAnalytics() {
     runInAction(() => {
       this.isLoadingAnalytics = true;
-      this.analyticsPeriodDays = days;
     });
 
-    const res = await getTimeAnalytics(days);
+    const res = await getTimeAnalytics({
+      preset: this.analyticsPreset,
+      startDate: this.analyticsStartDate || undefined,
+      endDate: this.analyticsEndDate || undefined,
+      listId: this.analyticsListId !== 'all' ? this.analyticsListId : undefined,
+      taskId: this.analyticsTaskId !== 'all' ? this.analyticsTaskId : undefined,
+    });
+
     runInAction(() => {
       this.isLoadingAnalytics = false;
       if (res.ok) {
