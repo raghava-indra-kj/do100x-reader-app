@@ -50,7 +50,7 @@ router.get("/", async (req, res) => {
   });
 
   res.json(
-    rows.map((v) => ({
+    rows.map((v: any) => ({
       id: v.id,
       pageId: v.pageId,
       term: v.term,

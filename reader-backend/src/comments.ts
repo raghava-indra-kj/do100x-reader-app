@@ -57,7 +57,7 @@ router.get("/", async (req, res) => {
   });
 
   res.json(
-    comments.map((c) => ({
+    comments.map((c: any) => ({
       id: c.id,
       pageId: c.pageId,
       pageTitle: c.pageTitle,

@@ -134,7 +134,7 @@ router.get("/", async (req, res) => {
   });
 
   res.json(
-    pages.map((p) => ({
+    pages.map((p: any) => ({
       id: p.id,
       userId: p.userId,
       parentPageId: p.parentId,
@@ -351,7 +351,7 @@ router.post("/swap", async (req, res) => {
     return;
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: any) => {
     if (s1 < s2) {
       await tx.page.updateMany({
         where: { parentId, deletedAt: null, sortOrder: { gt: s1, lte: s2 } },
