@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ThemeSelector } from '@modules/core/ui/components/theme-selector';
 import { AppBarLogo } from './appbar-logo';
 import { LogoutButton } from './logout-button';
-import { Settings, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { settingsPageRoute } from '@boot/routes';
 import { useAuthStore } from '@modules/auth/provider/store';
@@ -29,13 +29,18 @@ export function AppBar() {
                     <span className="hidden sm:inline font-medium">Bored?</span>
                 </Button>
                 <Observer>
-                    {() => authStore.isAuthenticated ? (
-                        <Link to={settingsPageRoute}>
-                            <Button variant="outlined" size="sm" iconOnly tooltip="Settings">
-                                <Settings size={16} />
-                            </Button>
-                        </Link>
-                    ) : null}
+                    {() => {
+                        if (!authStore.isAuthenticated) return null;
+                        const username = authStore.currentUser.username || 'User';
+                        const firstChar = username.charAt(0).toUpperCase();
+                        return (
+                            <Link to={settingsPageRoute} title={`Logged in as ${username} — Open Settings`}>
+                                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-brand)] text-[var(--color-surface-canvas)] font-semibold text-xs shadow-xs hover:opacity-90 transition-all cursor-pointer ring-2 ring-[var(--color-border-subtle)] hover:ring-[var(--color-brand)] select-none">
+                                    {firstChar}
+                                </div>
+                            </Link>
+                        );
+                    }}
                 </Observer>
                 <ThemeSelector className="h-8 py-0 text-xs" />
                 <LogoutButton />

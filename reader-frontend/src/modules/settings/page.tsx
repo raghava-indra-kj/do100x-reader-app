@@ -24,7 +24,6 @@ import {
   Key,
   X,
   Layers,
-  ShieldCheck,
   Plus,
 } from 'lucide-react';
 import { getLifePerspectiveConfig, saveLifePerspectiveConfig } from '@modules/core/utils/time-perspective';
@@ -42,26 +41,26 @@ interface TabItem {
 const TABS: TabItem[] = [
   {
     id: 'account',
-    label: 'Account & Security',
-    subtitle: 'Profile, password & lifespan',
+    label: 'Account & Preferences',
+    subtitle: 'Profile & lifespan settings',
     icon: User,
   },
   {
     id: 'ai',
-    label: 'AI & Models',
-    subtitle: 'Provider keys & custom models',
+    label: 'AI Models',
+    subtitle: 'Providers & model keys',
     icon: Bot,
   },
   {
     id: 'mcp',
     label: 'MCP Server',
-    subtitle: 'AI agent & IDE integration',
+    subtitle: 'Agent connections & config',
     icon: Server,
   },
   {
     id: 'guide',
     label: 'Format Guide',
-    subtitle: 'format.llm.md reference',
+    subtitle: 'format.llm.md specification',
     icon: FileCode,
   },
 ];
@@ -125,10 +124,9 @@ export default function SettingsPage() {
         {/* Left Sidebar Navigation */}
         <aside className="w-64 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-card)]/40 p-4 shrink-0 flex flex-col gap-1 hidden md:flex overflow-y-auto">
           <div className="px-3 py-2">
-            <h1 className="text-lg font-semibold text-[var(--color-text-strong)] font-[family-name:var(--font-serif)]">
+            <h1 className="text-xl font-semibold text-[var(--color-text-strong)] font-[family-name:var(--font-serif)]">
               Settings
             </h1>
-            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Preferences & Configurations</p>
           </div>
 
           <div className="h-px bg-[var(--color-border-subtle)] my-2" />
@@ -203,13 +201,13 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <div className="space-y-6">
-                    {/* TAB 1: ACCOUNT & SECURITY */}
+                    {/* TAB 1: ACCOUNT & PREFERENCES */}
                     {activeTab === 'account' && (
                       <div className="space-y-6 animate-fade-in">
                         <div>
-                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Account & Security</h2>
+                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Account & Preferences</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Your workspace credentials, authentication details, and personal perspective settings
+                            Your credentials and personal settings
                           </p>
                         </div>
 
@@ -217,14 +215,14 @@ export default function SettingsPage() {
                         <section className="p-6 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] space-y-4">
                           <div className="flex items-center gap-2">
                             <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)]">
-                              <ShieldCheck size={16} />
+                              <User size={15} />
                             </div>
-                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Authentication</h3>
+                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Profile</h3>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                             <div>
-                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Logged in User</span>
+                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Username</span>
                               <p className="text-sm font-medium text-[var(--color-text-strong)] mt-1.5 bg-[var(--color-surface-canvas)] px-3 py-2 rounded-xl border border-[var(--color-border-default)]">
                                 {authStore.currentUser.username}
                               </p>
@@ -275,8 +273,8 @@ export default function SettingsPage() {
                                 <Hourglass size={15} />
                               </div>
                               <div>
-                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Life Perspective & Memento Mori</h3>
-                                <p className="text-xs text-[var(--color-text-muted)]">Real-time remaining minutes counter on the Inspirations screen</p>
+                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Life Perspective</h3>
+                                <p className="text-xs text-[var(--color-text-muted)]">Remaining time counter on the Inspirations screen</p>
                               </div>
                             </div>
                             {lifeSaved && (
@@ -317,13 +315,13 @@ export default function SettingsPage() {
                       </div>
                     )}
 
-                    {/* TAB 2: AI & MODELS */}
+                    {/* TAB 2: AI MODELS */}
                     {activeTab === 'ai' && (
                       <div className="space-y-6 animate-fade-in">
                         <div>
-                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">AI & Model Configuration</h2>
+                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">AI Models</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Manage your LLM credentials, provider endpoints, and custom model definitions
+                            Configure provider credentials and custom models
                           </p>
                         </div>
 
@@ -333,12 +331,12 @@ export default function SettingsPage() {
                             <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)]">
                               <Bot size={15} />
                             </div>
-                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Default Provider Credentials</h3>
+                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Default Credentials</h3>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <FormLabel>Default Provider Base URL</FormLabel>
+                              <FormLabel>Provider Base URL</FormLabel>
                               <Input
                                 value={store.baseUrlInput}
                                 onValueChange={(v) => store.setBaseUrlInput(v)}
@@ -348,7 +346,7 @@ export default function SettingsPage() {
 
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <FormLabel>Default API Key</FormLabel>
+                                <FormLabel>API Key</FormLabel>
                                 {store.apiKeyInput && (
                                   <div className="flex items-center gap-1">
                                     <button
@@ -397,7 +395,7 @@ export default function SettingsPage() {
                           {/* Task-Specific Model Assignments */}
                           <div className="border-t border-[var(--color-border-subtle)] pt-4">
                             <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider mb-3">
-                              Task Model Assignments
+                              Model Assignments
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-2">
@@ -442,7 +440,7 @@ export default function SettingsPage() {
                           {/* Global Custom System Prompts */}
                           <div className="border-t border-[var(--color-border-subtle)] pt-4 space-y-4">
                             <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">
-                              Global System Prompts (Optional)
+                              System Prompts (Optional)
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-2">
@@ -477,7 +475,7 @@ export default function SettingsPage() {
 
                           <div className="pt-2">
                             <Button onClick={() => store.saveConfig()} loading={store.isSavingConfig}>
-                              Save AI Configuration
+                              Save Settings
                             </Button>
                           </div>
                         </section>
@@ -490,9 +488,9 @@ export default function SettingsPage() {
                                 <Layers size={15} />
                               </div>
                               <div>
-                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Custom AI Models</h3>
+                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Custom Models</h3>
                                 <p className="text-xs text-[var(--color-text-muted)]">
-                                  Dedicated endpoints for Groq, Ollama, DeepSeek, OpenRouter
+                                  Add models with custom endpoints or API keys
                                 </p>
                               </div>
                             </div>
@@ -506,7 +504,7 @@ export default function SettingsPage() {
                             {store.userModels.length === 0 ? (
                               <div className="text-center py-6 border border-dashed border-[var(--color-border-subtle)] rounded-xl bg-[var(--color-surface-canvas)]">
                                 <Bot size={24} className="mx-auto text-[var(--color-text-subtle)] mb-1.5" />
-                                <p className="text-xs text-[var(--color-text-muted)]">No custom models registered yet.</p>
+                                <p className="text-xs text-[var(--color-text-muted)]">No custom models added yet.</p>
                               </div>
                             ) : (
                               <div className="grid grid-cols-1 gap-3">
@@ -520,7 +518,7 @@ export default function SettingsPage() {
                                         <div className="flex items-center justify-between">
                                           <span className="text-xs font-semibold text-[var(--color-text-strong)] flex items-center gap-1.5">
                                             <Pencil size={13} className="text-[var(--color-brand)]" />
-                                            Edit Model Credentials
+                                            Edit Model
                                           </span>
                                           <button
                                             type="button"
@@ -533,7 +531,7 @@ export default function SettingsPage() {
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                           <div className="space-y-1.5">
-                                            <FormLabel>Model Display Name</FormLabel>
+                                            <FormLabel>Display Name</FormLabel>
                                             <Input
                                               value={store.editModelNameInput}
                                               onValueChange={(v) => store.setEditModelNameInput(v)}
@@ -552,21 +550,21 @@ export default function SettingsPage() {
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                           <div className="space-y-1.5">
-                                            <FormLabel>Custom Base URL (Optional)</FormLabel>
+                                            <FormLabel>Base URL (Optional)</FormLabel>
                                             <Input
                                               value={store.editModelBaseUrlInput}
                                               onValueChange={(v) => store.setEditModelBaseUrlInput(v)}
-                                              placeholder="Inherits global Base URL if empty"
+                                              placeholder="Inherits default Base URL if empty"
                                             />
                                           </div>
                                           <div className="space-y-1.5">
-                                            <FormLabel>Custom API Key (Optional)</FormLabel>
+                                            <FormLabel>API Key (Optional)</FormLabel>
                                             <div className="relative flex items-center">
                                               <Input
                                                 type={showEditModelApiKey ? 'text' : 'password'}
                                                 value={store.editModelApiKeyInput}
                                                 onValueChange={(v) => store.setEditModelApiKeyInput(v)}
-                                                placeholder="Inherits global API Key if empty"
+                                                placeholder="Inherits default API Key if empty"
                                                 className="pr-9"
                                               />
                                               <button
@@ -619,13 +617,13 @@ export default function SettingsPage() {
                                             {m.apiKey ? (
                                               <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-medium">
                                                 <Key size={11} className="shrink-0" />
-                                                Custom API Key
+                                                Custom Key
                                               </span>
                                             ) : null}
 
                                             {!m.baseUrl && !m.apiKey ? (
                                               <span className="text-[var(--color-text-subtle)] text-[11px]">
-                                                Inherits global Base URL & API Key
+                                                Uses default credentials
                                               </span>
                                             ) : null}
                                           </div>
@@ -637,7 +635,7 @@ export default function SettingsPage() {
                                             size="sm"
                                             iconOnly
                                             onClick={() => store.startEditingModel(m)}
-                                            tooltip="Edit model credentials"
+                                            tooltip="Edit model"
                                           >
                                             <Pencil size={15} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" />
                                           </Button>
@@ -665,12 +663,12 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <Plus size={14} className="text-[var(--color-brand)]" />
                               <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">
-                                Register New Model
+                                Add Model
                               </h4>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <FormLabel>Model Display Name</FormLabel>
+                                <FormLabel>Display Name</FormLabel>
                                 <Input
                                   value={store.newModelNameInput}
                                   onValueChange={(v) => store.setNewModelNameInput(v)}
@@ -689,7 +687,7 @@ export default function SettingsPage() {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <FormLabel>Custom Base URL (Optional)</FormLabel>
+                                <FormLabel>Base URL (Optional)</FormLabel>
                                 <Input
                                   value={store.newModelBaseUrlInput}
                                   onValueChange={(v) => store.setNewModelBaseUrlInput(v)}
@@ -697,13 +695,13 @@ export default function SettingsPage() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <FormLabel>Custom API Key (Optional)</FormLabel>
+                                <FormLabel>API Key (Optional)</FormLabel>
                                 <div className="relative flex items-center">
                                   <Input
                                     type={showNewModelApiKey ? 'text' : 'password'}
                                     value={store.newModelApiKeyInput}
                                     onValueChange={(v) => store.setNewModelApiKeyInput(v)}
-                                    placeholder="Custom API key for this model"
+                                    placeholder="Custom API key"
                                     className="pr-10"
                                   />
                                   <button
@@ -732,13 +730,13 @@ export default function SettingsPage() {
                       </div>
                     )}
 
-                    {/* TAB 3: MCP INTEGRATION */}
+                    {/* TAB 3: MCP SERVER */}
                     {activeTab === 'mcp' && (
                       <div className="space-y-6 animate-fade-in">
                         <div>
-                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">MCP Server Integration</h2>
+                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">MCP Server</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Expose your Reader workspace directly to external AI agents (Antigravity IDE, Claude Desktop, Cursor)
+                            Connect external AI agents directly to your Reader app
                           </p>
                         </div>
 
@@ -749,19 +747,19 @@ export default function SettingsPage() {
                                 <Server size={15} />
                               </div>
                               <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">
-                                Model Context Protocol (MCP) Server
+                                Connection Details
                               </h3>
                             </div>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              Live SSE Transport
+                              Live SSE
                             </span>
                           </div>
 
                           {/* Secret URL Card */}
                           <div className="space-y-2 pt-1">
                             <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">
-                              Your Unique MCP Server URL
+                              Server URL
                             </span>
                             <div className="flex items-center gap-2">
                               <p className="text-xs font-mono text-[var(--color-text-strong)] bg-[var(--color-surface-canvas)] px-3.5 py-2.5 rounded-xl border border-[var(--color-border-default)] select-all flex-1 truncate">
@@ -778,7 +776,7 @@ export default function SettingsPage() {
                                 className="flex items-center gap-1.5 shrink-0 text-xs"
                               >
                                 {copiedMcpUrl ? <Check size={14} className="text-[var(--color-brand)]" /> : <Copy size={14} />}
-                                <span>{copiedMcpUrl ? 'Copied URL!' : 'Copy URL'}</span>
+                                <span>{copiedMcpUrl ? 'Copied' : 'Copy URL'}</span>
                               </Button>
                               <Button
                                 size="sm"
@@ -790,7 +788,7 @@ export default function SettingsPage() {
                                 className="flex items-center gap-1.5 shrink-0 text-xs"
                               >
                                 {copiedMcpJson ? <Check size={14} /> : <Copy size={14} />}
-                                <span>{copiedMcpJson ? 'Copied JSON Config!' : 'Copy JSON Config'}</span>
+                                <span>{copiedMcpJson ? 'Copied Config' : 'Copy JSON Config'}</span>
                               </Button>
                             </div>
                           </div>
@@ -799,7 +797,7 @@ export default function SettingsPage() {
                           <div className="rounded-2xl bg-[var(--color-surface-canvas)] p-4 border border-[var(--color-border-subtle)] space-y-2">
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-semibold text-[var(--color-text-strong)]">
-                                JSON Config Snippet (for <code>.agents/mcp_config.json</code>, Claude Desktop, or Cursor):
+                                Configuration Snippet
                               </p>
                               <button
                                 type="button"
@@ -810,39 +808,12 @@ export default function SettingsPage() {
                                 }}
                                 className="text-xs text-[var(--color-brand)] font-medium hover:underline flex items-center gap-1 cursor-pointer"
                               >
-                                <Copy size={12} /> Copy Snippet
+                                <Copy size={12} /> Copy
                               </button>
                             </div>
                             <pre className="font-mono text-xs text-[var(--color-text-body)] overflow-x-auto p-3.5 rounded-xl bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] leading-relaxed">
                               {mcpConfigJson}
                             </pre>
-                          </div>
-
-                          {/* Capabilities Overview */}
-                          <div className="border-t border-[var(--color-border-subtle)] pt-4">
-                            <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider mb-3">
-                              Supported MCP Capabilities
-                            </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                              <div className="p-3.5 rounded-xl bg-[var(--color-surface-canvas)] border border-[var(--color-border-subtle)] space-y-1">
-                                <p className="text-xs font-semibold text-[var(--color-text-strong)]">Precision Updates</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
-                                  <code>reader_update_section</code> (by index) &amp; <code>reader_replace_lines</code>
-                                </p>
-                              </div>
-                              <div className="p-3.5 rounded-xl bg-[var(--color-surface-canvas)] border border-[var(--color-border-subtle)] space-y-1">
-                                <p className="text-xs font-semibold text-[var(--color-text-strong)]">Full Workspace CRUD</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
-                                  Manage pages, subpages, comments, vocabulary, and hierarchical tree
-                                </p>
-                              </div>
-                              <div className="p-3.5 rounded-xl bg-[var(--color-surface-canvas)] border border-[var(--color-border-subtle)] space-y-1">
-                                <p className="text-xs font-semibold text-[var(--color-text-strong)]">Strict User Isolation</p>
-                                <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">
-                                  Requests are strictly authenticated and scoped to your user token
-                                </p>
-                              </div>
-                            </div>
                           </div>
                         </section>
                       </div>
@@ -852,9 +823,9 @@ export default function SettingsPage() {
                     {activeTab === 'guide' && (
                       <div className="space-y-6 animate-fade-in">
                         <div>
-                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Markdown LLM Guide</h2>
+                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Format Guide</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Prompt instructions &amp; frontmatter schema for AI-generated pages
+                            Markdown format rules for AI-generated pages
                           </p>
                         </div>
 
@@ -865,7 +836,7 @@ export default function SettingsPage() {
                                 <FileCode size={15} />
                               </div>
                               <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">
-                                format.llm.md Specification
+                                format.llm.md
                               </h3>
                             </div>
                             <Button
@@ -879,12 +850,9 @@ export default function SettingsPage() {
                               className="flex items-center gap-1.5"
                             >
                               {copiedGuide ? <Check size={14} className="text-[var(--color-brand)]" /> : <Copy size={14} />}
-                              <span>{copiedGuide ? 'Copied Guide!' : 'Copy format.llm.md'}</span>
+                              <span>{copiedGuide ? 'Copied' : 'Copy Guide'}</span>
                             </Button>
                           </div>
-                          <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                            Provide this schema to external LLMs (ChatGPT, Claude, Gemini) when asking them to write documentation pages for Reader. It ensures required frontmatter titles, sections, Callouts, Details, Mermaid, and D2 diagrams are generated correctly.
-                          </p>
                           <div className="relative">
                             <pre className="p-4 rounded-xl bg-[var(--color-surface-canvas)] border border-[var(--color-border-default)] text-xs font-mono text-[var(--color-text-body)] max-h-96 overflow-y-auto whitespace-pre-wrap leading-relaxed select-all">
                               {FORMAT_LLM_MD_CONTENT}
