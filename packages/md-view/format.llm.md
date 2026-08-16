@@ -6,7 +6,7 @@ Supported: CommonMark + GFM + math + limited raw HTML (sanitized). Anything else
 
 | Feature | Syntax |
 |---|---|
-| Frontmatter | `---\nkey: val\n---` at file top; stripped, not rendered. Parsed as strict YAML — malformed YAML silently drops the *entire* frontmatter (title/category included). **Always double-quote string values**: `title: "Module 2 — Memory Model: How Objects Live and Die"`. Required whenever the value contains `: ` (colon+space), or starts with `- ? : , [ ] { } # & * ! \| > ' " % @` \`, or could be misread as a number/bool/null (`"3"`, `"true"`, `"no"`) |
+| Frontmatter | `---\ntitle: "Page Title"\ncategory: "Category"\n---` at file top; stripped, not rendered. Parsed as strict YAML — malformed YAML silently drops frontmatter. **Always double-quote string values**: `title: "Module 2 — Memory Model: How Objects Live and Die"`. Required whenever value contains `: ` (colon+space), or starts with `- ? : , [ ] { } # & * ! \| > ' " % @` \`, or could be misread as number/bool/null (`"3"`, `"true"`, `"no"`) |
 | Headings | `#`…`######` (ATX) or `===`/`---` underline (setext H1/H2). **No auto-id/anchor** — add `<h2 id="x">` manually if you need `#x` links |
 | Paragraph break | blank line |
 | Hard line break | trailing `\` or 2 trailing spaces |
@@ -16,7 +16,7 @@ Supported: CommonMark + GFM + math + limited raw HTML (sanitized). Anything else
 | HR | `---` / `***` / `___` |
 | Link / image | `[t](url "title")` `![alt](url "title")`. `javascript:`/`data:`/`vbscript:`/`file:` URLs stripped. `https?:` links open new tab; bare URLs/`<email@x.com>` autolink |
 | Table | GFM pipe tables, `:--`/`:-:`/`--:` alignment, scrolls horizontally |
-| Code fence | ` ```lang ` → highlighted; ` ```mermaid ` → rendered as live diagram, not text |
+| Code fence | ` ```lang ` → highlighted; ` ```mermaid ` or ` ```d2 ` (` ```d2lang `) → rendered as live diagrams, not text |
 | Math | inline `$x^2$`, block `$$...$$`; a paragraph that's *only* one `$...$` auto-promotes to block |
 | Footnotes | `[^1]`/`[^1]: text` parse but render unstyled |
 
@@ -62,6 +62,6 @@ Other default-safe HTML (`sub`, `sup`, `kbd`, `span[class,style]`, `a[id]`, etc.
 
 1. ATX headings, no reliance on auto anchors.
 2. Blank line before/after content in every `<callout>`/`<details>`.
-3. Mermaid → fence only, never inside raw-HTML blocks.
+3. Mermaid / D2 → fence only, never inside raw-HTML blocks.
 4. No `javascript:`/`data:` URLs, no `<script>`.
 5. Frontmatter string values double-quoted, especially `title:` — an unquoted colon inside the value breaks YAML parsing and drops the whole frontmatter block.

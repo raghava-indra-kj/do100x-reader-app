@@ -112,7 +112,14 @@ export const PageToc = observer(function PageToc() {
     return (
         <div className="flex flex-col h-full">
             <div className="flex items-center justify-between shrink-0 px-3 pt-3 pb-0">
-                <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">Contents</span>
+                <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
+                    Contents
+                    {store.navigableSections.length > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[var(--color-surface-card)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)] font-bold">
+                            {store.navigableSections.length}
+                        </span>
+                    )}
+                </span>
                 <button
                     onClick={() => setEditOpen(true)}
                     className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"

@@ -1,6 +1,8 @@
 import type { Page } from '@domain/page/models/page';
 import type { Section } from '@domain/page/models/section';
 import { getPage } from '@domain/page/services/pages-service';
+import { getComments, getExplanations } from '@domain/comment/services/comments-service';
+import { getVocabulary } from '@domain/vocabulary/services/vocabulary-service';
 import { DataState } from '@lib/utils/data-state';
 import type { PageHeadingLevel } from './theme/page-heading-level';
 import { action, computed, makeObservable, observable, runInAction } from 'mobx';
@@ -53,6 +55,8 @@ export class PageStore {
     _motivationQuote: Motivation | null;
     commentsVersion: number;
     vocabVersion: number;
+    commentsCount: number;
+    vocabCount: number;
 
     constructor({ pageId }: { pageId: string }) {
         this.pageId = pageId;
@@ -69,6 +73,8 @@ export class PageStore {
         this._motivationQuote = null;
         this.commentsVersion = 0;
         this.vocabVersion = 0;
+        this.commentsCount = 0;
+        this.vocabCount = 0;
         makeObservable<PageStore, "_currentPage" | "_currentSectionId" | "_parentPageTitle">(this, {
             initDataState: observable.ref,
             _currentPage: observable.ref,
@@ -77,6 +83,8 @@ export class PageStore {
             _motivationQuote: observable.ref,
             commentsVersion: observable,
             vocabVersion: observable,
+            commentsCount: observable,
+            vocabCount: observable,
             optCurrentPage: computed,
             flatSections: computed,
             navigableSections: computed,
@@ -95,6 +103,8 @@ export class PageStore {
             setHeadingLevel: action,
             bumpCommentsVersion: action,
             bumpVocabVersion: action,
+            loadCommentsCount: action,
+            loadVocabCount: action,
         });
     }
 
@@ -104,10 +114,34 @@ export class PageStore {
 
     bumpCommentsVersion() {
         this.commentsVersion++;
+        this.loadCommentsCount();
+        this.loadVocabCount();
     }
 
     bumpVocabVersion() {
         this.vocabVersion++;
+        this.loadVocabCount();
+    }
+
+    async loadCommentsCount() {
+        const result = await getComments({ pageId: this.pageId });
+        runInAction(() => {
+            if (result.ok) {
+                this.commentsCount = result.data.length;
+            }
+        });
+    }
+
+    async loadVocabCount() {
+        const [vocabRes, explRes] = await Promise.all([
+            getVocabulary({ pageId: this.pageId }),
+            getExplanations({ pageId: this.pageId }),
+        ]);
+        runInAction(() => {
+            const vCount = vocabRes.ok ? vocabRes.data.length : 0;
+            const eCount = explRes.ok ? explRes.data.length : 0;
+            this.vocabCount = vCount + eCount;
+        });
     }
 
     get optCurrentPage(): Page | null {
@@ -223,6 +257,8 @@ export class PageStore {
                 if (result.data.parentPageId) {
                     this.loadParentPageTitle(result.data.parentPageId);
                 }
+                this.loadCommentsCount();
+                this.loadVocabCount();
             } else {
                 this.initDataState = DataState.error(result.error);
             }

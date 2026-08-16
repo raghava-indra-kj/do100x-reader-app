@@ -132,6 +132,22 @@ router.put("/:commentId", async (req, res) => {
   res.status(204).send();
 });
 
+// DELETE /comments?pageId=
+router.delete("/", async (req, res) => {
+  const { pageId } = req.query as { pageId?: string };
+
+  if (!pageId) {
+    res.status(400).json({ message: "pageId query parameter is required" });
+    return;
+  }
+
+  await prisma.comment.deleteMany({
+    where: { pageId },
+  });
+
+  res.status(204).send();
+});
+
 // DELETE /comments/:commentId
 router.delete("/:commentId", async (req, res) => {
   const { commentId } = req.params;

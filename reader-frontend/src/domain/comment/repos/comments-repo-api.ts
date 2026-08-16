@@ -60,4 +60,13 @@ export class CommentsRepoApi implements ICommentsRepo {
             return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete comment'), cause: error }));
         }
     }
+
+    async deleteAllComments({ pageId }: { pageId: string }): AsyncResult<void, AppError> {
+        try {
+            await apiClient.delete('/comments', { params: { pageId } });
+            return ok(undefined);
+        } catch (error) {
+            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete all comments'), cause: error }));
+        }
+    }
 }

@@ -126,8 +126,13 @@ export const PageVocabulary = observer(function PageVocabulary() {
     return (
         <div className="flex h-full flex-col">
             <div className="flex flex-col gap-1.5 shrink-0 px-3 pt-3 pb-2 border-b border-[var(--color-border-subtle)]">
-                <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">
+                <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
                     Vocabulary
+                    {(vocab.length + explanations.length) > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[var(--color-surface-card)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)] font-bold">
+                            {vocab.length + explanations.length}
+                        </span>
+                    )}
                 </span>
 
                 <div className="flex items-center gap-1">

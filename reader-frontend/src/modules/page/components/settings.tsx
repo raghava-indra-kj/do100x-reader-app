@@ -3,13 +3,16 @@ import { ThemeSelector } from '@modules/core/ui/components/theme-selector';
 import { Select } from '@modules/core/ui/primitives/select';
 import { FormLabel } from '@modules/core/ui/primitives/form-label';
 import { Dialog, BaseDialog } from '@modules/core/ui/primitives/dialog';
+import { Button } from '@modules/core/ui/primitives/button';
 import { PageFontFamilies } from '../theme/page-font-families';
 import { PageFontSizes } from '../theme/page-font-sizes';
 import { PageHeadingLevel } from '../theme/page-heading-level';
 import { Observer } from 'mobx-react-lite';
-import { X } from 'lucide-react';
+import { X, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { settingsPageRoute } from '@boot/routes';
+import { toast } from 'sonner';
+import { FORMAT_LLM_MD_CONTENT } from '@modules/core/constants/format-llm-guide';
 
 const fontFamilyItems = Object.fromEntries(PageFontFamilies.VALUES.map(f => [f.id, f.label]));
 const fontSizeItems = Object.fromEntries(PageFontSizes.VALUES.map(s => [s.id, s.label]));
@@ -85,10 +88,24 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     <FormLabel>Theme</FormLabel>
                     <ThemeSelector />
                 </div>
-                <div className="border-t border-[var(--color-border-subtle)] pt-4 flex justify-center">
-                    <Link to={settingsPageRoute} onClick={() => onOpenChange(false)} className="text-xs text-[var(--color-brand)] font-medium hover:underline">
-                        Configure AI models &rarr;
-                    </Link>
+                <div className="border-t border-[var(--color-border-subtle)] pt-4 flex flex-col gap-2.5">
+                    <Button
+                        variant="outlined"
+                        size="sm"
+                        onClick={() => {
+                            navigator.clipboard.writeText(FORMAT_LLM_MD_CONTENT);
+                            toast.success('format.llm.md copied to clipboard');
+                        }}
+                        className="flex items-center justify-center gap-1.5 text-xs w-full"
+                    >
+                        <Copy size={13} />
+                        <span>Copy Markdown Format Guide (format.llm.md)</span>
+                    </Button>
+                    <div className="flex justify-center">
+                        <Link to={settingsPageRoute} onClick={() => onOpenChange(false)} className="text-xs text-[var(--color-brand)] font-medium hover:underline">
+                            Configure AI models &amp; Lifespan &rarr;
+                        </Link>
+                    </div>
                 </div>
             </div>
         </Dialog>

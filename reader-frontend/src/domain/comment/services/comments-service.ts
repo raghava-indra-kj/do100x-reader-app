@@ -67,3 +67,10 @@ export async function deleteComment(
     const repo = container.get<ICommentsRepo>(TYPES.ICommentsRepo);
     return repo.deleteComment(params);
 }
+
+export async function deleteAllComments(
+    params: { pageId: string }
+): AsyncResult<void, AppError> {
+    const repo = container.get<ICommentsRepo>(TYPES.ICommentsRepo);
+    return repo.deleteAllComments(params);
+}

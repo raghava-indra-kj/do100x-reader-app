@@ -23,4 +23,5 @@ export interface ICommentsRepo {
     }): AsyncResult<void, AppError>;
 
     deleteComment(params: { commentId: string }): AsyncResult<void, AppError>;
+    deleteAllComments(params: { pageId: string }): AsyncResult<void, AppError>;
 }

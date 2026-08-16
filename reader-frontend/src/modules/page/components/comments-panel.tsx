@@ -1,7 +1,7 @@
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePageStore } from '../store';
-import { getComments, editComment, deleteComment } from '@domain/comment/services/comments-service';
+import { getComments, editComment, deleteComment, deleteAllComments } from '@domain/comment/services/comments-service';
 import type { Comment } from '@domain/comment/models/comment';
 import { DataState } from '@lib/utils/data-state';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
@@ -350,6 +350,20 @@ export const PageComments = observer(function PageComments() {
         }
     }, [allExpanded, comments]);
 
+    const [isDeletingAll, setIsDeletingAll] = useState(false);
+
+    const handleDeleteAll = useCallback(async () => {
+        if (comments.length === 0 || isDeletingAll) return;
+        if (!window.confirm('Are you sure you want to delete all comments on this page?')) return;
+        setIsDeletingAll(true);
+        const result = await deleteAllComments({ pageId: store.pageId });
+        setIsDeletingAll(false);
+        if (result.ok) {
+            store.bumpCommentsVersion();
+            load();
+        }
+    }, [comments.length, isDeletingAll, store, load]);
+
     const handleCopyAll = useCallback(() => {
         if (comments.length === 0) return;
         const text = comments.map(formatCommentForCopy).join('\n\n---\n\n');
@@ -361,7 +375,14 @@ export const PageComments = observer(function PageComments() {
     return (
         <div className="flex h-full flex-col">
             <div className="flex items-center justify-between shrink-0 px-3 pt-3 pb-0">
-                <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">Comments</span>
+                <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
+                    Comments
+                    {comments.length > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[var(--color-surface-card)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)] font-bold">
+                            {comments.length}
+                        </span>
+                    )}
+                </span>
                 {comments.length > 0 && (
                     <div className="flex items-center gap-0.5">
                         <Tooltip content={copyFeedback ? 'Copied!' : 'Copy all comments'}>
@@ -382,6 +403,15 @@ export const PageComments = observer(function PageComments() {
                                 className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer rounded"
                             >
                                 {allExpanded ? <ChevronsUp size={14} /> : <ChevronsDown size={14} />}
+                            </button>
+                        </Tooltip>
+                        <Tooltip content="Delete all comments">
+                            <button
+                                onClick={handleDeleteAll}
+                                disabled={isDeletingAll}
+                                className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] transition-colors cursor-pointer rounded disabled:opacity-50"
+                            >
+                                <Trash2 size={14} />
                             </button>
                         </Tooltip>
                     </div>

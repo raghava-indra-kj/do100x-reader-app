@@ -75,6 +75,11 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                 <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5 font-[family-name:var(--font-sans)]">
                     {icon}
                     <span>{title}</span>
+                    {storeInstance.history.length > 0 && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[var(--color-surface-card)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)] font-bold">
+                            {storeInstance.history.length}
+                        </span>
+                    )}
                 </span>
                 <div className="flex items-center gap-2">
                     {activeEntry && extraHeaderActions && extraHeaderActions(activeEntry)}

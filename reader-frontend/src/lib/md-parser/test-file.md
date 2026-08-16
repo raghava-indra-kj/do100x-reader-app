@@ -203,3 +203,52 @@ No `data-hide-frame` — renders with the URL label bar above the iframe.
 `data-hide-frame` present — renders the raw iframe with no wrapper.
 
 <iframe src="https://www.wikipedia.org" width="100%" height="300" title="Wikipedia (hidden frame)" data-hide-frame></iframe>
+
+# 11. D2 Diagrams
+
+## 11.1 Architecture Diagram
+
+```d2
+direction: right
+
+user: User {
+  shape: person
+}
+
+frontend: React Application {
+  login: Login
+  dashboard: Dashboard
+}
+
+backend: Spring Boot {
+  api: REST API
+  service: Business Service
+}
+
+database: PostgreSQL {
+  shape: cylinder
+}
+
+user -> frontend.login: Browse
+frontend.login -> backend.api: HTTPS / JSON
+backend.api -> backend.service: Dispatch
+backend.service -> database: Query & Persist
+```
+
+## 11.2 Flow Diagram
+
+```d2
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+
+Client -> API Gateway: Request
+API Gateway -> Auth Service: Validate Token
+Auth Service -> API Gateway: Token OK
+API Gateway -> Core Engine: Process Request
+Core Engine -> Cache: Check Cache
+Core Engine -> DB: Fallback Query
+```
+
