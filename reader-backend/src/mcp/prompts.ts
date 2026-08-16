@@ -112,4 +112,42 @@ Format:
       };
     }
   );
+
+  // 4. Create Page with Format Guide
+  server.prompt(
+    "reader_create_page_with_format_guide",
+    "Generate a new Reader page adhering strictly to the official format.llm.md guidelines (frontmatter, callouts, diagrams)",
+    {
+      topic: z.string().describe("The topic, title, or subject of the page to create"),
+      category: z.string().optional().describe("Optional category tag (e.g. 'Engineering', 'Architecture', 'Notes')"),
+    },
+    async ({ topic, category }) => {
+      const { FORMAT_LLM_MD_CONTENT } = await import("./constants/format-guide");
+
+      return {
+        messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: `Please generate a comprehensive, beautifully structured documentation page about "${topic}".
+
+You MUST strictly follow the Reader application Markdown Formatting Guidelines (format.llm.md):
+
+${FORMAT_LLM_MD_CONTENT}
+
+Topic: ${topic}
+Category: ${category ?? "Documentation"}
+
+Ensure:
+1. Valid YAML frontmatter with double-quoted title and category.
+2. ATX headings for clear sectioning.
+3. Blank lines inside any <callout> and <details> tags.
+4. Live Mermaid or D2 diagram code blocks where visual architecture is helpful.`,
+            },
+          },
+        ],
+      };
+    }
+  );
 }

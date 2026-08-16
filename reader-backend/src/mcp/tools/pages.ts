@@ -7,8 +7,25 @@ import {
   replaceLines,
   insertSectionAfterIndex,
 } from "../utils/sectionizer";
+import { FORMAT_LLM_MD_CONTENT } from "../constants/format-guide";
 
 export function registerPageTools(server: McpServer, userId: string) {
+  // 0. Get Format Guide
+  server.tool(
+    "reader_get_format_guide",
+    "Get the official Reader Markdown formatting guidelines (format.llm.md) covering frontmatter rules, headings, callouts, details blocks, Mermaid & D2 diagrams, and math equations",
+    {},
+    async () => {
+      return {
+        content: [
+          {
+            type: "text",
+            text: FORMAT_LLM_MD_CONTENT,
+          },
+        ],
+      };
+    }
+  );
   // 1. List pages
   server.tool(
     "reader_list_pages",

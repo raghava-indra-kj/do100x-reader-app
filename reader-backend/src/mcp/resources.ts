@@ -136,4 +136,26 @@ updatedAt: ${page.updatedAt.toISOString()}
       };
     }
   );
+
+  // 5. Official Reader Markdown Format Guide (format.llm.md)
+  server.resource(
+    "format-guide",
+    "reader://format-guide",
+    {
+      description: "Official Markdown Format Guide (format.llm.md) specification for generating Reader pages",
+      mimeType: "text/markdown",
+    },
+    async (uri) => {
+      const { FORMAT_LLM_MD_CONTENT } = await import("./constants/format-guide");
+      return {
+        contents: [
+          {
+            uri: uri.href,
+            mimeType: "text/markdown",
+            text: FORMAT_LLM_MD_CONTENT,
+          },
+        ],
+      };
+    }
+  );
 }
