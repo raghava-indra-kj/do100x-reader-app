@@ -675,11 +675,12 @@ export class TasksStore {
     }
   }
 
-  async addSubtask(parentTaskId: string) {
-    if (!this.newSubtaskTitle.trim()) return;
+  async addSubtask(parentTaskId: string, title?: string) {
+    const text = (title || this.newSubtaskTitle).trim();
+    if (!text) return;
 
     const res = await createTask({
-      title: this.newSubtaskTitle.trim(),
+      title: text,
       parentId: parentTaskId,
       priority: 4,
     });
@@ -689,7 +690,18 @@ export class TasksStore {
         this.newSubtaskTitle = '';
       });
       toast.success('Subtask added');
-      await this.selectTask(parentTaskId);
+      // Refresh subtasks for this parent
+      const detailRes = await getTask(parentTaskId);
+      if (detailRes.ok) {
+        runInAction(() => {
+          const map = new Map(this.taskSubtasksMap);
+          map.set(parentTaskId, detailRes.data.subtasks);
+          this.taskSubtasksMap = map;
+        });
+      }
+      if (this.selectedTaskId === parentTaskId) {
+        await this.selectTask(parentTaskId);
+      }
       await this.loadTasks();
     } else {
       toast.error(res.error.message);

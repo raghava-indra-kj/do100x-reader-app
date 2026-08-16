@@ -15,12 +15,12 @@ export const ConfirmDialog = observer(({ store }: Props) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-sm bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+      <div className="w-full max-w-sm bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-lg shadow-xl overflow-hidden animate-in zoom-in-95 duration-150">
         {/* Header */}
-        <div className="p-5 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
+        <div className="p-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
           <div className="flex items-center space-x-2.5">
             <div
-              className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+              className={`w-7 h-7 rounded-md flex items-center justify-center ${
                 isDanger
                   ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
                   : isWarning
@@ -29,38 +29,37 @@ export const ConfirmDialog = observer(({ store }: Props) => {
               }`}
             >
               {isDanger ? (
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               ) : isWarning ? (
-                <AlertTriangle className="w-4 h-4" />
+                <AlertTriangle className="w-3.5 h-3.5" />
               ) : (
-                <Info className="w-4 h-4" />
+                <Info className="w-3.5 h-3.5" />
               )}
             </div>
             <div>
-              <h2 className="text-sm font-bold text-[var(--color-text-strong)]">{modal.title}</h2>
-              <p className="text-[11px] text-[var(--color-text-muted)]">Please confirm your action</p>
+              <h2 className="text-xs font-bold text-[var(--color-text-strong)]">{modal.title}</h2>
             </div>
           </div>
           <button
             type="button"
             onClick={() => store.closeConfirmation()}
-            className="p-1.5 rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
+            className="p-1 rounded-md hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Message */}
-        <div className="p-5 text-xs text-[var(--color-text-body)] leading-relaxed">
+        <div className="p-4 text-xs text-[var(--color-text-body)] leading-relaxed">
           {modal.message}
         </div>
 
         {/* Actions */}
-        <div className="p-4 border-t border-[var(--color-border-subtle)] flex items-center justify-end space-x-2 bg-[var(--color-surface-soft)]/30">
+        <div className="p-3 border-t border-[var(--color-border-subtle)] flex items-center justify-end space-x-2 bg-[var(--color-surface-soft)]/20">
           <button
             type="button"
             onClick={() => store.closeConfirmation()}
-            className="px-4 py-2 text-xs font-semibold rounded-xl hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
+            className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
           >
             Cancel
           </button>
@@ -71,7 +70,7 @@ export const ConfirmDialog = observer(({ store }: Props) => {
               store.closeConfirmation();
               if (action) await action();
             }}
-            className={`px-5 py-2 text-white text-xs font-bold rounded-xl shadow-xs transition cursor-pointer ${
+            className={`px-3.5 py-1.5 text-white text-xs font-semibold rounded-md shadow-xs transition cursor-pointer ${
               isDanger
                 ? 'bg-rose-600 hover:bg-rose-700'
                 : isWarning

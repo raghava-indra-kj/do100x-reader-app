@@ -72,25 +72,24 @@ export const TasksSidebar = observer(({ store }: Props) => {
   ];
 
   return (
-    <aside className="w-64 flex-shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col h-full select-none">
+    <aside className="w-60 flex-shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col h-full select-none">
       {/* Header */}
-      <div className="p-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
-        <div className="flex items-center space-x-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] flex items-center justify-center shadow-xs">
+      <div className="p-3.5 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="w-7 h-7 rounded-md bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] flex items-center justify-center shadow-xs">
             <ListTodo className="w-4 h-4" />
           </div>
           <div>
-            <span className="font-bold text-sm text-[var(--color-text-strong)] block leading-none">Task Hub</span>
-            <span className="text-[11px] text-[var(--color-text-muted)] font-normal mt-0.5 block">Lists & Focus Tracker</span>
+            <span className="font-bold text-xs text-[var(--color-text-strong)] block leading-none">Tasks</span>
           </div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-5">
+      <div className="flex-1 overflow-y-auto p-2 space-y-4">
         {/* Smart Views Section */}
-        <div className="space-y-1">
-          <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)]">
-            Focus & Views
+        <div className="space-y-0.5">
+          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)]">
+            Views
           </div>
           {smartFilters.map((f) => {
             const Icon = f.icon;
@@ -100,22 +99,22 @@ export const TasksSidebar = observer(({ store }: Props) => {
                 key={f.id}
                 type="button"
                 onClick={() => store.setCurrentView(f.id)}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
                   isActive
                     ? 'bg-[var(--color-brand)] text-white shadow-xs font-semibold'
                     : 'text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)]'
                 }`}
               >
-                <div className="flex items-center space-x-2.5">
+                <div className="flex items-center space-x-2 min-w-0">
                   <Icon
-                    className="w-4 h-4 shrink-0 transition-colors"
+                    className="w-3.5 h-3.5 shrink-0 transition-colors"
                     style={{ color: isActive ? '#ffffff' : f.color }}
                   />
-                  <span>{f.label}</span>
+                  <span className="truncate">{f.label}</span>
                 </div>
                 {f.count !== null && f.count > 0 && (
                   <span
-                    className={`text-[11px] px-2 py-0.5 rounded-full font-bold transition-colors ${
+                    className={`text-[10px] px-1.5 py-0.2 rounded font-bold transition-colors ${
                       isActive
                         ? 'bg-white/20 text-white'
                         : 'bg-[var(--color-surface-soft)] text-[var(--color-text-muted)]'
@@ -130,28 +129,28 @@ export const TasksSidebar = observer(({ store }: Props) => {
         </div>
 
         {/* Custom Lists / Projects Section */}
-        <div className="space-y-1.5 pt-2 border-t border-[var(--color-border-subtle)]">
-          <div className="flex items-center justify-between px-2.5 py-1">
+        <div className="space-y-0.5 pt-2 border-t border-[var(--color-border-subtle)]">
+          <div className="flex items-center justify-between px-2 py-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)]">
-              Projects & Lists
+              Lists
             </span>
             <button
               type="button"
               onClick={() => store.openCreateListDialog()}
               title="Create new list"
-              className="p-1 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition"
+              className="p-0.5 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {store.lists.length === 0 ? (
-            <div className="px-3 py-4 text-xs text-[var(--color-text-muted)] text-center border border-dashed border-[var(--color-border-subtle)] rounded-xl bg-[var(--color-surface-soft)]/30">
-              <p className="text-[11px]">No custom lists yet.</p>
+            <div className="px-2 py-3 text-xs text-[var(--color-text-muted)] text-center border border-dashed border-[var(--color-border-subtle)] rounded-md bg-[var(--color-surface-soft)]/20">
+              <p className="text-[11px]">No custom lists.</p>
               <button
                 type="button"
                 onClick={() => store.openCreateListDialog()}
-                className="mt-1.5 inline-flex items-center space-x-1 text-[11px] text-[var(--color-brand)] hover:underline font-semibold"
+                className="mt-1 inline-flex items-center space-x-1 text-[11px] text-[var(--color-brand)] hover:underline font-semibold cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
                 <span>Add List</span>
@@ -168,15 +167,15 @@ export const TasksSidebar = observer(({ store }: Props) => {
                     <button
                       type="button"
                       onClick={() => store.setCurrentView(`list:${list.id}`)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all ${
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
                         isActive
                           ? 'bg-[var(--color-brand)] text-white shadow-xs font-semibold'
                           : 'text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)]'
                       }`}
                     >
-                      <div className="flex items-center space-x-2.5 min-w-0">
+                      <div className="flex items-center space-x-2 min-w-0">
                         <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs ring-1 ring-black/10"
+                          className="w-2 h-2 rounded-full shrink-0 shadow-xs"
                           style={{ backgroundColor: list.color || '#3b82f6' }}
                         />
                         <span className="truncate">{list.name}</span>
@@ -185,7 +184,7 @@ export const TasksSidebar = observer(({ store }: Props) => {
                       <div className="flex items-center space-x-1 shrink-0">
                         {list.uncompletedCount > 0 && (
                           <span
-                            className={`text-[11px] px-2 py-0.5 rounded-full font-bold ${
+                            className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
                               isActive
                                 ? 'bg-white/20 text-white'
                                 : 'bg-[var(--color-surface-soft)] text-[var(--color-text-muted)]'
@@ -200,7 +199,7 @@ export const TasksSidebar = observer(({ store }: Props) => {
                             e.stopPropagation();
                             setMenuOpenListId(isMenuOpen ? null : list.id);
                           }}
-                          className={`p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-black/15 transition ${
+                          className={`p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-black/15 transition cursor-pointer ${
                             isActive ? 'text-white' : 'text-[var(--color-text-muted)]'
                           }`}
                         >
@@ -212,7 +211,7 @@ export const TasksSidebar = observer(({ store }: Props) => {
                     {/* Context Dropdown */}
                     {isMenuOpen && (
                       <div
-                        className="absolute right-2 top-full mt-1 z-30 w-36 bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] rounded-xl shadow-xl border border-[var(--color-border-default)] py-1 text-xs animate-in fade-in zoom-in-95 duration-100"
+                        className="absolute right-1 top-full mt-1 z-30 w-36 bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] rounded-lg shadow-xl border border-[var(--color-border-default)] py-1 text-xs animate-in fade-in duration-100"
                         onMouseLeave={() => setMenuOpenListId(null)}
                       >
                         <button
@@ -221,7 +220,7 @@ export const TasksSidebar = observer(({ store }: Props) => {
                             setMenuOpenListId(null);
                             store.openEditListDialog(list);
                           }}
-                          className="w-full px-3 py-1.5 text-left flex items-center space-x-2 hover:bg-[var(--color-surface-soft)] transition"
+                          className="w-full px-3 py-1.5 text-left flex items-center space-x-2 hover:bg-[var(--color-surface-soft)] transition cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
                           <span>Edit List</span>
