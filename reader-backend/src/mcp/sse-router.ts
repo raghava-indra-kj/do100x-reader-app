@@ -106,7 +106,7 @@ export function createMcpSseRouter(): Router {
     }
 
     try {
-      await transport.handlePostMessage(req, res);
+      await transport.handlePostMessage(req, res, req.body);
     } catch (err) {
       console.error(`Error handling MCP message for session ${sessionId} (user: ${user.id}):`, err);
       if (!res.headersSent) {
