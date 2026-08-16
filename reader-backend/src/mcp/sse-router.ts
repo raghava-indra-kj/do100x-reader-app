@@ -61,11 +61,6 @@ export function createMcpSseRouter(): Router {
     }
 
     try {
-      res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Connection", "keep-alive");
-      res.setHeader("X-Accel-Buffering", "no");
-      res.flushHeaders?.();
-
       const postEndpoint = req.baseUrl ? `${req.baseUrl}/messages` : "/messages";
       const transport = new SSEServerTransport(postEndpoint, res);
 
