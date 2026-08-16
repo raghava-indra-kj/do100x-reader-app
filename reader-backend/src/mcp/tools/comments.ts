@@ -84,12 +84,19 @@ export function registerCommentTools(server: McpServer, userId: string) {
         select: { title: true },
       });
 
+      if (!targetPage) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Page not found or inaccessible: ${pageId}` }],
+        };
+      }
+
       const now = new Date();
       const newComment = await prisma.comment.create({
         data: {
           userId,
           pageId,
-          pageTitle: targetPage?.title ?? "Untitled Page",
+          pageTitle: targetPage.title,
           sectionTitle: sectionTitle ?? null,
           selectedText,
           body,

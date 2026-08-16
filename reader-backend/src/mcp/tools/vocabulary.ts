@@ -60,6 +60,18 @@ export function registerVocabularyTools(server: McpServer, userId: string) {
       term: z.string().describe("The vocabulary term / phrase"),
     },
     async ({ pageId, term }) => {
+      const page = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+        select: { id: true },
+      });
+
+      if (!page) {
+        return {
+          isError: true,
+          content: [{ type: "text", text: `Page not found or inaccessible: ${pageId}` }],
+        };
+      }
+
       const newItem = await prisma.vocabulary.create({
         data: {
           userId,

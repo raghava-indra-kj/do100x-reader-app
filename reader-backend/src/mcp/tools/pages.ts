@@ -874,7 +874,13 @@ export function registerPageTools(server: McpServer, userId: string) {
         if (item.parentTempId && idMap.has(item.parentTempId)) {
           parentId = idMap.get(item.parentTempId)!;
         } else if (item.parentPageId) {
-          parentId = item.parentPageId;
+          const parentPage = await prisma.page.findFirst({
+            where: { id: item.parentPageId, userId, deletedAt: null },
+            select: { id: true },
+          });
+          if (parentPage) {
+            parentId = parentPage.id;
+          }
         }
 
         const created = await prisma.page.create({
@@ -1015,7 +1021,20 @@ export function registerPageTools(server: McpServer, userId: string) {
       }
 
       const now = new Date();
-      const parentId = targetParentId !== undefined ? (targetParentId === "null" ? null : targetParentId) : source.parentId;
+      let parentId: string | null = null;
+      if (targetParentId !== undefined) {
+        if (targetParentId === "null" || !targetParentId) {
+          parentId = null;
+        } else {
+          const validParent = await prisma.page.findFirst({
+            where: { id: targetParentId, userId, deletedAt: null },
+            select: { id: true },
+          });
+          parentId = validParent ? validParent.id : source.parentId;
+        }
+      } else {
+        parentId = source.parentId;
+      }
 
       async function clonePageRecursive(srcPage: typeof source, pId: string | null, customTitle?: string): Promise<any> {
         const cloned = await prisma.page.create({
