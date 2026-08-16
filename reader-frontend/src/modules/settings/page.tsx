@@ -8,7 +8,7 @@ import { Button } from '@modules/core/ui/primitives/button';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Select } from '@modules/core/ui/primitives/select';
 import { SettingsStore } from './store';
-import { Trash2, Eye, EyeOff, Copy, Check, Hourglass, FileCode } from 'lucide-react';
+import { Trash2, Eye, EyeOff, Copy, Check, Hourglass, FileCode, Pencil, Globe, Key, X } from 'lucide-react';
 import { getLifePerspectiveConfig, saveLifePerspectiveConfig } from '@modules/core/utils/time-perspective';
 import { FORMAT_LLM_MD_CONTENT } from '@modules/core/constants/format-llm-guide';
 
@@ -20,6 +20,8 @@ export default function SettingsPage() {
     const [showApiKey, setShowApiKey] = useState(false);
     const [copiedApiKey, setCopiedApiKey] = useState(false);
     const [copiedGuide, setCopiedGuide] = useState(false);
+    const [showNewModelApiKey, setShowNewModelApiKey] = useState(false);
+    const [showEditModelApiKey, setShowEditModelApiKey] = useState(false);
 
     // Life Perspective & Memento Mori State
     const [dob, setDob] = useState(() => getLifePerspectiveConfig().dob);
@@ -183,12 +185,15 @@ export default function SettingsPage() {
                                     </div>
                                 </section>
 
-                                {/* AI Model Configuration Section */}
+                                {/* Global AI Configuration Section */}
                                 <section className="p-6 rounded-[var(--radius-lg)] bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] space-y-4">
-                                    <h2 className="text-base font-semibold text-[var(--color-text-strong)]">AI Model Configuration</h2>
+                                    <div>
+                                        <h2 className="text-base font-semibold text-[var(--color-text-strong)]">Global AI Configuration</h2>
+                                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Default OpenAI-compatible credentials used unless overridden per model</p>
+                                    </div>
                                     
                                     <div className="space-y-2">
-                                        <FormLabel>Provider Base URL</FormLabel>
+                                        <FormLabel>Default Provider Base URL</FormLabel>
                                         <Input
                                             value={store.baseUrlInput}
                                             onValueChange={(v) => store.setBaseUrlInput(v)}
@@ -198,7 +203,7 @@ export default function SettingsPage() {
 
                                     <div className="space-y-2 pb-2">
                                         <div className="flex items-center justify-between">
-                                            <FormLabel>API Key</FormLabel>
+                                            <FormLabel>Default API Key</FormLabel>
                                             {store.apiKeyInput && (
                                                 <div className="flex items-center gap-1">
                                                     <button
@@ -327,30 +332,164 @@ export default function SettingsPage() {
 
                                 {/* AI Models Section */}
                                 <section className="p-6 rounded-[var(--radius-lg)] bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] space-y-6">
-                                    <h2 className="text-base font-semibold text-[var(--color-text-strong)]">AI Models</h2>
+                                    <div>
+                                        <h2 className="text-base font-semibold text-[var(--color-text-strong)]">AI Models</h2>
+                                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Manage models with optional custom Base URLs and API Keys (e.g. Groq, Ollama, DeepSeek, OpenRouter)</p>
+                                    </div>
 
                                     {/* Saved models list */}
-                                    <div className="space-y-2">
+                                    <div className="space-y-3">
                                         {store.userModels.length === 0 ? (
                                             <p className="text-xs text-[var(--color-text-muted)]">No models added yet.</p>
                                         ) : (
-                                            <div className="divide-y divide-[var(--color-border-subtle)]">
+                                            <div className="space-y-3">
                                                 {store.userModels.map((m) => (
-                                                    <div key={m.id} className="flex items-center justify-between py-3">
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="text-sm font-semibold text-[var(--color-text-strong)] truncate">{m.name}</p>
-                                                            <p className="text-xs text-[var(--color-text-muted)] truncate font-mono mt-0.5">{m.modelId}</p>
-                                                        </div>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            iconOnly
-                                                            onClick={() => store.deleteModel(m.id)}
-                                                            loading={store.deletingModelIds.has(m.id)}
-                                                            tooltip="Delete model"
-                                                        >
-                                                            <Trash2 size={16} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-error)]" />
-                                                        </Button>
+                                                    <div 
+                                                        key={m.id} 
+                                                        className="p-3.5 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] transition-all"
+                                                    >
+                                                        {store.editingModelId === m.id ? (
+                                                            /* Inline Edit Form */
+                                                            <div className="space-y-3">
+                                                                <div className="flex items-center justify-between">
+                                                                    <span className="text-xs font-semibold text-[var(--color-text-strong)] flex items-center gap-1.5">
+                                                                        <Pencil size={13} className="text-[var(--color-brand)]" />
+                                                                        Edit Model
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => store.cancelEditingModel()}
+                                                                        className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] cursor-pointer"
+                                                                    >
+                                                                        <X size={15} />
+                                                                    </button>
+                                                                </div>
+
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                                    <div className="space-y-1.5">
+                                                                        <FormLabel>Model Display Name</FormLabel>
+                                                                        <Input
+                                                                            value={store.editModelNameInput}
+                                                                            onValueChange={(v) => store.setEditModelNameInput(v)}
+                                                                            placeholder="GPT-4o"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <FormLabel>Model ID</FormLabel>
+                                                                        <Input
+                                                                            value={store.editModelIdInput}
+                                                                            onValueChange={(v) => store.setEditModelIdInput(v)}
+                                                                            placeholder="gpt-4o"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                                                                    <div className="space-y-1.5">
+                                                                        <FormLabel>Custom Base URL (Optional)</FormLabel>
+                                                                        <Input
+                                                                            value={store.editModelBaseUrlInput}
+                                                                            onValueChange={(v) => store.setEditModelBaseUrlInput(v)}
+                                                                            placeholder="Inherits global Base URL if empty"
+                                                                        />
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        <FormLabel>Custom API Key (Optional)</FormLabel>
+                                                                        <div className="relative flex items-center">
+                                                                            <Input
+                                                                                type={showEditModelApiKey ? "text" : "password"}
+                                                                                value={store.editModelApiKeyInput}
+                                                                                onValueChange={(v) => store.setEditModelApiKeyInput(v)}
+                                                                                placeholder="Inherits global API Key if empty"
+                                                                                className="pr-9"
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setShowEditModelApiKey((prev) => !prev)}
+                                                                                className="absolute right-2.5 p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"
+                                                                                title={showEditModelApiKey ? "Hide API key" : "Show API key"}
+                                                                            >
+                                                                                {showEditModelApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-2 pt-1">
+                                                                    <Button
+                                                                        size="sm"
+                                                                        onClick={() => store.updateModel()}
+                                                                        loading={store.isUpdatingModel}
+                                                                    >
+                                                                        Save Changes
+                                                                    </Button>
+                                                                    <Button
+                                                                        size="sm"
+                                                                        variant="ghost"
+                                                                        onClick={() => store.cancelEditingModel()}
+                                                                    >
+                                                                        Cancel
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            /* Display Card */
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="min-w-0 flex-1 space-y-1.5">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <p className="text-sm font-semibold text-[var(--color-text-strong)]">{m.name}</p>
+                                                                        <span className="text-[11px] font-mono text-[var(--color-text-muted)] bg-[var(--color-surface-soft)] px-2 py-0.5 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)]">
+                                                                            {m.modelId}
+                                                                        </span>
+                                                                    </div>
+
+                                                                    {/* Endpoint/Credential Badges */}
+                                                                    <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                                                                        {m.baseUrl ? (
+                                                                            <span className="inline-flex items-center gap-1 text-[var(--color-brand)] bg-[var(--color-brand-soft)]/40 px-2 py-0.5 rounded border border-[var(--color-brand)]/20 font-mono">
+                                                                                <Globe size={11} className="shrink-0" />
+                                                                                <span className="truncate max-w-[260px]">{m.baseUrl}</span>
+                                                                            </span>
+                                                                        ) : null}
+                                                                        
+                                                                        {m.apiKey ? (
+                                                                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-medium">
+                                                                                <Key size={11} className="shrink-0" />
+                                                                                Custom API Key
+                                                                            </span>
+                                                                        ) : null}
+
+                                                                        {!m.baseUrl && !m.apiKey ? (
+                                                                            <span className="text-[var(--color-text-subtle)] text-[11px]">
+                                                                                Inherits global Base URL &amp; API Key
+                                                                            </span>
+                                                                        ) : null}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-1 shrink-0">
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        iconOnly
+                                                                        onClick={() => store.startEditingModel(m)}
+                                                                        tooltip="Edit model credentials"
+                                                                    >
+                                                                        <Pencil size={15} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        iconOnly
+                                                                        onClick={() => store.deleteModel(m.id)}
+                                                                        loading={store.deletingModelIds.has(m.id)}
+                                                                        tooltip="Delete model"
+                                                                    >
+                                                                        <Trash2 size={15} className="text-[var(--color-text-muted)] hover:text-[var(--color-text-error)]" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ))}
                                             </div>
@@ -359,14 +498,17 @@ export default function SettingsPage() {
 
                                     {/* Add Model Form */}
                                     <div className="border-t border-[var(--color-border-subtle)] pt-4 space-y-4">
-                                        <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Add Model</h3>
+                                        <div>
+                                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Add New Model</h3>
+                                            <p className="text-xs text-[var(--color-text-muted)] mt-0.5">Provide model details. Base URL and API Key are optional and will fallback to global settings if left blank.</p>
+                                        </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <FormLabel>Model Display Name</FormLabel>
                                                 <Input
                                                     value={store.newModelNameInput}
                                                     onValueChange={(v) => store.setNewModelNameInput(v)}
-                                                    placeholder="GPT-4o"
+                                                    placeholder="e.g. Groq LLaMA 3.3 70B"
                                                 />
                                             </div>
                                             <div className="space-y-2">
@@ -374,10 +516,42 @@ export default function SettingsPage() {
                                                 <Input
                                                     value={store.newModelIdInput}
                                                     onValueChange={(v) => store.setNewModelIdInput(v)}
-                                                    placeholder="gpt-4o"
+                                                    placeholder="e.g. llama-3.3-70b-versatile"
                                                 />
                                             </div>
                                         </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <FormLabel>Custom Base URL (Optional)</FormLabel>
+                                                <Input
+                                                    value={store.newModelBaseUrlInput}
+                                                    onValueChange={(v) => store.setNewModelBaseUrlInput(v)}
+                                                    placeholder="e.g. https://api.groq.com/openai/v1"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <FormLabel>Custom API Key (Optional)</FormLabel>
+                                                <div className="relative flex items-center">
+                                                    <Input
+                                                        type={showNewModelApiKey ? "text" : "password"}
+                                                        value={store.newModelApiKeyInput}
+                                                        onValueChange={(v) => store.setNewModelApiKeyInput(v)}
+                                                        placeholder="Custom API key for this model"
+                                                        className="pr-10"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowNewModelApiKey((prev) => !prev)}
+                                                        className="absolute right-2.5 p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"
+                                                        title={showNewModelApiKey ? "Hide API key" : "Show API key"}
+                                                    >
+                                                        {showNewModelApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         <Button
                                             variant="outlined"
                                             onClick={() => store.addModel()}
@@ -395,3 +569,4 @@ export default function SettingsPage() {
         </div>
     );
 }
+

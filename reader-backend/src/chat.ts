@@ -88,42 +88,55 @@ router.post("/", async (req, res) => {
   // 2. Resolve System Prompt
   const resolvedSystemPrompt = await resolveSystemPrompt(userId, pageId, actionType, systemPrompt);
 
-  // 3. Fetch user's saved model config
-  const config = await prisma.model_config.findUnique({ where: { userId } });
-  if (!config) {
+  // 3. Fetch user's saved model config and specific user_model
+  const [config, userModel] = await Promise.all([
+    prisma.model_config.findUnique({ where: { userId } }),
+    prisma.user_model.findFirst({
+      where: {
+        userId,
+        OR: [{ modelId }, { id: modelId }],
+      },
+    }),
+  ]);
+
+  const effectiveBaseUrl = userModel?.baseUrl?.trim() || config?.baseUrl?.trim();
+  const effectiveApiKey = userModel?.apiKey?.trim() || config?.apiKey?.trim();
+  const effectiveModelId = userModel?.modelId || modelId;
+
+  if (!effectiveBaseUrl) {
     res.status(404).json({
       error: {
         type: "CONFIG_ERROR",
-        message: "Model configuration not found",
-        description: "No AI provider configuration exists for your account. Please configure your Base URL and API Key in Settings.",
-        rawError: { userId },
+        message: "Base URL not configured",
+        description: "No AI Base URL exists for this model or in your account Settings. Please configure a Base URL.",
+        rawError: { userId, modelId },
       },
     });
     return;
   }
 
-  if (!config.apiKey || !config.apiKey.trim()) {
+  if (!effectiveApiKey) {
     res.status(400).json({
       error: {
         type: "INVALID_API_KEY",
         message: "API Key is missing",
-        description: "Your AI API Key is empty. Please configure a valid API Key in Settings.",
-        rawError: { baseUrl: config.baseUrl },
+        description: "No AI API Key is configured for this model or in your account Settings. Please configure a valid API Key.",
+        rawError: { baseUrl: effectiveBaseUrl, modelId: effectiveModelId },
       },
     });
     return;
   }
 
-  // 4. Create an OpenAI-compatible client with the user's provider config
+  // 4. Create an OpenAI-compatible client with the effective provider config
   const openai = new OpenAI({
-    baseURL: config.baseUrl,
-    apiKey: config.apiKey,
+    baseURL: effectiveBaseUrl,
+    apiKey: effectiveApiKey,
   });
 
   try {
     // 5. Send chat completion
     const completion = await openai.chat.completions.create({
-      model: modelId,
+      model: effectiveModelId,
       messages: [
         { role: "system", content: resolvedSystemPrompt },
         { role: "user", content: userPrompt },
@@ -162,7 +175,7 @@ router.post("/", async (req, res) => {
       } else if (status === 404 || codeLower.includes("model_not_found") || msgLower.includes("model") && msgLower.includes("not found")) {
         errorType = "MODEL_NOT_FOUND";
         message = "Model Not Found";
-        description = `The requested model "${modelId}" was not found or is not supported by your AI provider endpoint.`;
+        description = `The requested model "${effectiveModelId}" was not found or is not supported by your AI provider endpoint.`;
       } else if (status === 429 || codeLower.includes("rate_limit") || codeLower.includes("quota") || msgLower.includes("quota") || msgLower.includes("rate limit")) {
         errorType = "RATE_LIMIT";
         message = "Rate Limit or Quota Exceeded";
@@ -197,7 +210,7 @@ router.post("/", async (req, res) => {
           type: isNetwork ? "NETWORK_ERROR" : "UNEXPECTED_ERROR",
           message: isNetwork ? "Cannot connect to AI Base URL" : "Unexpected AI Error",
           description: isNetwork
-            ? `Unable to reach Base URL "${config.baseUrl}". Please verify the URL is running and accessible.`
+            ? `Unable to reach Base URL "${effectiveBaseUrl}". Please verify the URL is running and accessible.`
             : errorMsg,
           rawError: {
             message: errorMsg,

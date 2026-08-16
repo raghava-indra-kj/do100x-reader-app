@@ -17,6 +17,7 @@ export interface ISettingsRepo {
         doubtSystemPrompt?: string;
     }): AsyncResult<ModelConfigData, AppError>;
     getUserModels(params: { userId: string }): AsyncResult<UserModelData[], AppError>;
-    createUserModel(params: { userId: string; name: string; modelId: string }): AsyncResult<string, AppError>;
+    createUserModel(params: { userId: string; name: string; modelId: string; baseUrl?: string; apiKey?: string }): AsyncResult<string, AppError>;
+    updateUserModel(params: { id: string; name: string; modelId: string; baseUrl?: string | null; apiKey?: string | null }): AsyncResult<void, AppError>;
     deleteUserModel(params: { id: string }): AsyncResult<void, AppError>;
 }

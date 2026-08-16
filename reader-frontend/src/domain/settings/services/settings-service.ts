@@ -45,12 +45,18 @@ export async function getUserModels(params: { userId: string }): AsyncResult<Use
     return ok(result.data.map(toUserModel));
 }
 
-export async function createUserModel(params: { userId: string; name: string; modelId: string }): AsyncResult<string, AppError> {
+export async function createUserModel(params: { userId: string; name: string; modelId: string; baseUrl?: string; apiKey?: string }): AsyncResult<string, AppError> {
     const repo = container.get<ISettingsRepo>(TYPES.ISettingsRepo);
     return repo.createUserModel(params);
+}
+
+export async function updateUserModel(params: { id: string; name: string; modelId: string; baseUrl?: string | null; apiKey?: string | null }): AsyncResult<void, AppError> {
+    const repo = container.get<ISettingsRepo>(TYPES.ISettingsRepo);
+    return repo.updateUserModel(params);
 }
 
 export async function deleteUserModel(params: { id: string }): AsyncResult<void, AppError> {
     const repo = container.get<ISettingsRepo>(TYPES.ISettingsRepo);
     return repo.deleteUserModel(params);
 }
+

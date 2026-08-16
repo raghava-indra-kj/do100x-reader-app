@@ -43,12 +43,22 @@ export class SettingsRepoApi implements ISettingsRepo {
         }
     }
 
-    async createUserModel(params: { userId: string; name: string; modelId: string }): AsyncResult<string, AppError> {
+    async createUserModel(params: { userId: string; name: string; modelId: string; baseUrl?: string; apiKey?: string }): AsyncResult<string, AppError> {
         try {
             const { data } = await apiClient.post('/user-models', params);
             return ok(data as string);
         } catch (error) {
             return err(new AppError({ message: getApiErrorMessage(error, 'Failed to add model'), cause: error }));
+        }
+    }
+
+    async updateUserModel(params: { id: string; name: string; modelId: string; baseUrl?: string | null; apiKey?: string | null }): AsyncResult<void, AppError> {
+        try {
+            const { id, ...body } = params;
+            await apiClient.put(`/user-models/${id}`, body);
+            return ok(undefined);
+        } catch (error) {
+            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to update model'), cause: error }));
         }
     }
 

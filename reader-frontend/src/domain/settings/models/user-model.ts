@@ -5,6 +5,8 @@ export const UserModelSchema = z.object({
     userId: z.string(),
     name: z.string(),
     modelId: z.string(),
+    baseUrl: z.string().nullable().optional(),
+    apiKey: z.string().nullable().optional(),
 });
 
 export type UserModelData = z.infer<typeof UserModelSchema>;
@@ -14,11 +16,16 @@ export class UserModel {
     readonly userId: string;
     readonly name: string;
     readonly modelId: string;
+    readonly baseUrl?: string;
+    readonly apiKey?: string;
 
     constructor(params: UserModelData) {
         this.id = params.id;
         this.userId = params.userId;
         this.name = params.name;
         this.modelId = params.modelId;
+        this.baseUrl = params.baseUrl ?? undefined;
+        this.apiKey = params.apiKey ?? undefined;
     }
 }
+
