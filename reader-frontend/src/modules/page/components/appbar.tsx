@@ -60,8 +60,15 @@ export function PageAppbar() {
                     {() => {
                         const page = store.optCurrentPage;
                         const section = store.currentSection;
+                        if (!page) {
+                            return (
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <div className="h-4 w-4 rounded bg-[var(--color-surface-raised)] animate-pulse shrink-0" />
+                                    <div className="h-4 w-32 rounded bg-[var(--color-surface-raised)] animate-pulse" />
+                                </div>
+                            );
+                        }
                         const parentTitle = store.parentPageTitle;
-                        if (!page) return null;
                         const parentPageId = page.parentPageId;
 
                         return (

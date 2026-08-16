@@ -121,11 +121,11 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                         )}
                     </div>
 
-                    <p className="text-sm text-[var(--color-text-muted)] leading-relaxed max-w-2xl">
-                        {hasSubpages
-                            ? `This page currently serves as a container with ${subpages.length} subpage${subpages.length === 1 ? '' : 's'}. You can explore the subpages below or add written content directly to this page.`
-                            : 'This page is empty. Start writing notes, paste markdown content, or create subpages to organize your thoughts.'}
-                    </p>
+                    {!hasSubpages && (
+                        <p className="text-sm text-[var(--color-text-muted)] leading-relaxed max-w-2xl">
+                            This page is empty. Start writing notes, paste markdown content, or create subpages to organize your thoughts.
+                        </p>
+                    )}
                 </div>
             </div>
 

@@ -53,7 +53,14 @@ export const PageToc = observer(function PageToc() {
     const [editOpen, setEditOpen] = useState(false);
 
     if (!page) {
-        return null;
+        return (
+            <div className="flex flex-col gap-2 p-3">
+                <div className="h-4 w-20 rounded bg-[var(--color-surface-soft)] animate-pulse mb-2" />
+                <div className="h-7 w-full rounded bg-[var(--color-surface-soft)] animate-pulse" />
+                <div className="h-7 w-4/5 rounded bg-[var(--color-surface-soft)] animate-pulse" />
+                <div className="h-7 w-3/4 rounded bg-[var(--color-surface-soft)] animate-pulse" />
+            </div>
+        );
     }
 
     if (page.sections.length === 0) {

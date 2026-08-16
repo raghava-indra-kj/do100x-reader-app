@@ -1,8 +1,7 @@
 import { AppError } from '@core/errors/app-error';
-import { err, ok, type Result } from '@raghava.indra/result-ts';
+import { ok, type Result } from '@raghava.indra/result-ts';
 import { safeParseMarkdown } from '../../../lib/md-parser/parse-markdown';
 import type { MdSection } from '../../../lib/md-parser/types';
-import { PAGE_PARSE_FAILED } from '../const/error-codes';
 import type { DbPage } from '../models/db-page';
 import type { DbPageListItem } from '../models/db-page-list-item';
 import { Page } from '../models/page';
@@ -23,16 +22,21 @@ export function toPageListItem(db: DbPageListItem): PageListItem {
 }
 
 export function toPage(dbPage: DbPage): Result<Page, AppError> {
-    const parseResult = safeParseMarkdown(dbPage.content);
-    if (!parseResult.ok) {
-        const parseErr = new AppError({
-            errorCode: PAGE_PARSE_FAILED,
-            message: `Failed to parse markdown`,
-            cause: parseResult.error,
-        });
-        return err(parseErr);
-    }
-    const doc = parseResult.data;
+    const parseResult = safeParseMarkdown(dbPage.content ?? '');
+    const sections: Section[] = parseResult.ok
+        ? parseResult.data.sections.map((s) => toSection({ mdSection: s, pageId: dbPage.id }))
+        : [
+            new Section({
+                id: 'root-section',
+                pageId: dbPage.id,
+                title: dbPage.title,
+                rawTitle: dbPage.title,
+                level: 1,
+                content: dbPage.content ?? '',
+                children: [],
+            }),
+        ];
+
     const page = new Page({
         id: dbPage.id,
         userId: dbPage.userId,
@@ -42,7 +46,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         category: dbPage.category,
         createdAt: dbPage.createdAt,
         updatedAt: dbPage.updatedAt,
-        sections: doc.sections.map((s) => toSection({ mdSection: s, pageId: dbPage.id })),
+        sections,
         childrenCount: dbPage.childrenCount,
         isPublic: dbPage.isPublic,
         isOwner: dbPage.isOwner,
