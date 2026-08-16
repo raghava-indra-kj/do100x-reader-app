@@ -1137,4 +1137,313 @@ export function registerPageTools(server: McpServer, userId: string) {
       };
     }
   );
+
+  // 18. Find and Replace across a page or multiple pages
+  server.tool(
+    "reader_find_and_replace",
+    "Find and replace text across a specific page, a category, or the entire knowledge base",
+    {
+      find: z.string().describe("Text or pattern to find"),
+      replace: z.string().describe("Replacement text"),
+      pageId: z.string().optional().describe("Optional page ID to restrict replacement to a single page"),
+      category: z.string().optional().describe("Optional category to restrict replacement to"),
+      matchCase: z.boolean().optional().describe("Case-sensitive match (default: true)"),
+      isRegex: z.boolean().optional().describe("Treat 'find' as a regular expression (default: false)"),
+      dryRun: z.boolean().optional().describe("Preview match counts without saving changes (default: false)"),
+    },
+    async ({ find, replace, pageId, category, matchCase = true, isRegex = false, dryRun = false }) => {
+      const where: Record<string, unknown> = {
+        userId,
+        deletedAt: null,
+      };
+      if (pageId) where.id = pageId;
+      if (category) where.category = category;
+
+      const pages = await prisma.page.findMany({
+        where,
+        select: { id: true, title: true, content: true, category: true },
+      });
+
+      let regex: RegExp;
+      try {
+        let flags = "g";
+        if (!matchCase) flags += "i";
+        const pattern = isRegex ? find : find.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        regex = new RegExp(pattern, flags);
+      } catch (err) {
+        return { isError: true, content: [{ type: "text", text: `Invalid regular expression: ${String(err)}` }] };
+      }
+
+      const results: Array<{ pageId: string; title: string; replacements: number }> = [];
+      const now = new Date();
+
+      for (const p of pages) {
+        const content = p.content || "";
+        const matches = content.match(regex);
+        if (matches && matches.length > 0) {
+          const newContent = content.replace(regex, replace);
+          results.push({ pageId: p.id, title: p.title, replacements: matches.length });
+
+          if (!dryRun) {
+            await prisma.page.update({
+              where: { id: p.id },
+              data: { content: newContent, updatedAt: now },
+            });
+          }
+        }
+      }
+
+      const totalReplacements = results.reduce((acc, r) => acc + r.replacements, 0);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              dryRun,
+              totalReplacements,
+              totalPagesAffected: results.length,
+              pages: results,
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 19. Get Knowledge Base & Reading Analytics
+  server.tool(
+    "reader_get_stats",
+    "Get overall reading statistics, page counts, word counts, vocabulary count, and category breakdown",
+    {
+      category: z.string().optional().describe("Optional category to filter statistics for"),
+    },
+    async ({ category }) => {
+      const wherePage: Record<string, unknown> = {
+        userId,
+        deletedAt: null,
+      };
+      if (category) wherePage.category = category;
+
+      const pages = await prisma.page.findMany({
+        where: wherePage,
+        select: { id: true, parentId: true, category: true, content: true, updatedAt: true },
+      });
+
+      let totalWords = 0;
+      let totalLines = 0;
+      const categoryCounts = new Map<string, number>();
+
+      for (const p of pages) {
+        const cat = p.category || "Uncategorized";
+        categoryCounts.set(cat, (categoryCounts.get(cat) || 0) + 1);
+
+        if (p.content) {
+          totalWords += p.content.trim().split(/\s+/).filter(Boolean).length;
+          totalLines += p.content.split(/\r?\n/).length;
+        }
+      }
+
+      const vocabCount = await prisma.vocabulary.count({ where: { userId } });
+      const commentsCount = await prisma.comment.count({ where: { userId } });
+
+      const stats = {
+        totalPages: pages.length,
+        rootPages: pages.filter((p) => !p.parentId).length,
+        subpages: pages.filter((p) => !!p.parentId).length,
+        totalWords,
+        totalLines,
+        savedVocabularyTerms: vocabCount,
+        personalComments: commentsCount,
+        categories: Object.fromEntries(categoryCounts.entries()),
+      };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(stats, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 20. Daily Note / Journal Manager
+  server.tool(
+    "reader_get_or_create_daily_note",
+    "Get or automatically create today's daily journal/note page for thoughts, logs, and reading reflections",
+    {
+      date: z.string().optional().describe("Date in YYYY-MM-DD format (defaults to current date)"),
+      category: z.string().optional().describe("Category name (default: 'Daily Notes')"),
+      templateHeading: z.string().optional().describe("Optional initial heading to include if creating a new note"),
+    },
+    async ({ date, category = "Daily Notes", templateHeading }) => {
+      const targetDate = date || new Date().toISOString().slice(0, 10);
+      const title = `Daily Note - ${targetDate}`;
+
+      let page = await prisma.page.findFirst({
+        where: {
+          userId,
+          title: { in: [title, targetDate] },
+          deletedAt: null,
+        },
+      });
+
+      const now = new Date();
+      let isNew = false;
+
+      if (!page) {
+        isNew = true;
+        const initialContent = `---\ntitle: "${title}"\ncategory: "${category}"\n---\n\n# ${title}\n\n${templateHeading ? `## ${templateHeading}\n\n` : "## Key Takeaways\n\n- \n\n## Tasks / Notes\n\n- [ ] \n"}`;
+
+        page = await prisma.page.create({
+          data: {
+            userId,
+            title,
+            content: initialContent,
+            category,
+            sortOrder: 0,
+            childrenCount: 0,
+            isPublic: false,
+            createdAt: now,
+            updatedAt: now,
+          },
+        });
+      }
+
+      const sections = parseMarkdownSections(page.content || "");
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              isNew,
+              pageId: page.id,
+              title: page.title,
+              category: page.category,
+              sectionsCount: sections.length,
+              content: page.content,
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 21. Recent Activity Feed
+  server.tool(
+    "reader_get_recent_activity",
+    "Retrieve recent activity across pages, vocabulary lookups, and annotations over recent days",
+    {
+      days: z.number().optional().describe("Number of past days to inspect (default: 7)"),
+      limit: z.number().optional().describe("Max activity items (default: 15)"),
+    },
+    async ({ days = 7, limit = 15 }) => {
+      const sinceDate = new Date();
+      sinceDate.setDate(sinceDate.getDate() - days);
+
+      const recentPages = await prisma.page.findMany({
+        where: { userId, updatedAt: { gte: sinceDate }, deletedAt: null },
+        select: { id: true, title: true, category: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+        take: limit,
+      });
+
+      const recentVocab = await prisma.vocabulary.findMany({
+        where: { userId, createdAt: { gte: sinceDate } },
+        select: { id: true, term: true, pageTitle: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      });
+
+      const recentComments = await prisma.comment.findMany({
+        where: { userId, createdAt: { gte: sinceDate } },
+        select: { id: true, body: true, pageTitle: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      });
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              periodDays: days,
+              updatedPages: recentPages,
+              newVocabulary: recentVocab,
+              recentComments,
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
+
+  // 22. Lint & Format Page Markdown (conforming to format.llm.md)
+  server.tool(
+    "reader_lint_format_page",
+    "Inspect and auto-correct page markdown according to format.llm.md rules (e.g. blank lines inside callouts/details, YAML frontmatter quoting)",
+    {
+      pageId: z.string().describe("Target page ID to lint and format"),
+      autoFix: z.boolean().optional().describe("Whether to automatically apply fixes and save the page (default: true)"),
+    },
+    async ({ pageId, autoFix = true }) => {
+      const page = await prisma.page.findFirst({
+        where: { id: pageId, userId, deletedAt: null },
+      });
+      if (!page) {
+        return { isError: true, content: [{ type: "text", text: `Page not found: ${pageId}` }] };
+      }
+
+      let markdown = page.content || "";
+      const warnings: string[] = [];
+      let fixed = false;
+
+      // 1. Fix callout blank lines (<callout icon="...">\n\n ... \n\n</callout>)
+      const calloutRegex = /<callout([^>]*)>([\s\S]*?)<\/callout>/gi;
+      markdown = markdown.replace(calloutRegex, (match, attrs, inner) => {
+        if (!inner.startsWith("\n\n") || !inner.endsWith("\n\n")) {
+          warnings.push("Fixed missing blank lines inside <callout> tag");
+          fixed = true;
+          return `<callout${attrs}>\n\n${inner.trim()}\n\n</callout>`;
+        }
+        return match;
+      });
+
+      // 2. Fix details blank lines (<details...>\n<summary>...</summary>\n\n ... \n\n</details>)
+      const detailsRegex = /<details([^>]*)>\s*(<summary>[\s\S]*?<\/summary>)([\s\S]*?)<\/details>/gi;
+      markdown = markdown.replace(detailsRegex, (match, attrs, summary, body) => {
+        if (!body.startsWith("\n\n") || !body.endsWith("\n\n")) {
+          warnings.push("Fixed missing blank lines inside <details> tag");
+          fixed = true;
+          return `<details${attrs}>\n${summary.trim()}\n\n${body.trim()}\n\n</details>`;
+        }
+        return match;
+      });
+
+      if (autoFix && fixed) {
+        await prisma.page.update({
+          where: { id: pageId },
+          data: { content: markdown, updatedAt: new Date() },
+        });
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              pageId,
+              title: page.title,
+              autoFixApplied: autoFix && fixed,
+              issuesFound: warnings.length,
+              warnings,
+            }, null, 2),
+          },
+        ],
+      };
+    }
+  );
 }
