@@ -8,6 +8,7 @@ import pagesRouter from "./pages";
 import commentsRouter from "./comments";
 import vocabularyRouter from "./vocabulary";
 import modelConfigRouter from "./model-config";
+import userModelsRouter from "./user-models";
 import chatRouter from "./chat";
 import tasksRouter from "./tasks";
 import taskListsRouter from "./task-lists";
