@@ -10,6 +10,7 @@ import vocabularyRouter from "./vocabulary";
 import modelConfigRouter from "./model-config";
 import userModelsRouter from "./user-models";
 import chatRouter from "./chat";
+import { createMcpSseRouter } from "./mcp/sse-router";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,6 +18,11 @@ const frontendDist = path.resolve(__dirname, "../../reader-frontend/dist");
 const hasFrontend = fs.existsSync(path.join(frontendDist, "index.html"));
 
 app.use(express.json({ limit: '10mb' }));
+
+// MCP Server Endpoints (SSE & Messages)
+const mcpRouter = createMcpSseRouter();
+app.use("/mcp", mcpRouter);
+app.use("/", mcpRouter); // Also mount at root for standard http://localhost:3000/sse
 
 if (hasFrontend) {
   app.use(express.static(frontendDist));

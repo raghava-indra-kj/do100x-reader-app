@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "reader": {
+      "serverUrl": "http://localhost:3000/sse/b83c479d-302f-46f2-bc62-593551983ee5"
+    }
+  }
+}
