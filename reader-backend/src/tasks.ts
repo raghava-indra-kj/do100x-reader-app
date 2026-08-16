@@ -378,10 +378,29 @@ router.patch("/:id", async (req: Request, res: Response) => {
 
   if (parentId !== undefined) {
     const targetParentId = parentId === null || parentId === "null" ? null : parentId;
-    // Prevent cyclic parentage
     if (targetParentId === id) {
       res.status(400).json({ error: "Cannot make task a subtask of itself" });
       return;
+    }
+    if (targetParentId) {
+      // Prevent cyclic nesting: check if targetParentId is a descendant of id
+      let curr: string | null = targetParentId;
+      let isCycle = false;
+      while (curr) {
+        if (curr === id) {
+          isCycle = true;
+          break;
+        }
+        const parentTask: { parentId: string | null } | null = await prisma.task.findFirst({
+          where: { id: curr, userId, deletedAt: null },
+          select: { parentId: true },
+        });
+        curr = parentTask ? parentTask.parentId : null;
+      }
+      if (isCycle) {
+        res.status(400).json({ error: "Cannot move task into its own descendant subtask" });
+        return;
+      }
     }
     updateData.parentId = targetParentId;
   }

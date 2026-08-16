@@ -331,10 +331,29 @@ export function registerTaskTools(server: McpServer, userId: string) {
       }
 
       if (parentTaskId !== undefined) {
-        if (parentTaskId === taskId) {
+        const targetParentId = parentTaskId === "null" || !parentTaskId ? null : parentTaskId;
+        if (targetParentId === taskId) {
           return { isError: true, content: [{ type: "text", text: "Cannot make a task a subtask of itself" }] };
         }
-        updateData.parentId = parentTaskId === "null" || !parentTaskId ? null : parentTaskId;
+        if (targetParentId) {
+          let curr: string | null = targetParentId;
+          let isCycle = false;
+          while (curr) {
+            if (curr === taskId) {
+              isCycle = true;
+              break;
+            }
+            const parentTask: { parentId: string | null } | null = await prisma.task.findFirst({
+              where: { id: curr, userId, deletedAt: null },
+              select: { parentId: true },
+            });
+            curr = parentTask ? parentTask.parentId : null;
+          }
+          if (isCycle) {
+            return { isError: true, content: [{ type: "text", text: "Cannot move task into its own descendant subtask" }] };
+          }
+        }
+        updateData.parentId = targetParentId;
       }
 
       const updated = await prisma.task.update({

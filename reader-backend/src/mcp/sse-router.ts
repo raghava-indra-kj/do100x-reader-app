@@ -87,8 +87,8 @@ export function createMcpSseRouter(): Router {
   router.get("/sse/:token", handleSseConnect);
   router.get("/sse", handleSseConnect);
 
-  // POST /messages - Handles tool calls and client JSON-RPC messages for authenticated sessions
-  router.post("/messages", async (req: Request, res: Response) => {
+  // POST /messages & /sse/messages - Handles tool calls and client JSON-RPC messages for authenticated sessions
+  const handlePostMessage = async (req: Request, res: Response) => {
     const sessionId = req.query.sessionId as string;
     if (!sessionId) {
       res.status(400).json({ error: "sessionId query parameter is required" });
@@ -113,7 +113,10 @@ export function createMcpSseRouter(): Router {
         res.status(500).json({ error: "Failed to process MCP message" });
       }
     }
-  });
+  };
+
+  router.post("/messages", handlePostMessage);
+  router.post("/sse/messages", handlePostMessage);
 
   return router;
 }
