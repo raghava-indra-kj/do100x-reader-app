@@ -1,7 +1,8 @@
 npm install
-npx prisma generate --schema=reader-backend/prisma/schema.prisma
-npx prisma db push --schema=reader-backend/prisma/schema.prisma
+Set-Location reader-backend
+npx prisma generate
+npx prisma db push
+Set-Location ..
 npm run build
-
 Set-Location reader-backend
 node dist/index.js
