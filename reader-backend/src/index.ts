@@ -48,9 +48,13 @@ process.on("unhandledRejection", (reason) => {
   console.error("Unhandled rejection:", reason);
 });
 
+process.title = `Reader App [Port ${PORT}]`;
+
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  if (hasFrontend) {
-    console.log("Serving frontend from reader-frontend/dist");
-  }
+  console.log("\n=======================================================");
+  console.log(`   READER APP SERVER RUNNING`);
+  console.log(`   URL:      http://localhost:${PORT}`);
+  console.log(`   PID:      ${process.pid}`);
+  console.log(`   Frontend: ${hasFrontend ? "Unified (dist/)" : "API Mode"}`);
+  console.log("=======================================================\n");
 });
