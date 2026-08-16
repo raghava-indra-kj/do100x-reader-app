@@ -512,6 +512,7 @@ export class TasksStore {
     runInAction(() => {
       this.selectedTaskId = taskId;
       this.isLoadingDetail = true;
+      this.expandedTaskIds.add(taskId);
     });
 
     const res = await getTask(taskId);
@@ -519,6 +520,9 @@ export class TasksStore {
       this.isLoadingDetail = false;
       if (res.ok) {
         this.selectedTaskDetail = res.data;
+        if (res.data.parentId) {
+          this.expandedTaskIds.add(res.data.parentId);
+        }
       } else {
         toast.error(res.error.message);
       }

@@ -7,13 +7,16 @@ import {
   Trash2,
   Plus,
   Clock,
-  Edit2,
   RotateCcw,
   Check,
   GitBranch,
   Flag,
   FileText,
   ArrowLeft,
+  Calendar,
+  Layers,
+  ChevronRight,
+  Folder,
 } from 'lucide-react';
 import type { TasksStore } from '../store';
 import { useState } from 'react';
@@ -35,25 +38,28 @@ export const TaskDetailPane = observer(({ store }: Props) => {
 
   const [notesTab, setNotesTab] = useState<'write' | 'preview'>('write');
   const [isPriorityMenuOpen, setIsPriorityMenuOpen] = useState(false);
+  const [isListMenuOpen, setIsListMenuOpen] = useState(false);
+  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
+  const [isTimeMenuOpen, setIsTimeMenuOpen] = useState(false);
 
   // Empty State (No task selected)
   if (!store.selectedTaskId) {
     return (
-      <div className="w-96 flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)]/40 p-6 flex flex-col items-center justify-center text-center text-[var(--color-text-muted)] select-none">
+      <div className="w-96 flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] p-6 flex flex-col items-center justify-center text-center text-[var(--color-text-muted)] select-none">
         <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-soft)] flex items-center justify-center mb-3 shadow-xs text-[var(--color-brand)]">
           <Clock className="w-7 h-7 stroke-[1.8]" />
         </div>
         <h2 className="text-sm font-bold text-[var(--color-text-strong)]">Focus & Task Details</h2>
         <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-[220px]">
-          Select any task from your list to manage subtasks, write markdown notes, and run the server live timer.
+          Select any task or subtask from your list to manage its hierarchy, write markdown notes, and run the live timer.
         </p>
 
         {/* Quick status pill if a timer is running elsewhere */}
         {store.activeTimer && (
-          <div className="mt-6 p-4 rounded-2xl bg-[var(--color-surface-raised)] border border-rose-500/30 shadow-sm w-full text-left space-y-2">
+          <div className="mt-6 p-4 rounded-2xl bg-[var(--color-surface-raised)] border border-rose-500/30 shadow-xs w-full text-left space-y-2">
             <div className="flex items-center space-x-2 text-rose-500 text-xs font-bold">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-              <span>Timer Running on Another Task</span>
+              <span>Timer Running</span>
             </div>
             <p className="text-xs font-semibold text-[var(--color-text-strong)] truncate">
               {store.activeTimer.taskTitle}
@@ -78,7 +84,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
 
   if (store.isLoadingDetail || !detail) {
     return (
-      <div className="w-96 flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)]/40 p-6 flex items-center justify-center text-xs text-[var(--color-text-muted)]">
+      <div className="w-96 flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] p-6 flex items-center justify-center text-xs text-[var(--color-text-muted)]">
         Loading details...
       </div>
     );
@@ -89,30 +95,40 @@ export const TaskDetailPane = observer(({ store }: Props) => {
   const subtasksPercent =
     detail.subtasks.length > 0 ? Math.round((completedSubtasksCount / detail.subtasks.length) * 100) : 0;
 
+  const formattedDueDate = detail.dueDate
+    ? new Date(detail.dueDate).toISOString().slice(0, 10)
+    : '';
+
+  const isToday = formattedDueDate === new Date().toISOString().slice(0, 10);
+  const isTomorrow = formattedDueDate === new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+
   return (
-    <div className="w-96 flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col h-full overflow-hidden shadow-sm">
-      {/* Header */}
-      <div className="p-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
-        <div className="flex items-center space-x-2">
+    <div className="w-96 flex-shrink-0 border-l border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] flex flex-col h-full overflow-hidden shadow-xs">
+      {/* 1. Header with Breadcrumb Path */}
+      <div className="p-4 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex items-center justify-between">
+        <div className="flex items-center space-x-1.5 min-w-0 text-xs font-semibold">
           {detail.parentId ? (
             <button
               type="button"
               onClick={() => store.selectTask(detail.parentId!)}
-              className="flex items-center space-x-1.5 text-xs text-[var(--color-brand)] hover:underline font-bold cursor-pointer"
+              className="flex items-center space-x-1.5 text-[var(--color-brand)] hover:underline font-bold cursor-pointer group truncate"
+              title="Navigate up to parent task"
             >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Parent Task</span>
+              <ArrowLeft className="w-3.5 h-3.5 shrink-0 group-hover:-translate-x-0.5 transition-transform" />
+              <span className="truncate">Back to Parent Task</span>
             </button>
           ) : (
-            <div className="flex items-center space-x-2">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pConfig.flagColor }} />
-              <span className="text-xs font-bold text-[var(--color-text-strong)]">
+            <div className="flex items-center space-x-1.5 text-[var(--color-text-muted)] truncate">
+              <Folder className="w-3.5 h-3.5 text-[var(--color-brand)] shrink-0" />
+              <span className="text-[var(--color-text-strong)] font-bold truncate">
                 {detail.list ? detail.list.name : 'Inbox'}
               </span>
             </div>
           )}
         </div>
-        <div className="flex items-center space-x-1">
+
+        {/* Top Right Action Icons */}
+        <div className="flex items-center space-x-1 shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -132,7 +148,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
           <button
             type="button"
             onClick={() => store.selectTask(null)}
-            title="Close details"
+            title="Close detail pane"
             className="p-1.5 rounded-lg hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
           >
             <X className="w-4 h-4" />
@@ -140,135 +156,294 @@ export const TaskDetailPane = observer(({ store }: Props) => {
         </div>
       </div>
 
-      {/* Main Body */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-5">
-        {/* Title & Checkbox */}
-        <div className="space-y-3">
-          <div className="flex items-start space-x-2.5">
+      {/* 2. Main Scrollable Workspace */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Task Title & Status Checkbox */}
+        <div className="flex items-start space-x-3">
+          <button
+            type="button"
+            onClick={() => store.toggleTaskStatus(detail)}
+            className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+              detail.isDone
+                ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
+                : 'border-[var(--color-border-strong)] hover:border-emerald-500'
+            }`}
+          >
+            {detail.isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+          </button>
+
+          <input
+            type="text"
+            defaultValue={detail.title}
+            key={detail.id}
+            onBlur={(e) => {
+              if (e.target.value.trim() && e.target.value !== detail.title) {
+                store.updateTaskProperties(detail.id, { title: e.target.value.trim() });
+              }
+            }}
+            placeholder="Task title..."
+            className="text-base font-bold bg-transparent border-0 ring-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 w-full text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] cursor-text"
+          />
+        </div>
+
+        {/* 3. Interactive Attributes Toolbar (TickTick-style Pills) */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          {/* Priority Pill */}
+          <div className="relative">
             <button
               type="button"
-              onClick={() => store.toggleTaskStatus(detail)}
-              className={`w-5 h-5 rounded-full border-2 mt-0.5 flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                detail.isDone
-                  ? 'bg-emerald-500 border-emerald-500 text-white shadow-xs'
-                  : 'border-[var(--color-border-strong)] hover:border-emerald-500'
-              }`}
+              onClick={() => {
+                setIsPriorityMenuOpen(!isPriorityMenuOpen);
+                setIsListMenuOpen(false);
+                setIsDateMenuOpen(false);
+                setIsTimeMenuOpen(false);
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition cursor-pointer ${pConfig.bg} ${pConfig.text} ${pConfig.border}`}
             >
-              {detail.isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              <Flag className="w-3 h-3" style={{ color: pConfig.flagColor }} />
+              <span>{pConfig.label}</span>
             </button>
 
-            <input
-              type="text"
-              defaultValue={detail.title}
-              onBlur={(e) => {
-                if (e.target.value.trim() && e.target.value !== detail.title) {
-                  store.updateTaskProperties(detail.id, { title: e.target.value.trim() });
-                }
-              }}
-              className="text-sm font-bold bg-transparent focus:bg-[var(--color-surface-soft)] focus:ring-1 focus:ring-[var(--color-brand)] rounded-lg px-2 py-1 w-full border border-transparent hover:border-[var(--color-border-subtle)] transition text-[var(--color-text-strong)] cursor-text"
-            />
+            {isPriorityMenuOpen && (
+              <div
+                className="absolute left-0 top-full mt-1.5 z-40 w-36 bg-[var(--color-surface-raised)] rounded-xl border border-[var(--color-border-default)] shadow-xl p-1 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
+                onMouseLeave={() => setIsPriorityMenuOpen(false)}
+              >
+                {[1, 2, 3, 4].map((p) => {
+                  const m = PRIORITY_META[p];
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => {
+                        store.updateTaskProperties(detail.id, { priority: p });
+                        setIsPriorityMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-left font-medium transition cursor-pointer ${
+                        detail.priority === p
+                          ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-bold'
+                          : 'hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)]'
+                      }`}
+                    >
+                      <Flag className="w-3.5 h-3.5" style={{ color: m.flagColor }} />
+                      <span>{m.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Properties Grid */}
-          <div className="grid grid-cols-2 gap-2 bg-[var(--color-surface-soft)]/50 p-3 rounded-2xl border border-[var(--color-border-subtle)] text-xs">
-            {/* Priority Picker */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">Priority</label>
-              <div className="relative">
+          {/* List / Project Pill */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setIsListMenuOpen(!isListMenuOpen);
+                setIsPriorityMenuOpen(false);
+                setIsDateMenuOpen(false);
+                setIsTimeMenuOpen(false);
+              }}
+              className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-medium bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] text-[var(--color-text-strong)] hover:border-[var(--color-brand)] transition cursor-pointer"
+            >
+              <Layers className="w-3 h-3 text-[var(--color-brand)]" />
+              <span>{detail.list ? detail.list.name : 'Inbox'}</span>
+            </button>
+
+            {isListMenuOpen && (
+              <div
+                className="absolute left-0 top-full mt-1.5 z-40 w-44 bg-[var(--color-surface-raised)] rounded-xl border border-[var(--color-border-default)] shadow-xl p-1 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
+                onMouseLeave={() => setIsListMenuOpen(false)}
+              >
                 <button
                   type="button"
-                  onClick={() => setIsPriorityMenuOpen(!isPriorityMenuOpen)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl border font-semibold cursor-pointer ${pConfig.bg} ${pConfig.text} ${pConfig.border}`}
+                  onClick={() => {
+                    store.updateTaskProperties(detail.id, { listId: null });
+                    setIsListMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-left transition cursor-pointer ${
+                    !detail.listId ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-bold' : 'hover:bg-[var(--color-surface-soft)]'
+                  }`}
                 >
-                  <div className="flex items-center space-x-1.5">
-                    <Flag className="w-3 h-3" style={{ color: pConfig.flagColor }} />
-                    <span>{pConfig.label}</span>
-                  </div>
+                  <span>📥 Inbox</span>
                 </button>
-
-                {isPriorityMenuOpen && (
-                  <div
-                    className="absolute left-0 top-full mt-1 z-30 w-full bg-[var(--color-surface-raised)] rounded-xl border border-[var(--color-border-default)] shadow-xl p-1 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
-                    onMouseLeave={() => setIsPriorityMenuOpen(false)}
+                {store.lists.map((l) => (
+                  <button
+                    key={l.id}
+                    type="button"
+                    onClick={() => {
+                      store.updateTaskProperties(detail.id, { listId: l.id });
+                      setIsListMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-lg text-left transition cursor-pointer ${
+                      detail.listId === l.id ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-bold' : 'hover:bg-[var(--color-surface-soft)]'
+                    }`}
                   >
-                    {[1, 2, 3, 4].map((p) => {
-                      const m = PRIORITY_META[p];
-                      return (
-                        <button
-                          key={p}
-                          type="button"
-                          onClick={() => {
-                            store.updateTaskProperties(detail.id, { priority: p });
-                            setIsPriorityMenuOpen(false);
-                          }}
-                          className={`w-full flex items-center space-x-2 px-2 py-1.5 rounded-lg text-left font-medium transition cursor-pointer ${
-                            detail.priority === p
-                              ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-bold'
-                              : 'hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)]'
-                          }`}
-                        >
-                          <Flag className="w-3.5 h-3.5" style={{ color: m.flagColor }} />
-                          <span>{m.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: l.color || '#3b82f6' }} />
+                    <span className="truncate">{l.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Due Date Pill */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setIsDateMenuOpen(!isDateMenuOpen);
+                setIsPriorityMenuOpen(false);
+                setIsListMenuOpen(false);
+                setIsTimeMenuOpen(false);
+              }}
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-medium border transition cursor-pointer ${
+                detail.dueDate
+                  ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] border-[var(--color-brand)]/40 font-bold'
+                  : 'bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
+              }`}
+            >
+              <Calendar className="w-3 h-3" />
+              <span>
+                {detail.dueDate
+                  ? isToday
+                    ? 'Today'
+                    : isTomorrow
+                    ? 'Tomorrow'
+                    : formattedDueDate
+                  : 'Due Date'}
+              </span>
+            </button>
+
+            {isDateMenuOpen && (
+              <div
+                className="absolute left-0 top-full mt-1.5 z-40 w-52 bg-[var(--color-surface-raised)] rounded-2xl border border-[var(--color-border-default)] shadow-2xl p-2 text-xs space-y-2 animate-in fade-in zoom-in-95 duration-100"
+                onMouseLeave={() => setIsDateMenuOpen(false)}
+              >
+                <div className="grid grid-cols-2 gap-1 pb-1 border-b border-[var(--color-border-subtle)]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      store.updateTaskProperties(detail.id, { dueDate: new Date().toISOString().slice(0, 10) });
+                      setIsDateMenuOpen(false);
+                    }}
+                    className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-soft)] hover:bg-[var(--color-brand-soft)] hover:text-[var(--color-brand-on-soft)] text-center font-semibold cursor-pointer transition"
+                  >
+                    Today
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tom = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+                      store.updateTaskProperties(detail.id, { dueDate: tom });
+                      setIsDateMenuOpen(false);
+                    }}
+                    className="px-2 py-1.5 rounded-lg bg-[var(--color-surface-soft)] hover:bg-[var(--color-brand-soft)] hover:text-[var(--color-brand-on-soft)] text-center font-semibold cursor-pointer transition"
+                  >
+                    Tomorrow
+                  </button>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">Custom Date</span>
+                  <input
+                    type="date"
+                    value={formattedDueDate}
+                    onChange={(e) => {
+                      store.updateTaskProperties(detail.id, { dueDate: e.target.value || null });
+                      setIsDateMenuOpen(false);
+                    }}
+                    className="w-full bg-[var(--color-surface-canvas)] border border-[var(--color-border-default)] rounded-xl px-2.5 py-1.5 text-xs text-[var(--color-text-strong)] focus:outline-none cursor-pointer"
+                  />
+                </div>
+
+                {detail.dueDate && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      store.updateTaskProperties(detail.id, { dueDate: null });
+                      setIsDateMenuOpen(false);
+                    }}
+                    className="w-full py-1 text-center text-[11px] text-[var(--color-error)] hover:underline font-medium cursor-pointer"
+                  >
+                    Clear Date
+                  </button>
                 )}
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* List Picker */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">List</label>
-              <select
-                value={detail.listId || 'inbox'}
-                onChange={(e) => store.updateTaskProperties(detail.id, { listId: e.target.value === 'inbox' ? null : e.target.value })}
-                className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-xl px-2.5 py-1.5 text-xs focus:outline-none text-[var(--color-text-strong)] font-medium cursor-pointer"
+          {/* Due Time Pill */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setIsTimeMenuOpen(!isTimeMenuOpen);
+                setIsPriorityMenuOpen(false);
+                setIsListMenuOpen(false);
+                setIsDateMenuOpen(false);
+              }}
+              className={`flex items-center space-x-1 px-2.5 py-1 rounded-xl text-xs font-medium border transition cursor-pointer ${
+                detail.dueTime
+                  ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] border-[var(--color-brand)]/40 font-bold'
+                  : 'bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]'
+              }`}
+            >
+              <Clock className="w-3 h-3" />
+              <span>{detail.dueTime || 'Time'}</span>
+            </button>
+
+            {isTimeMenuOpen && (
+              <div
+                className="absolute left-0 top-full mt-1.5 z-40 w-44 bg-[var(--color-surface-raised)] rounded-2xl border border-[var(--color-border-default)] shadow-2xl p-2 text-xs space-y-2 animate-in fade-in zoom-in-95 duration-100"
+                onMouseLeave={() => setIsTimeMenuOpen(false)}
               >
-                <option value="inbox">📥 Inbox</option>
-                {store.lists.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    📁 {l.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">Set Time</span>
+                  <input
+                    type="time"
+                    value={detail.dueTime || ''}
+                    onChange={(e) => {
+                      store.updateTaskProperties(detail.id, { dueTime: e.target.value || null });
+                    }}
+                    className="w-full bg-[var(--color-surface-canvas)] border border-[var(--color-border-default)] rounded-xl px-2 py-1 text-xs text-[var(--color-text-strong)] focus:outline-none cursor-pointer"
+                  />
+                </div>
 
-            {/* Due Date */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">Due Date</label>
-              <input
-                type="date"
-                value={detail.dueDate ? new Date(detail.dueDate).toISOString().slice(0, 10) : ''}
-                onChange={(e) => store.updateTaskProperties(detail.id, { dueDate: e.target.value || null })}
-                className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-xl px-2 py-1 text-xs focus:outline-none text-[var(--color-text-strong)] font-medium cursor-pointer"
-              />
-            </div>
-
-            {/* Due Time */}
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">Due Time</label>
-              <input
-                type="time"
-                value={detail.dueTime || ''}
-                onChange={(e) => store.updateTaskProperties(detail.id, { dueTime: e.target.value || null })}
-                className="w-full bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-xl px-2 py-1 text-xs focus:outline-none text-[var(--color-text-strong)] font-medium cursor-pointer"
-              />
-            </div>
+                {detail.dueTime && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      store.updateTaskProperties(detail.id, { dueTime: null });
+                      setIsTimeMenuOpen(false);
+                    }}
+                    className="w-full py-1 text-center text-[11px] text-[var(--color-error)] hover:underline font-medium cursor-pointer"
+                  >
+                    Clear Time
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Live Stopwatch Timer Card */}
-        <div className="p-4 rounded-2xl border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)]/20 space-y-3 shadow-xs">
+        {/* 4. Live Focus Stopwatch Card */}
+        <div className="p-4 rounded-2xl border border-[var(--color-brand)]/30 bg-[var(--color-surface-raised)] space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-brand)] flex items-center space-x-1.5">
               <Clock className="w-3.5 h-3.5" />
-              <span>Server Live Stopwatch</span>
+              <span>Focus Stopwatch</span>
             </span>
-            {isRunningForThis && (
+            {isRunningForThis ? (
               <span className="text-[10px] bg-rose-500 text-white font-bold px-2 py-0.5 rounded-full animate-pulse">
-                {store.isTimerRunning ? 'RUNNING' : 'PAUSED'}
+                {store.isTimerRunning ? 'RECORDING' : 'PAUSED'}
               </span>
+            ) : (
+              detail.totalTimeFormatted && (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  {detail.totalTimeFormatted} total
+                </span>
+              )
             )}
           </div>
 
@@ -277,7 +452,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
               {isRunningForThis ? store.formattedTimerElapsed : '00:00'}
             </div>
             <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-              Total Focus Recorded: <strong className="text-[var(--color-text-strong)]">{detail.totalTimeFormatted || '0m'}</strong>
+              Total Time Spent: <strong className="text-[var(--color-text-strong)]">{detail.totalTimeFormatted || '0m'}</strong>
             </p>
           </div>
 
@@ -343,11 +518,131 @@ export const TaskDetailPane = observer(({ store }: Props) => {
           </div>
         </div>
 
-        {/* Markdown Notes & Description */}
-        <div className="space-y-2">
+        {/* 5. Subtasks Breakdown & Checklist (TickTick Experience) */}
+        <div className="p-4 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)] flex items-center space-x-1.5">
-              <FileText className="w-3 h-3" />
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-strong)] flex items-center space-x-1.5">
+              <GitBranch className="w-3.5 h-3.5 text-[var(--color-brand)]" />
+              <span>Subtasks ({detail.subtasks.length})</span>
+            </span>
+            {detail.subtasks.length > 0 && (
+              <span className="text-[11px] font-bold text-[var(--color-brand)] bg-[var(--color-brand-soft)]/50 px-2 py-0.5 rounded-full">
+                {completedSubtasksCount}/{detail.subtasks.length} ({subtasksPercent}%)
+              </span>
+            )}
+          </div>
+
+          {/* Subtask Progress bar */}
+          {detail.subtasks.length > 0 && (
+            <div className="h-1.5 w-full rounded-full bg-[var(--color-surface-soft)] overflow-hidden">
+              <div
+                className="h-full bg-[var(--color-brand)] transition-all duration-300 rounded-full"
+                style={{ width: `${subtasksPercent}%` }}
+              />
+            </div>
+          )}
+
+          {/* Subtasks List */}
+          <div className="space-y-1.5">
+            {detail.subtasks.map((subtask) => (
+              <div
+                key={subtask.id}
+                onClick={() => store.selectTask(subtask.id)}
+                className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--color-surface-canvas)] hover:bg-[var(--color-surface-soft)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] text-xs group/sub cursor-pointer transition shadow-2xs"
+              >
+                <div className="flex items-center space-x-2 min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      store.toggleTaskStatus(subtask);
+                    }}
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                      subtask.isDone
+                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-2xs'
+                        : 'border-[var(--color-border-strong)] hover:border-emerald-500'
+                    }`}
+                  >
+                    {subtask.isDone && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                  </button>
+
+                  <span
+                    className={`truncate font-medium hover:text-[var(--color-brand)] transition ${
+                      subtask.isDone
+                        ? 'line-through text-[var(--color-text-muted)]'
+                        : 'text-[var(--color-text-strong)]'
+                    }`}
+                  >
+                    {subtask.title}
+                  </span>
+                </div>
+
+                <div className="flex items-center space-x-1 opacity-0 group-hover/sub:opacity-100 transition">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      store.startTimerForTask(subtask.id);
+                    }}
+                    title="Start timer for subtask"
+                    className="p-1 hover:text-[var(--color-brand)] text-[var(--color-text-muted)] cursor-pointer"
+                  >
+                    <Play className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      store.requestConfirmation({
+                        title: 'Delete Subtask',
+                        message: `Are you sure you want to delete "${subtask.title}"?`,
+                        confirmLabel: 'Delete Subtask',
+                        confirmVariant: 'danger',
+                        onConfirm: () => store.deleteTask(subtask.id),
+                      });
+                    }}
+                    className="p-1 hover:text-[var(--color-error)] text-[var(--color-text-muted)] cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                  <div className="text-[var(--color-brand)] pl-0.5">
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Inline Add Subtask Input */}
+          <div className="flex items-center space-x-1.5 pt-1">
+            <input
+              type="text"
+              placeholder="+ Add a subtask (Press Enter)..."
+              value={store.newSubtaskTitle}
+              onChange={(e) => store.setNewSubtaskTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && store.newSubtaskTitle.trim()) {
+                  store.addSubtask(detail.id);
+                }
+              }}
+              className="flex-1 bg-[var(--color-surface-canvas)] border border-[var(--color-border-default)] text-xs rounded-xl px-3 py-1.5 border-none ring-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)]"
+            />
+            <button
+              type="button"
+              onClick={() => store.addSubtask(detail.id)}
+              disabled={!store.newSubtaskTitle.trim()}
+              className="p-1.5 bg-[var(--color-brand)] text-white text-xs font-bold rounded-xl hover:bg-[var(--color-brand-hover)] disabled:opacity-35 transition cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* 6. Markdown Notes & Description */}
+        <div className="p-4 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] space-y-2.5 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-strong)] flex items-center space-x-1.5">
+              <FileText className="w-3.5 h-3.5 text-[var(--color-brand)]" />
               <span>Notes & Description</span>
             </span>
 
@@ -382,16 +677,17 @@ export const TaskDetailPane = observer(({ store }: Props) => {
             <textarea
               rows={4}
               defaultValue={detail.description || ''}
+              key={`desc-${detail.id}`}
               onBlur={(e) => {
                 if (e.target.value !== (detail.description || '')) {
                   store.updateTaskProperties(detail.id, { description: e.target.value });
                 }
               }}
               placeholder="Write detailed notes (Markdown supported)..."
-              className="w-full p-3 text-xs rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] transition cursor-text"
+              className="w-full p-3 text-xs rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] border-none ring-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] transition cursor-text resize-y"
             />
           ) : (
-            <div className="p-3.5 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-soft)]/30 text-xs text-[var(--color-text-body)] min-h-[80px] whitespace-pre-wrap">
+            <div className="p-3 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] text-xs text-[var(--color-text-body)] min-h-[80px] whitespace-pre-wrap">
               {detail.description ? (
                 detail.description
               ) : (
@@ -401,130 +697,21 @@ export const TaskDetailPane = observer(({ store }: Props) => {
           )}
         </div>
 
-        {/* Infinite Subtasks Section */}
-        <div className="space-y-2.5">
+        {/* 7. Recorded Focus Sessions History */}
+        <div className="p-4 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] space-y-3 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)] flex items-center space-x-1.5">
-              <GitBranch className="w-3 h-3" />
-              <span>Subtasks ({detail.subtasks.length})</span>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[var(--color-text-strong)] flex items-center space-x-1.5">
+              <Clock className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Time History ({detail.timeSessions.length})</span>
             </span>
-            {detail.subtasks.length > 0 && (
-              <span className="text-[10px] font-bold text-[var(--color-brand)]">
-                {completedSubtasksCount}/{detail.subtasks.length} ({subtasksPercent}%)
-              </span>
-            )}
-          </div>
 
-          {/* Subtask Progress bar */}
-          {detail.subtasks.length > 0 && (
-            <div className="h-1.5 w-full rounded-full bg-[var(--color-surface-soft)] overflow-hidden">
-              <div
-                className="h-full bg-[var(--color-brand)] transition-all duration-300 rounded-full"
-                style={{ width: `${subtasksPercent}%` }}
-              />
-            </div>
-          )}
-
-          {/* Inline Add Subtask Input */}
-          <div className="flex items-center space-x-1.5">
-            <input
-              type="text"
-              placeholder="+ Add subtask (Press Enter)..."
-              value={store.newSubtaskTitle}
-              onChange={(e) => store.setNewSubtaskTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && store.newSubtaskTitle.trim()) {
-                  store.addSubtask(detail.id);
-                }
-              }}
-              className="flex-1 bg-[var(--color-surface-soft)] border border-[var(--color-border-default)] text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)]"
-            />
-            <button
-              type="button"
-              onClick={() => store.addSubtask(detail.id)}
-              disabled={!store.newSubtaskTitle.trim()}
-              className="p-1.5 bg-[var(--color-brand)] text-white text-xs font-bold rounded-xl hover:bg-[var(--color-brand-hover)] disabled:opacity-35 transition cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Subtasks List - Clicking opens the subtask as the selected task */}
-          <div className="space-y-1">
-            {detail.subtasks.map((subtask) => (
-              <div
-                key={subtask.id}
-                onClick={() => store.selectTask(subtask.id)}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-[var(--color-surface-soft)]/50 hover:bg-[var(--color-surface-soft)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] text-xs group/item cursor-pointer transition"
-              >
-                <div className="flex items-center space-x-2 min-w-0 flex-1">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      store.toggleTaskStatus(subtask);
-                    }}
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                      subtask.isDone
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'border-[var(--color-border-strong)] hover:border-emerald-500'
-                    }`}
-                  >
-                    {subtask.isDone && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                  </button>
-                  <span
-                    className={`truncate font-medium hover:text-[var(--color-brand)] transition ${
-                      subtask.isDone
-                        ? 'line-through text-[var(--color-text-muted)]'
-                        : 'text-[var(--color-text-strong)]'
-                    }`}
-                  >
-                    {subtask.title}
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-1 opacity-0 group-hover/item:opacity-100 transition">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      store.startTimerForTask(subtask.id);
-                    }}
-                    title="Start stopwatch on subtask"
-                    className="p-1 hover:text-[var(--color-brand)] text-[var(--color-text-muted)] cursor-pointer"
-                  >
-                    <Play className="w-3 h-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      store.deleteTask(subtask.id);
-                    }}
-                    className="p-1 hover:text-[var(--color-error)] text-[var(--color-text-muted)] cursor-pointer"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Time Sessions History */}
-        <div className="space-y-2.5 pt-2 border-t border-[var(--color-border-subtle)]">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)] flex items-center space-x-1.5">
-              <Clock className="w-3 h-3" />
-              <span>Time Sessions</span>
-            </span>
             <div className="flex items-center space-x-2">
               <button
                 type="button"
                 onClick={() => store.openAddSessionDialog()}
                 className="text-[11px] text-[var(--color-brand)] hover:underline font-bold cursor-pointer"
               >
-                + Log Time
+                + Log Past Time
               </button>
               {detail.timeSessions.length > 0 && (
                 <button
@@ -540,37 +727,36 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                   }}
                   className="text-[11px] text-[var(--color-error)] hover:underline font-medium cursor-pointer"
                 >
-                  Clear All
+                  Clear
                 </button>
               )}
             </div>
           </div>
 
           {detail.timeSessions.length === 0 ? (
-            <div className="text-center py-4 text-xs text-[var(--color-text-muted)] bg-[var(--color-surface-soft)]/30 rounded-2xl border border-dashed border-[var(--color-border-subtle)]">
+            <div className="text-center py-4 text-xs text-[var(--color-text-muted)] bg-[var(--color-surface-canvas)] rounded-xl border border-dashed border-[var(--color-border-subtle)]">
               No sessions logged yet.
             </div>
           ) : (
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
               {detail.timeSessions.map((session) => (
                 <div
                   key={session.id}
-                  className="p-2.5 rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-soft)]/40 text-xs flex items-center justify-between group/sess"
+                  className="flex items-center justify-between p-2 rounded-xl bg-[var(--color-surface-canvas)] border border-[var(--color-border-subtle)] text-xs group/sess"
                 >
-                  <div className="space-y-0.5 min-w-0 flex-1">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center space-x-2">
-                      <span className="font-bold text-[var(--color-text-strong)] font-mono text-[11px]">
+                      <span className="font-bold text-[var(--color-text-strong)] font-mono">
                         {session.durationFormatted}
                       </span>
                       <span className="text-[10px] text-[var(--color-text-muted)]">
-                        {new Date(session.startTime).toLocaleDateString(undefined, {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                        {new Date(session.startTime).toLocaleDateString()}
                       </span>
                     </div>
                     {session.notes && (
-                      <p className="text-[11px] text-[var(--color-text-muted)] truncate">{session.notes}</p>
+                      <p className="text-[10px] text-[var(--color-text-muted)] truncate mt-0.5">
+                        {session.notes}
+                      </p>
                     )}
                   </div>
 
@@ -578,14 +764,14 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                     <button
                       type="button"
                       onClick={() => store.openEditSessionDialog(session)}
-                      className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] cursor-pointer"
+                      className="p-1 hover:text-[var(--color-brand)] text-[var(--color-text-muted)] cursor-pointer"
                     >
-                      <Edit2 className="w-3 h-3" />
+                      <FileText className="w-3 h-3" />
                     </button>
                     <button
                       type="button"
                       onClick={() => store.deleteSession(session.id)}
-                      className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-error)] cursor-pointer"
+                      className="p-1 hover:text-[var(--color-error)] text-[var(--color-text-muted)] cursor-pointer"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
