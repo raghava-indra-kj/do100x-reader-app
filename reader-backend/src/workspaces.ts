@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { createHash, randomUUID } from "crypto";
 import { requireAuth } from "./auth";
 import { prisma } from "./prisma";
 import { roleAllows, type ReaderRole } from "./reader-space";
@@ -48,7 +49,14 @@ router.get("/", requireAuth, async (req, res, next) => {
             name: true,
             personalOwnerId: true,
             createdAt: true,
-            readerSpace: { select: { id: true, name: true } },
+            readerSpace: {
+              select: {
+                id: true,
+                name: true,
+                preferences: { where: { userId: req.auth!.user.id }, select: { homeDocumentId: true } },
+                documents: { where: { parentId: null, deletedAt: null }, orderBy: { orderKey: "asc" }, take: 1, select: { id: true } },
+              },
+            },
           },
         },
       },
@@ -60,7 +68,11 @@ router.get("/", requireAuth, async (req, res, next) => {
       role: toRole(role),
       isPersonal: workspace.personalOwnerId === req.auth!.user.id,
       createdAt: workspace.createdAt,
-      readerSpace: workspace.readerSpace,
+      readerSpace: workspace.readerSpace && {
+        id: workspace.readerSpace.id,
+        name: workspace.readerSpace.name,
+        homeDocumentId: workspace.readerSpace.preferences[0]?.homeDocumentId ?? workspace.readerSpace.documents[0]?.id ?? null,
+      },
     })));
   } catch (error) {
     next(error);
@@ -77,17 +89,39 @@ router.post("/", requireAuth, async (req, res, next) => {
       res.status(400).json({ message: "name must be between 1 and 255 characters" });
       return;
     }
-    const workspace = await prisma.workspace.create({
-      data: {
-        kind: "team",
-        name,
-        createdById: req.auth!.user.id,
-        members: { create: { userId: req.auth!.user.id, role: "owner" } },
-        readerSpace: { create: { name: "Reader" } },
-      },
-      select: { id: true, name: true, kind: true, readerSpace: { select: { id: true, name: true } } },
+    const workspace = await prisma.$transaction(async (tx) => {
+      const documentId = randomUUID();
+      const revisionId = randomUUID();
+      const markdown = `# ${name}\n\nWelcome to this shared Reader workspace.\n`;
+      return tx.workspace.create({
+        data: {
+          kind: "team",
+          name,
+          createdById: req.auth!.user.id,
+          members: { create: { userId: req.auth!.user.id, role: "owner" } },
+          readerSpace: {
+            create: {
+              name: "Reader",
+              preferences: { create: { userId: req.auth!.user.id, homeDocumentId: documentId } },
+              documents: {
+                create: {
+                  id: documentId,
+                  title: "Home",
+                  orderKey: "0000000000-home",
+                  currentRevisionNumber: 1,
+                  headRevisionId: revisionId,
+                  createdById: req.auth!.user.id,
+                  updatedById: req.auth!.user.id,
+                  revisions: { create: { id: revisionId, revisionNumber: 1, markdown, contentHash: createHash("sha256").update(markdown).digest("hex"), formatVersion: "reader-markdown-v1", createdById: req.auth!.user.id } },
+                },
+              },
+            },
+          },
+        },
+        select: { id: true, name: true, kind: true, readerSpace: { select: { id: true, name: true } } },
+      });
     });
-    res.status(201).json({ ...workspace, role: "owner" });
+    res.status(201).json({ ...workspace, role: "owner", readerSpace: workspace.readerSpace && { ...workspace.readerSpace, homeDocumentId: null } });
   } catch (error) {
     next(error);
   }
