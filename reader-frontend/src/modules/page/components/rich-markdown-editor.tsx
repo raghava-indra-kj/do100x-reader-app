@@ -1,4 +1,5 @@
 import { Crepe } from '@milkdown/crepe';
+import '@milkdown/crepe/theme/common/style.css';
 import '@milkdown/crepe/theme/frame.css';
 import { useEffect, useRef, useState } from 'react';
 
