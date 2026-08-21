@@ -107,19 +107,6 @@ export function UpsertPageDialog({
             return;
         }
 
-        if (initialTitle !== undefined || initialContent !== undefined || initialCategory !== undefined) {
-            setTitle(initialTitle ?? "");
-            setContent(initialContent ?? "");
-            setCategory(initialCategory ?? null);
-            setBaseRevision(1);
-            setEditorMode(preferredEditorMode(initialContent ?? ""));
-            setEditorGeneration((generation) => generation + 1);
-            setMeaningSystemPrompt("");
-            setExplanationSystemPrompt("");
-            setDoubtSystemPrompt("");
-            return;
-        }
-
         if (isEdit && editId) {
             if (loadingRef.current) return;
             loadingRef.current = true;
@@ -138,6 +125,19 @@ export function UpsertPageDialog({
                     setDoubtSystemPrompt(result.data.doubtSystemPrompt ?? "");
                 }
             });
+            return;
+        }
+
+        if (initialTitle !== undefined || initialContent !== undefined || initialCategory !== undefined) {
+            setTitle(initialTitle ?? "");
+            setContent(initialContent ?? "");
+            setCategory(initialCategory ?? null);
+            setBaseRevision(1);
+            setEditorMode(preferredEditorMode(initialContent ?? ""));
+            setEditorGeneration((generation) => generation + 1);
+            setMeaningSystemPrompt("");
+            setExplanationSystemPrompt("");
+            setDoubtSystemPrompt("");
         }
     }, [open, isEdit, editId, page, initialTitle, initialContent, initialCategory]);
 
