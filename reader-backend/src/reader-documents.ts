@@ -549,17 +549,20 @@ router.get("/:documentId/share-links", requireAuth, async (req, res, next) => {
 router.get("/", requireAuth, async (req, res, next) => {
   try {
     const requestedSpaceId = typeof req.query.readerSpaceId === "string" ? req.query.readerSpaceId : undefined;
-    const personal = requestedSpaceId ? null : await ensurePersonalReaderSpace(req.auth!.user.id);
-    const readerSpaceId = requestedSpaceId ?? personal!.readerSpaceId;
+    const parentDocumentId = typeof req.query.parentDocumentId === "string"
+      ? (req.query.parentDocumentId === "null" ? null : req.query.parentDocumentId)
+      : undefined;
+    const parentSpace = !requestedSpaceId && parentDocumentId
+      ? await prisma.reader_document.findFirst({ where: { id: parentDocumentId, deletedAt: null }, select: { readerSpaceId: true } })
+      : null;
+    const personal = requestedSpaceId || parentSpace ? null : await ensurePersonalReaderSpace(req.auth!.user.id);
+    const readerSpaceId = requestedSpaceId ?? parentSpace?.readerSpaceId ?? personal!.readerSpaceId;
     const context = await getReaderSpaceContext(prisma, readerSpaceId, req.auth!.user.id);
     if (!context || !roleAllows(context.role, "viewer")) {
       res.status(404).json({ message: "Reader space not found" });
       return;
     }
 
-    const parentDocumentId = typeof req.query.parentDocumentId === "string"
-      ? (req.query.parentDocumentId === "null" ? null : req.query.parentDocumentId)
-      : undefined;
     const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
     const documents = await prisma.reader_document.findMany({
       where: {
@@ -629,8 +632,11 @@ router.post("/", requireAuth, async (req, res, next) => {
       return;
     }
 
-    const personal = requestedSpaceId ? null : await ensurePersonalReaderSpace(req.auth!.user.id);
-    const readerSpaceId = requestedSpaceId ?? personal!.readerSpaceId;
+    const parentSpace = !requestedSpaceId && parentDocumentId
+      ? await prisma.reader_document.findFirst({ where: { id: parentDocumentId, deletedAt: null }, select: { readerSpaceId: true } })
+      : null;
+    const personal = requestedSpaceId || parentSpace ? null : await ensurePersonalReaderSpace(req.auth!.user.id);
+    const readerSpaceId = requestedSpaceId ?? parentSpace?.readerSpaceId ?? personal!.readerSpaceId;
     const context = await getReaderSpaceContext(prisma, readerSpaceId, req.auth!.user.id);
     if (!context || !roleAllows(context.role, "editor")) {
       res.status(403).json({ message: "You do not have permission to create documents in this Reader space" });

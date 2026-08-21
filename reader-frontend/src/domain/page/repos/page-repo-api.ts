@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 const ReaderDocumentSchema = z.object({
     id: z.string(),
+    readerSpaceId: z.string(),
     parentDocumentId: z.string().nullable(),
     title: z.string(),
     category: z.string().nullable(),
@@ -43,6 +44,7 @@ function canEdit(permission: z.infer<typeof ReaderDocumentSchema>['permission'])
 function toDbPage(document: z.infer<typeof ReaderDocumentSchema>): DbPage {
     return DbPageSchema.parse({
         id: document.id,
+        readerSpaceId: document.readerSpaceId,
         userId: document.revision.createdById,
         parentPageId: document.parentDocumentId,
         title: document.title,

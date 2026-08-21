@@ -25,6 +25,7 @@ import type { Section } from '@domain/page/models/section';
 import { PageSettingsDialog } from './settings';
 import { ShareDialog } from './share-dialog';
 import { MotivationReelsDialog } from '@modules/core/ui/components/motivation-reels';
+import { WorkspaceSwitcher } from './workspace-switcher';
 
 function collectLevels(sections: Section[]): Set<number> {
     const levels = new Set<number>();
@@ -114,6 +115,7 @@ export function PageAppbar() {
                 </Observer>
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
+                <Observer>{() => <WorkspaceSwitcher activeReaderSpaceId={store.optCurrentPage?.readerSpaceId ?? null} />}</Observer>
                 <Observer>
                     {() => {
                         const section = store.currentSection;

@@ -4,6 +4,7 @@ export { Section } from './section';
 
 export class Page {
     readonly id: string;
+    readonly readerSpaceId: string | null;
     readonly userId: string;
     readonly parentPageId: string | null;
     readonly title: string;
@@ -21,6 +22,7 @@ export class Page {
 
     constructor(params: {
         id: string;
+        readerSpaceId?: string | null;
         userId?: string;
         parentPageId: string | null;
         title: string;
@@ -37,6 +39,7 @@ export class Page {
         doubtSystemPrompt?: string | null;
     }) {
         this.id = params.id;
+        this.readerSpaceId = params.readerSpaceId ?? null;
         this.userId = params.userId ?? '';
         this.parentPageId = params.parentPageId;
         this.title = params.title;

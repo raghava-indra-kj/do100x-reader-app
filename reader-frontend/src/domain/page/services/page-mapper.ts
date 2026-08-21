@@ -38,6 +38,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
 
     const page = new Page({
         id: dbPage.id,
+        readerSpaceId: dbPage.readerSpaceId,
         userId: dbPage.userId,
         parentPageId: dbPage.parentPageId,
         title: dbPage.title,

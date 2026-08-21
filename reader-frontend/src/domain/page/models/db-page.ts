@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const DbPageSchema = z.object({
     id: z.string(),
+    readerSpaceId: z.string().optional(),
     userId: z.string(),
     parentPageId: z.string().nullable(),
     title: z.string(),
