@@ -1,5 +1,6 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { prisma } from "../prisma";
+import { ensurePersonalReaderSpace } from "../reader-space";
 
 export function registerResources(server: McpServer, userId: string) {
   // 1. All Pages Index
@@ -11,9 +12,10 @@ export function registerResources(server: McpServer, userId: string) {
       mimeType: "application/json",
     },
     async (uri) => {
-      const pages = await prisma.page.findMany({
+      const space = await ensurePersonalReaderSpace(userId);
+      const pages = await prisma.reader_document.findMany({
         where: {
-          userId,
+          readerSpaceId: space.readerSpaceId,
           deletedAt: null,
         },
         select: {
@@ -21,10 +23,10 @@ export function registerResources(server: McpServer, userId: string) {
           parentId: true,
           title: true,
           category: true,
-          childrenCount: true,
+          currentRevisionNumber: true,
           updatedAt: true,
         },
-        orderBy: { sortOrder: "asc" },
+        orderBy: { orderKey: "asc" },
       });
 
       return {
@@ -48,8 +50,10 @@ export function registerResources(server: McpServer, userId: string) {
       mimeType: "text/markdown",
     },
     async (uri, { pageId }) => {
-      const page = await prisma.page.findFirst({
-        where: { id: String(pageId), userId, deletedAt: null },
+      const space = await ensurePersonalReaderSpace(userId);
+      const page = await prisma.reader_document.findFirst({
+        where: { id: String(pageId), readerSpaceId: space.readerSpaceId, deletedAt: null },
+        include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } },
       });
 
       if (!page) {
@@ -61,15 +65,14 @@ id: ${page.id}
 title: ${page.title}
 category: ${page.category ?? "none"}
 parentId: ${page.parentId ?? "root"}
-childrenCount: ${page.childrenCount}
-isPublic: ${page.isPublic}
+revisionNumber: ${page.currentRevisionNumber}
 updatedAt: ${page.updatedAt.toISOString()}
 ---
 
 # ${page.title}
 
 `;
-      const fullText = header + (page.content ?? "");
+      const fullText = header + (page.revisions[0]?.markdown ?? "");
 
       return {
         contents: [
@@ -92,8 +95,14 @@ updatedAt: ${page.updatedAt.toISOString()}
       mimeType: "application/json",
     },
     async (uri, { pageId }) => {
-      const comments = await prisma.comment.findMany({
-        where: { pageId: String(pageId), userId },
+      const space = await ensurePersonalReaderSpace(userId);
+      const page = await prisma.reader_document.findFirst({
+        where: { id: String(pageId), readerSpaceId: space.readerSpaceId, deletedAt: null },
+        select: { id: true },
+      });
+      if (!page) throw new Error(`Document not found: ${pageId}`);
+      const comments = await prisma.reader_document_annotation.findMany({
+        where: { documentId: page.id },
         orderBy: { createdAt: "desc" },
       });
 

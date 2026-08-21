@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../prisma";
+import { ensurePersonalReaderSpace } from "../reader-space";
 
 export function registerPrompts(server: McpServer, userId: string) {
   // 1. Study Guide
@@ -11,19 +12,21 @@ export function registerPrompts(server: McpServer, userId: string) {
       pageId: z.string().describe("The UUID of the root or target page to summarize"),
     },
     async ({ pageId }) => {
-      const page = await prisma.page.findFirst({
-        where: { id: pageId, userId, deletedAt: null },
+      const space = await ensurePersonalReaderSpace(userId);
+      const page = await prisma.reader_document.findFirst({
+        where: { id: pageId, readerSpaceId: space.readerSpaceId, deletedAt: null },
+        include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } },
       });
 
-      const subpages = await prisma.page.findMany({
-        where: { parentId: pageId, userId, deletedAt: null },
-        select: { title: true, content: true },
+      const subpages = await prisma.reader_document.findMany({
+        where: { parentId: pageId, readerSpaceId: space.readerSpaceId, deletedAt: null },
+        include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } },
       });
 
       const contentBlock = [
         `Main Page: ${page?.title ?? "Untitled"}`,
-        page?.content ?? "",
-        ...subpages.map((s) => `Subpage: ${s.title}\n${s.content ?? ""}`),
+        page?.revisions[0]?.markdown ?? "",
+        ...subpages.map((s) => `Subpage: ${s.title}\n${s.revisions[0]?.markdown ?? ""}`),
       ].join("\n\n---\n\n");
 
       return {
@@ -57,8 +60,10 @@ ${contentBlock}`,
       sectionOrText: z.string().describe("The text or heading to explain"),
     },
     async ({ pageId, sectionOrText }) => {
-      const page = await prisma.page.findFirst({
-        where: { id: pageId, userId, deletedAt: null },
+      const space = await ensurePersonalReaderSpace(userId);
+      const page = await prisma.reader_document.findFirst({
+        where: { id: pageId, readerSpaceId: space.readerSpaceId, deletedAt: null },
+        include: { revisions: { orderBy: { revisionNumber: "desc" }, take: 1 } },
       });
 
       return {
@@ -69,7 +74,7 @@ ${contentBlock}`,
               type: "text",
               text: `I am reading the page "${page?.title ?? "Document"}".
 
-Context:\n${page?.content ?? ""}\n\nCan you explain the following concept/section clearly with real-world analogies, examples, and step-by-step breakdown?\n\nTarget Concept: ${sectionOrText}`,
+Context:\n${page?.revisions[0]?.markdown ?? ""}\n\nCan you explain the following concept/section clearly with real-world analogies, examples, and step-by-step breakdown?\n\nTarget Concept: ${sectionOrText}`,
             },
           },
         ],

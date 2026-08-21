@@ -45,7 +45,7 @@ Documents are private to their workspace by default. Workspace roles support tea
 2. Deploy the backend and run `npx prisma db push` / `npx prisma generate`.
 3. Run `npm run data:migrate-reader-documents` from `reader-backend`.
 4. Deploy the frontend and verify a migrated document, revision history, and Google sign-in.
-5. Keep legacy tables read-only during the transition. The browser page API is retired and legacy Reader MCP write tools are intentionally unavailable; do not remove legacy tables until the document-native MCP and vocabulary integrations are released and the retention window has passed.
+5. Keep legacy tables read-only during the transition. The browser page API and active Reader MCP tools use the versioned document model; do not remove legacy tables until the vocabulary integration has moved and the retention window has passed.
 
 The migration is safe to re-run and does not duplicate document revisions or annotations.
 
