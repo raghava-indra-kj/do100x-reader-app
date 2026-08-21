@@ -1,6 +1,6 @@
 import type { Section } from '@domain/page/models/section';
 import { Page } from '@domain/page/models/page';
-import { getPage, updatePageShareStatus } from '@domain/page/services/pages-service';
+import { getPage } from '@domain/page/services/pages-service';
 import { getComments, getExplanations } from '@domain/comment/services/comments-service';
 import { getVocabulary } from '@domain/vocabulary/services/vocabulary-service';
 import { DataState } from '@lib/utils/data-state';
@@ -87,7 +87,6 @@ export class PageStore {
             vocabCount: observable,
             optCurrentPage: computed,
             isOwner: computed,
-            isPublic: computed,
             flatSections: computed,
             navigableSections: computed,
             currentSection: computed,
@@ -107,7 +106,6 @@ export class PageStore {
             bumpVocabVersion: action,
             loadCommentsCount: action,
             loadVocabCount: action,
-            setPagePublic: action,
         });
     }
 
@@ -153,10 +151,6 @@ export class PageStore {
 
     get isOwner(): boolean {
         return this._currentPage?.isOwner ?? false;
-    }
-
-    get isPublic(): boolean {
-        return this._currentPage?.isPublic ?? false;
     }
 
     get parentPageTitle(): string | null {
@@ -248,34 +242,6 @@ export class PageStore {
         if (!current) return;
         const next = this.navigableSections[this.navigableSections.indexOf(current) + 1];
         if (next) this.setCurrentSection(next);
-    }
-
-    async setPagePublic(isPublic: boolean) {
-        const result = await updatePageShareStatus({ pageId: this.pageId, isPublic });
-        if (result.ok) {
-            runInAction(() => {
-                if (this._currentPage) {
-                    this._currentPage = new Page({
-                        id: this._currentPage.id,
-                        userId: this._currentPage.userId,
-                        parentPageId: this._currentPage.parentPageId,
-                        title: this._currentPage.title,
-                        content: this._currentPage.content,
-                        category: this._currentPage.category,
-                        createdAt: this._currentPage.createdAt,
-                        updatedAt: this._currentPage.updatedAt,
-                        sections: this._currentPage.sections,
-                        childrenCount: this._currentPage.childrenCount,
-                        isPublic: result.data.isPublic,
-                        isOwner: this._currentPage.isOwner,
-                        meaningSystemPrompt: this._currentPage.meaningSystemPrompt,
-                        explanationSystemPrompt: this._currentPage.explanationSystemPrompt,
-                        doubtSystemPrompt: this._currentPage.doubtSystemPrompt,
-                    });
-                }
-            });
-        }
-        return result;
     }
 
     async loadPage() {

@@ -31,24 +31,6 @@ function findYaml(tree: Root): YamlNode | null {
  * ```
  * → `{ title: "My Post", tags: ["a", "b"] }`
  */
-function parseFallbackFrontmatter(yamlStr: string): MdFrontmatter {
-    const result: Record<string, unknown> = {};
-    const lines = yamlStr.split(/\r?\n/);
-    for (const line of lines) {
-        const match = line.match(/^([A-Za-z0-9_-]+)\s*:\s*(.*)$/);
-        if (match) {
-            const key = match[1].trim();
-            let val = match[2].trim();
-            if ((val.startsWith('"') && val.endsWith('"') && val.length >= 2) ||
-                (val.startsWith("'") && val.endsWith("'") && val.length >= 2)) {
-                val = val.slice(1, -1);
-            }
-            result[key] = val;
-        }
-    }
-    return result as MdFrontmatter;
-}
-
 export function extractFrontmatter(tree: Root): MdFrontmatter | null {
     const node = findYaml(tree);
     if (!node || !node.value.trim()) return null;
@@ -56,13 +38,16 @@ export function extractFrontmatter(tree: Root): MdFrontmatter | null {
     let parsed: unknown;
     try {
         parsed = load(node.value, { schema: JSON_SCHEMA });
-    } catch {
-        parsed = parseFallbackFrontmatter(node.value);
+    } catch (error) {
+        // Silently recovering to a partial regex parse corrupts user metadata:
+        // a malformed document can otherwise look valid while losing fields.
+        throw new MdParseError("Invalid YAML in front matter", { cause: error });
     }
 
     if (parsed == null) return null;
     if (typeof parsed !== "object" || Array.isArray(parsed)) {
-        return parseFallbackFrontmatter(node.value);
+        const kind = Array.isArray(parsed) ? "array" : typeof parsed;
+        throw new MdParseError(`Front matter must be a mapping, got ${kind}`);
     }
     return parsed as MdFrontmatter;
 }

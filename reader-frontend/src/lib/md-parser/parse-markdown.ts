@@ -1,15 +1,19 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkFrontmatter from "remark-frontmatter";
+import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
 import { MdParseError, type MdDocument, type ParseResult } from "./types";
 import { extractFrontmatter } from "./internal/frontmatter";
 import { buildSections } from "./internal/sections";
 
 /**
- * Shared remark processor with frontmatter support.
+ * Reader Markdown parser. Its syntax profile intentionally mirrors
+ * @reader/md-ast and the rendering pipeline: CommonMark, YAML frontmatter,
+ * GitHub Flavored Markdown, and inline/display math.
  * Created once at module level — safe to reuse across calls since parse() is stateless.
  */
-const processor = unified().use(remarkParse).use(remarkFrontmatter);
+const processor = unified().use(remarkParse).use(remarkFrontmatter).use(remarkGfm).use(remarkMath);
 
 /**
  * Parses a markdown string into a structured MdDocument.

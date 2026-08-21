@@ -19,6 +19,222 @@ model user_account {
   updatedAt      DateTime           @updatedAt @db.DateTime(6)
   sessions       auth_session[]
   readerProfile  reader_profile?
+  createdWorkspaces workspace[] @relation("workspace_creator")
+  personalWorkspace workspace? @relation("personal_workspace_owner")
+  workspaceMemberships workspace_member[]
+  readerPreferences reader_member_preference[]
+  createdReaderDocuments reader_document[] @relation("reader_document_created_by")
+  updatedReaderDocuments reader_document[] @relation("reader_document_updated_by")
+  documentGrants reader_document_grant[] @relation("reader_document_grant_user")
+}
+
+// Shared tenancy boundary for Reader, Tasks, and future applications. Every
+// account receives a personal workspace; teams become additional workspaces
+// instead of changing application-owned rows from userId to teamId later.
+model workspace {
+  id          String             @id @default(uuid()) @db.VarChar(36)
+  kind        String             @default("personal") @db.VarChar(32)
+  name        String             @db.VarChar(255)
+  createdById String             @db.VarChar(36)
+  personalOwnerId String?        @unique @db.VarChar(36)
+  createdAt   DateTime           @default(now()) @db.DateTime(6)
+  updatedAt   DateTime           @updatedAt @db.DateTime(6)
+  deletedAt   DateTime?          @db.DateTime(6)
+  createdBy   user_account       @relation("workspace_creator", fields: [createdById], references: [id], onDelete: Restrict)
+  personalOwner user_account?    @relation("personal_workspace_owner", fields: [personalOwnerId], references: [id], onDelete: SetNull)
+  members     workspace_member[]
+  readerSpace reader_space?
+
+  @@index([createdById])
+  @@index([deletedAt])
+}
+
+// Membership and role are shared platform concerns, not Reader concerns.
+model workspace_member {
+  id          String       @id @default(uuid()) @db.VarChar(36)
+  workspaceId String       @db.VarChar(36)
+  userId      String       @db.VarChar(36)
+  role        String       @default("viewer") @db.VarChar(32)
+  createdAt   DateTime     @default(now()) @db.DateTime(6)
+  updatedAt   DateTime     @updatedAt @db.DateTime(6)
+  workspace   workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        user_account @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+// Reader-specific installation/configuration inside a shared workspace. Tasks
+// and future apps receive their own app-space tables instead of sharing Reader
+// settings or document state.
+model reader_space {
+  id          String                     @id @default(uuid()) @db.VarChar(36)
+  workspaceId String                     @unique @db.VarChar(36)
+  name        String                     @db.VarChar(255)
+  createdAt   DateTime                   @default(now()) @db.DateTime(6)
+  updatedAt   DateTime                   @updatedAt @db.DateTime(6)
+  workspace   workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documents   reader_document[]
+  preferences reader_member_preference[]
+  propertyDefinitions reader_property_definition[]
+}
+
+// Reader navigation state belongs to a user in a Reader space, never to the
+// application-independent user_account row.
+model reader_member_preference {
+  readerSpaceId  String       @db.VarChar(36)
+  userId         String       @db.VarChar(36)
+  homeDocumentId String?      @db.VarChar(36)
+  createdAt      DateTime     @default(now()) @db.DateTime(6)
+  updatedAt      DateTime     @updatedAt @db.DateTime(6)
+  readerSpace    reader_space @relation(fields: [readerSpaceId], references: [id], onDelete: Cascade)
+  user           user_account @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([readerSpaceId, userId])
+  @@index([userId])
+}
+
+// Stable document identity and hierarchy. Markdown itself is deliberately not
+// stored here: every saved body lives in an immutable revision below.
+model reader_document {
+  id                    String                         @id @default(uuid()) @db.VarChar(36)
+  readerSpaceId         String                         @db.VarChar(36)
+  parentId              String?                        @db.VarChar(36)
+  title                 String                         @db.VarChar(1000)
+  category              String?                        @db.VarChar(255)
+  meaningSystemPrompt   String?                        @db.Text
+  explanationSystemPrompt String?                      @db.Text
+  doubtSystemPrompt     String?                        @db.Text
+  orderKey              String                         @default("h") @db.VarChar(64)
+  visibility            String                         @default("workspace") @db.VarChar(32)
+  currentRevisionNumber Int                            @default(0)
+  headRevisionId        String?                        @db.VarChar(36)
+  legacyPageId          String?                        @unique @db.VarChar(36)
+  createdById           String                         @db.VarChar(36)
+  updatedById           String                         @db.VarChar(36)
+  createdAt             DateTime                       @default(now()) @db.DateTime(6)
+  updatedAt             DateTime                       @updatedAt @db.DateTime(6)
+  deletedAt             DateTime?                      @db.DateTime(6)
+  readerSpace           reader_space                   @relation(fields: [readerSpaceId], references: [id], onDelete: Cascade)
+  createdBy             user_account                   @relation("reader_document_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy             user_account                   @relation("reader_document_updated_by", fields: [updatedById], references: [id], onDelete: Restrict)
+  revisions             reader_document_revision[]
+  propertyValues        reader_document_property_value[]
+  grants                reader_document_grant[]
+  shareLinks            reader_document_share_link[]
+  annotations           reader_document_annotation[]
+
+  @@index([readerSpaceId, parentId, orderKey])
+  @@index([parentId])
+  @@index([deletedAt])
+}
+
+// Immutable Markdown snapshots. The pair (documentId, revisionNumber) is the
+// optimistic-concurrency contract exposed to every writer, including MCP.
+model reader_document_revision {
+  id             String          @id @default(uuid()) @db.VarChar(36)
+  documentId     String          @db.VarChar(36)
+  revisionNumber Int
+  parentRevisionId String?       @db.VarChar(36)
+  markdown       String          @db.LongText
+  contentHash    String          @db.Char(64)
+  formatVersion  String          @default("reader-markdown-v1") @db.VarChar(64)
+  createdById    String          @db.VarChar(36)
+  createdAt      DateTime        @default(now()) @db.DateTime(6)
+  document       reader_document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, revisionNumber])
+  @@index([documentId, createdAt])
+  @@index([contentHash])
+}
+
+// Typed, workspace-owned property definitions replace unvalidated EAV keys.
+// valueJson is validated by the API against valueType before persistence.
+model reader_property_definition {
+  id            String                           @id @default(uuid()) @db.VarChar(36)
+  readerSpaceId String                           @db.VarChar(36)
+  key           String                           @db.VarChar(128)
+  label         String                           @db.VarChar(255)
+  valueType     String                           @db.VarChar(32)
+  configJson    Json?
+  createdAt     DateTime                         @default(now()) @db.DateTime(6)
+  updatedAt     DateTime                         @updatedAt @db.DateTime(6)
+  readerSpace   reader_space                     @relation(fields: [readerSpaceId], references: [id], onDelete: Cascade)
+  values        reader_document_property_value[]
+
+  @@unique([readerSpaceId, key])
+}
+
+model reader_document_property_value {
+  documentId   String                     @db.VarChar(36)
+  definitionId String                     @db.VarChar(36)
+  valueJson    Json
+  createdAt    DateTime                   @default(now()) @db.DateTime(6)
+  updatedAt    DateTime                   @updatedAt @db.DateTime(6)
+  document     reader_document            @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  definition   reader_property_definition @relation(fields: [definitionId], references: [id], onDelete: Cascade)
+
+  @@id([documentId, definitionId])
+  @@index([definitionId])
+}
+
+// A direct grant is useful for selective internal sharing. It is deliberately
+// separate from workspace membership and does not make a document user-owned.
+model reader_document_grant {
+  id          String          @id @default(uuid()) @db.VarChar(36)
+  documentId  String          @db.VarChar(36)
+  userId      String          @db.VarChar(36)
+  role        String          @default("viewer") @db.VarChar(32)
+  createdById String          @db.VarChar(36)
+  createdAt   DateTime        @default(now()) @db.DateTime(6)
+  updatedAt   DateTime        @updatedAt @db.DateTime(6)
+  document    reader_document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  account     user_account    @relation("reader_document_grant_user", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, userId])
+  @@index([userId])
+}
+
+// Share-link tokens are random secrets whose SHA-256 hash is stored. Links
+// grant read-only access and can be expired or revoked without changing a
+// document's workspace visibility.
+model reader_document_share_link {
+  id          String          @id @default(uuid()) @db.VarChar(36)
+  documentId  String          @db.VarChar(36)
+  tokenHash   String          @unique @db.Char(64)
+  createdById String          @db.VarChar(36)
+  expiresAt   DateTime?       @db.DateTime(6)
+  revokedAt   DateTime?       @db.DateTime(6)
+  createdAt   DateTime        @default(now()) @db.DateTime(6)
+  document    reader_document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@index([expiresAt])
+}
+
+// Revision-aware anchors make comments resilient to normal editing. Exact
+// quote/context supports re-anchoring if a later revision moves the selection.
+model reader_document_annotation {
+  id               String          @id @default(uuid()) @db.VarChar(36)
+  legacyCommentId  String?         @unique @db.VarChar(36)
+  documentId       String          @db.VarChar(36)
+  revisionId       String          @db.VarChar(36)
+  authorId         String          @db.VarChar(36)
+  startOffset      Int
+  endOffset        Int
+  exactQuote       String          @db.Text
+  prefix           String?         @db.Text
+  suffix           String?         @db.Text
+  body             String          @db.Text
+  sectionTitle     String?         @db.VarChar(1000)
+  linkedDocumentId String?         @db.VarChar(36)
+  isExplanation    Boolean         @default(false)
+  resolvedAt       DateTime?       @db.DateTime(6)
+  createdAt        DateTime        @default(now()) @db.DateTime(6)
+  updatedAt        DateTime        @updatedAt @db.DateTime(6)
+  document         reader_document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, revisionId])
 }
 
 // Reader-specific state. Keeping this distinct lets another app (for example,

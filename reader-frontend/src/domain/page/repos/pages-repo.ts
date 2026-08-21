@@ -22,15 +22,11 @@ export interface IPagesRepo {
         title: string;
         content: string;
         category: string | null;
+        baseRevision: number;
         meaningSystemPrompt?: string;
         explanationSystemPrompt?: string;
         doubtSystemPrompt?: string;
     }): AsyncResult<void, AppError>;
-
-    updateShareStatus(params: {
-        pageId: string;
-        isPublic: boolean;
-    }): AsyncResult<{ isPublic: boolean }, AppError>;
 
     deletePage(params: { pageId: string }): AsyncResult<void, AppError>;
 

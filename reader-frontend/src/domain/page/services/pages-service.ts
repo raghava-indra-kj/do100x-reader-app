@@ -47,6 +47,7 @@ export async function editPage(
         title: string;
         content: string;
         category: string | null;
+        baseRevision: number;
         meaningSystemPrompt?: string;
         explanationSystemPrompt?: string;
         doubtSystemPrompt?: string;
@@ -59,13 +60,6 @@ export async function editPage(
     const result = await repo.editPage(params);
     if (!result.ok) return result;
     return ok(undefined);
-}
-
-export async function updatePageShareStatus(
-    params: { pageId: string; isPublic: boolean }
-): AsyncResult<{ isPublic: boolean }, AppError> {
-    const repo = container.get<IPagesRepo>(TYPES.IPagesRepo);
-    return repo.updateShareStatus(params);
 }
 
 export async function deletePage(

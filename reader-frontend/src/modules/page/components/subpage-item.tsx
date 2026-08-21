@@ -1,6 +1,6 @@
 import { pagesPageWithIdRouteValue } from '@boot/routes';
 import type { PageListItem } from '@domain/page/models/page-list-item';
-import { Trash2, GripVertical, Pencil, Globe } from 'lucide-react';
+import { Trash2, GripVertical, Pencil } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
@@ -64,11 +64,6 @@ export const SubpageItem = observer(function SubpageItem({ page, onDeleted, pare
                         <span className="text-sm text-[var(--color-text-body)] hover:text-[var(--color-text-strong)] break-words">
                             {page.title}
                         </span>
-                        {page.isPublic && (
-                            <span className="inline-flex items-center text-[10px] text-emerald-600 dark:text-emerald-400" title="Public subpage">
-                                <Globe size={11} />
-                            </span>
-                        )}
                     </div>
                     {page.category && (
                         <span className="text-[11px] text-[var(--color-text-subtle)] leading-tight">{page.category}</span>

@@ -15,7 +15,6 @@ export function toPageListItem(db: DbPageListItem): PageListItem {
         title: db.title,
         category: db.category,
         sortOrder: db.sortOrder,
-        isPublic: db.isPublic,
         createdAt: db.createdAt,
         updatedAt: db.updatedAt
     });
@@ -48,8 +47,8 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         updatedAt: dbPage.updatedAt,
         sections,
         childrenCount: dbPage.childrenCount,
-        isPublic: dbPage.isPublic,
         isOwner: dbPage.isOwner,
+        revisionNumber: dbPage.revisionNumber,
         meaningSystemPrompt: dbPage.meaningSystemPrompt,
         explanationSystemPrompt: dbPage.explanationSystemPrompt,
         doubtSystemPrompt: dbPage.doubtSystemPrompt,

@@ -13,16 +13,40 @@ Reader uses Google Identity Services for authentication. It does not use Firebas
 
    The client ID is public by design. Do not put a Google client secret in either file; this sign-in flow does not need one. Set `APP_ORIGIN` in the backend `.env` to the Vite/deployed browser origin (comma-separate multiple origins).
 
-4. Apply the intentionally clean schema change:
+4. Apply the schema and generate the Prisma client:
 
    ```powershell
-   npm run db:reset
+   cd reader-backend
+   npx prisma db push
+   npx prisma generate
    ```
 
-   This drops the legacy username/password data and recreates the database. It is intentional for this project’s small, disposable data set.
+   For an existing installation, take a database backup, deploy this schema, then run the idempotent Reader migration once:
+
+   ```powershell
+   npm run data:migrate-reader-documents
+   ```
+
+   Do not use `db:reset` in a deployed environment. The migration preserves legacy page IDs, content, properties, comments, and the home-page choice while moving Reader data to versioned documents.
 
 ## Identity model
 
-`user_account` is application-independent and stores only Google identity/profile data. `reader_profile` stores Reader-only navigation state, including the default home page. Tasks and future applications can reference the account ID while owning their own profile, membership, workspace, and authorization models.
+`user_account` is application-independent and stores only Google identity/profile data. A `workspace` is the tenancy boundary shared by Reader, Tasks, and future applications. `reader_space` is Reader's installation inside a workspace; `reader_member_preference` holds a person's Reader navigation state such as their home document. Tasks and future applications can reference the account and workspace IDs while owning their own app data.
+
+## Reader documents and Markdown
+
+Markdown is the canonical document format. Each document has a stable ID and immutable revision snapshots; writes require the revision that the editor started from, so a stale save returns a conflict instead of overwriting another editor. The visual editor is a Markdown projection, not a second content format. The supported Reader Markdown profile is CommonMark with YAML frontmatter, GitHub Flavored Markdown (tables/task lists/strikethrough), and inline/display math.
+
+Documents are private to their workspace by default. Workspace roles support teams, direct grants support a single document's viewer/editor access, and share links are opaque, hashed, read-only, and revocable. Share links never include descendant documents implicitly.
+
+## Deploying the data-model transition
+
+1. Back up the database.
+2. Deploy the backend and run `npx prisma db push` / `npx prisma generate`.
+3. Run `npm run data:migrate-reader-documents` from `reader-backend`.
+4. Deploy the frontend and verify a migrated document, revision history, and Google sign-in.
+5. Keep legacy tables read-only during the transition. The browser page API is retired and legacy Reader MCP write tools are intentionally unavailable; do not remove legacy tables until the document-native MCP and vocabulary integrations are released and the retention window has passed.
+
+The migration is safe to re-run and does not duplicate document revisions or annotations.
 
 Browser sessions are opaque, hashed server-side tokens stored in HTTP-only, SameSite cookies. The browser does not persist user identity in local storage or send a user-ID header. MCP access uses a separately generated high-entropy token that can be rotated from Settings.

@@ -77,6 +77,28 @@ describe("parseMarkdown — frontmatter", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseMarkdown — sections", () => {
+    it("keeps GFM tables, task lists, and math within their heading section", () => {
+        const source = [
+            "## Study plan",
+            "",
+            "- [x] Read the paper",
+            "",
+            "| Topic | Status |",
+            "| --- | --- |",
+            "| Parsing | Done |",
+            "",
+            "Inline $E=mc^2$ and:",
+            "",
+            "$$",
+            "a^2 + b^2 = c^2",
+            "$$",
+        ].join("\n");
+
+        const doc = parseMarkdown(source);
+        expect(doc.sections).toHaveLength(1);
+        expect(doc.sections[0].content).toBe(source.split("\n").slice(2).join("\n"));
+    });
+
     it("returns empty sections for empty string", () => {
         const doc = parseMarkdown("");
         expect(doc.sections).toEqual([]);

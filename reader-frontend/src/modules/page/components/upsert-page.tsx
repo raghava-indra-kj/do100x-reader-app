@@ -10,12 +10,19 @@ import { toast } from "@modules/core/ui/primitives/toast/toast";
 import { pagesPageWithIdRouteValue } from "@boot/routes";
 import { setDialogConsuming } from "../clipboard-paste";
 import { useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { usePageStore } from "../store";
 import { useThemeStore } from "@modules/core/theme";
 import { PageColorSchema } from "../theme/page-color-schema";
 import { MarkdownRenderer } from "@reader/md-view";
 import { observer } from "mobx-react-lite";
+
+// Milkdown is needed only when the author opts into visual editing. Keeping it
+// out of the normal reader chunk avoids charging every document view for the
+// editor's ProseMirror runtime.
+const RichMarkdownEditor = lazy(() =>
+    import("./rich-markdown-editor").then((module) => ({ default: module.RichMarkdownEditor })),
+);
 
 export interface UpsertPageDialogProps {
     open: boolean;
@@ -26,6 +33,15 @@ export interface UpsertPageDialogProps {
     initialTitle?: string;
     initialContent?: string;
     initialCategory?: string | null;
+}
+
+/** Raw HTML is intentionally kept in source mode until it is migrated to a
+ * Reader Markdown directive. This prevents a visual round-trip from changing
+ * unsupported legacy markup invisibly. */
+function preferredEditorMode(markdown: string): "visual" | "markdown" {
+    return /<(?:callout|details|iframe|audio|video|script|style)\b/i.test(markdown)
+        ? "markdown"
+        : "visual";
 }
 
 export function UpsertPageDialog({
@@ -46,6 +62,9 @@ export function UpsertPageDialog({
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
     const [category, setCategory] = useState<string | null>(null);
+    const [baseRevision, setBaseRevision] = useState(1);
+    const [editorMode, setEditorMode] = useState<"visual" | "markdown">("visual");
+    const [editorGeneration, setEditorGeneration] = useState(0);
     const [meaningSystemPrompt, setMeaningSystemPrompt] = useState("");
     const [explanationSystemPrompt, setExplanationSystemPrompt] = useState("");
     const [doubtSystemPrompt, setDoubtSystemPrompt] = useState("");
@@ -61,6 +80,9 @@ export function UpsertPageDialog({
             setTitle("");
             setContent("");
             setCategory(null);
+            setBaseRevision(1);
+            setEditorMode("visual");
+            setEditorGeneration(0);
             setMeaningSystemPrompt("");
             setExplanationSystemPrompt("");
             setDoubtSystemPrompt("");
@@ -76,6 +98,9 @@ export function UpsertPageDialog({
             setTitle(page.title);
             setContent(page.content ?? "");
             setCategory(page.category);
+            setBaseRevision(page.revisionNumber);
+            setEditorMode(preferredEditorMode(page.content ?? ""));
+            setEditorGeneration((generation) => generation + 1);
             setMeaningSystemPrompt(page.meaningSystemPrompt ?? "");
             setExplanationSystemPrompt(page.explanationSystemPrompt ?? "");
             setDoubtSystemPrompt(page.doubtSystemPrompt ?? "");
@@ -86,6 +111,9 @@ export function UpsertPageDialog({
             setTitle(initialTitle ?? "");
             setContent(initialContent ?? "");
             setCategory(initialCategory ?? null);
+            setBaseRevision(1);
+            setEditorMode(preferredEditorMode(initialContent ?? ""));
+            setEditorGeneration((generation) => generation + 1);
             setMeaningSystemPrompt("");
             setExplanationSystemPrompt("");
             setDoubtSystemPrompt("");
@@ -102,6 +130,9 @@ export function UpsertPageDialog({
                     setTitle(result.data.title);
                     setContent(result.data.content ?? "");
                     setCategory(result.data.category);
+                    setBaseRevision(result.data.revisionNumber);
+                    setEditorMode(preferredEditorMode(result.data.content ?? ""));
+                    setEditorGeneration((generation) => generation + 1);
                     setMeaningSystemPrompt(result.data.meaningSystemPrompt ?? "");
                     setExplanationSystemPrompt(result.data.explanationSystemPrompt ?? "");
                     setDoubtSystemPrompt(result.data.doubtSystemPrompt ?? "");
@@ -115,6 +146,8 @@ export function UpsertPageDialog({
             if (extracted.title) setTitle(extracted.title);
             if (extracted.category) setCategory(extracted.category);
             setContent(extracted.content);
+            setEditorMode("markdown");
+            setEditorGeneration((generation) => generation + 1);
             toast.success("Pasted content detected with frontmatter");
         },
         [],
@@ -149,6 +182,7 @@ export function UpsertPageDialog({
                 title: title.trim(),
                 content,
                 category: trimmedCategory,
+                baseRevision,
                 meaningSystemPrompt: meaningPromptValue,
                 explanationSystemPrompt: explanationPromptValue,
                 doubtSystemPrompt: doubtPromptValue,
@@ -178,7 +212,7 @@ export function UpsertPageDialog({
                 setSubmitState(DataState.error(result.error));
             }
         }
-    }, [title, content, category, isEdit, editId, parentPageId, navigate, onOpenChange, store, meaningSystemPrompt, explanationSystemPrompt, doubtSystemPrompt]);
+    }, [title, content, category, baseRevision, isEdit, editId, parentPageId, navigate, onOpenChange, store, meaningSystemPrompt, explanationSystemPrompt, doubtSystemPrompt]);
 
     return (
         <Dialog
@@ -220,14 +254,49 @@ export function UpsertPageDialog({
                     </div>
                 </div>
                 <div className="flex flex-col gap-2 min-h-0 flex-1">
-                    <FormLabel>Content</FormLabel>
-                    <textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        onPaste={handleTextareaPaste}
-                        placeholder="Write your content here…"
-                        className="w-full flex-1 resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-4 py-2.5 text-sm rounded-[var(--radius-md)] transition-colors outline-none overflow-y-auto"
-                    />
+                    <div className="flex items-center justify-between gap-3">
+                        <FormLabel>Content</FormLabel>
+                        <div className="inline-flex rounded-[var(--radius-sm)] border border-[var(--color-border-default)] bg-[var(--color-surface-soft)] p-0.5 text-xs">
+                            <button
+                                type="button"
+                                onClick={() => setEditorMode("visual")}
+                                className={`rounded-[calc(var(--radius-sm)-2px)] px-2.5 py-1 transition-colors ${editorMode === "visual" ? "bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] shadow-sm" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]"}`}
+                            >
+                                Visual
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setEditorMode("markdown")}
+                                className={`rounded-[calc(var(--radius-sm)-2px)] px-2.5 py-1 transition-colors ${editorMode === "markdown" ? "bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] shadow-sm" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]"}`}
+                            >
+                                Markdown
+                            </button>
+                        </div>
+                    </div>
+                    {editorMode === "visual" ? (
+                        <Suspense
+                            fallback={
+                                <div className="flex flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-soft)] text-sm text-[var(--color-text-muted)]">
+                                    Loading visual editor…
+                                </div>
+                            }
+                        >
+                            <RichMarkdownEditor
+                                key={`reader-editor-${editId ?? "new"}-${editorGeneration}`}
+                                documentKey={`${editId ?? "new"}-${editorGeneration}`}
+                                initialMarkdown={content}
+                                onMarkdownChange={setContent}
+                            />
+                        </Suspense>
+                    ) : (
+                        <textarea
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            onPaste={handleTextareaPaste}
+                            placeholder="Write your content here…"
+                            className="w-full flex-1 resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-4 py-2.5 text-sm rounded-[var(--radius-md)] transition-colors outline-none overflow-y-auto font-mono"
+                        />
+                    )}
                 </div>
                 {/* Collapsible AI Prompts section */}
                 <div className="shrink-0 space-y-3">

@@ -14,7 +14,6 @@ import {
     BookOpen, 
     Sparkles, 
     Share2, 
-    Globe 
 } from 'lucide-react';
 import { Observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
@@ -101,12 +100,6 @@ export function PageAppbar() {
                                 <span className="truncate font-semibold text-[var(--color-text-strong)] max-w-[160px]" title={page.title}>
                                     {page.title}
                                 </span>
-                                {page.isPublic && (
-                                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                                        <Globe size={10} />
-                                        <span>Public</span>
-                                    </span>
-                                )}
                                 {section?.title && (
                                     <>
                                         <ChevronRight size={10} className="shrink-0 text-[var(--color-text-muted)]" />
@@ -228,15 +221,15 @@ export function PageAppbar() {
                         if (!isOwner) return null;
                         return (
                             <Button 
-                                variant={store.isPublic ? 'secondary' : 'outlined'}
+                                variant="outlined"
                                 size="sm" 
                                 onClick={() => setShareOpen(true)} 
                                 tooltip="Share page & subpages publicly"
                                 className="flex items-center gap-1.5 px-2.5 text-xs"
                             >
-                                <Share2 size={14} className={store.isPublic ? 'text-emerald-500' : ''} />
+                                <Share2 size={14} />
                                 <span className="hidden sm:inline font-medium">
-                                    {store.isPublic ? 'Shared' : 'Share'}
+                                    Share
                                 </span>
                             </Button>
                         );

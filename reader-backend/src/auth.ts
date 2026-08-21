@@ -109,6 +109,14 @@ export async function attachAuth(req: Request, res: Response, next: NextFunction
       return;
     }
 
+    const preference = await prisma.reader_member_preference.findFirst({
+      where: {
+        userId: session.user.id,
+        readerSpace: { workspace: { personalOwnerId: session.user.id, deletedAt: null } },
+      },
+      select: { homeDocumentId: true },
+    });
+
     req.auth = {
       sessionId: session.id,
       user: {
@@ -116,7 +124,7 @@ export async function attachAuth(req: Request, res: Response, next: NextFunction
         email: session.user.email,
         displayName: session.user.displayName,
         avatarUrl: session.user.avatarUrl,
-        homepageId: session.user.readerProfile?.homepageId ?? null,
+        homepageId: preference?.homeDocumentId ?? null,
       },
     };
     next();

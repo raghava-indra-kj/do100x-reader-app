@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { randomUUID } from "crypto";
 import { OAuth2Client } from "google-auth-library";
 import {
   clearSessionCookie,
@@ -10,6 +9,8 @@ import {
   setSessionCookie,
 } from "./auth";
 import { prisma } from "./prisma";
+import { ensurePersonalReaderHome } from "./reader-space";
+import { migrateLegacyReaderDataForUser } from "./reader-document-migration";
 
 const router = Router();
 
@@ -27,13 +28,13 @@ function toCurrentUser(user: {
   displayName: string;
   avatarUrl: string | null;
   readerProfile: { homepageId: string | null } | null;
-}) {
+}, homepageId: string) {
   return {
     id: user.id,
     email: user.email,
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
-    homepageId: user.readerProfile?.homepageId ?? null,
+    homepageId,
   };
 }
 
@@ -72,38 +73,21 @@ router.post("/google", async (req, res, next) => {
         include: { readerProfile: { select: { homepageId: true } } },
       });
     } else {
-      const userId = randomUUID();
-      const homepageId = randomUUID();
       const now = new Date();
-      user = await prisma.$transaction(async (tx) => {
-        await tx.page.create({
-          data: {
-            id: homepageId,
-            userId,
-            parentId: null,
-            title: "Home",
-            content: null,
-            sortOrder: 1,
-            childrenCount: 0,
-            createdAt: now,
-            updatedAt: now,
-          },
-        });
-        return tx.user_account.create({
-          data: {
-            id: userId,
-            googleSubject: payload.sub,
-            email: payload.email,
-            displayName,
-            avatarUrl,
-            readerProfile: {
-              create: { homepageId, createdAt: now, updatedAt: now },
-            },
-          },
-          include: { readerProfile: { select: { homepageId: true } } },
-        });
+      user = await prisma.user_account.create({
+        data: {
+          googleSubject: payload.sub,
+          email: payload.email,
+          displayName,
+          avatarUrl,
+          readerProfile: { create: { homepageId: null, createdAt: now, updatedAt: now } },
+        },
+        include: { readerProfile: { select: { homepageId: true } } },
       });
     }
+
+    await migrateLegacyReaderDataForUser(user);
+    const homepageId = await ensurePersonalReaderHome(user.id);
 
     const token = createOpaqueToken();
     const expiresAt = getSessionExpiry();
@@ -115,7 +99,7 @@ router.post("/google", async (req, res, next) => {
     ]);
 
     setSessionCookie(res, token);
-    res.status(200).json(toCurrentUser(user));
+    res.status(200).json(toCurrentUser(user, homepageId));
   } catch (error) {
     if (error instanceof Error && error.message === "GOOGLE_CLIENT_ID is not configured") {
       res.status(503).json({ message: "Google Sign-In has not been configured on the server" });
@@ -125,8 +109,26 @@ router.post("/google", async (req, res, next) => {
   }
 });
 
-router.get("/me", requireAuth, (req, res) => {
-  res.json(req.auth!.user);
+router.get("/me", requireAuth, async (req, res, next) => {
+  try {
+    if (req.auth!.user.homepageId) {
+      res.json(req.auth!.user);
+      return;
+    }
+    const user = await prisma.user_account.findUnique({
+      where: { id: req.auth!.user.id },
+      include: { readerProfile: { select: { homepageId: true } } },
+    });
+    if (!user) {
+      res.status(401).json({ message: "Sign in is required" });
+      return;
+    }
+    await migrateLegacyReaderDataForUser(user);
+    const homepageId = await ensurePersonalReaderHome(user.id);
+    res.json(toCurrentUser(user, homepageId));
+  } catch (error) {
+    next(error);
+  }
 });
 
 router.post("/logout", async (req, res, next) => {

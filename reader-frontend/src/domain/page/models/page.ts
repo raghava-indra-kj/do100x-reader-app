@@ -13,8 +13,8 @@ export class Page {
     readonly updatedAt: Date;
     readonly sections: Section[];
     readonly childrenCount: number;
-    readonly isPublic: boolean;
     readonly isOwner: boolean;
+    readonly revisionNumber: number;
     readonly meaningSystemPrompt: string | null;
     readonly explanationSystemPrompt: string | null;
     readonly doubtSystemPrompt: string | null;
@@ -30,8 +30,8 @@ export class Page {
         updatedAt: Date;
         sections: Section[];
         childrenCount: number;
-        isPublic?: boolean;
         isOwner?: boolean;
+        revisionNumber?: number;
         meaningSystemPrompt?: string | null;
         explanationSystemPrompt?: string | null;
         doubtSystemPrompt?: string | null;
@@ -46,8 +46,8 @@ export class Page {
         this.updatedAt = params.updatedAt;
         this.sections = params.sections;
         this.childrenCount = params.childrenCount;
-        this.isPublic = params.isPublic ?? false;
         this.isOwner = params.isOwner ?? true;
+        this.revisionNumber = params.revisionNumber ?? 1;
         this.meaningSystemPrompt = params.meaningSystemPrompt ?? null;
         this.explanationSystemPrompt = params.explanationSystemPrompt ?? null;
         this.doubtSystemPrompt = params.doubtSystemPrompt ?? null;
