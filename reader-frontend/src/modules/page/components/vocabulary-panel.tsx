@@ -21,7 +21,7 @@ import {
     ShieldCheck,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { loginPageRoute } from '@boot/routes';
+import { signInPageRoute } from '@boot/routes';
 
 function formatRelativeTime(date: Date): string {
     const now = Date.now();
@@ -60,6 +60,11 @@ export const PageVocabulary = observer(function PageVocabulary() {
     const commentsVersion = store.commentsVersion;
 
     const load = useCallback(() => {
+        if (!authStore.isAuthenticated) {
+            setVocabState(DataState.data([]));
+            setExplState(DataState.data([]));
+            return;
+        }
         setVocabState(DataState.loading());
         setExplState(DataState.loading());
 
@@ -100,7 +105,7 @@ export const PageVocabulary = observer(function PageVocabulary() {
             }
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, date, store.pageId, vocabVersion, commentsVersion]);
+    }, [authStore.isAuthenticated, mode, date, store.pageId, vocabVersion, commentsVersion]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -148,7 +153,7 @@ export const PageVocabulary = observer(function PageVocabulary() {
                 <div className="mx-3 mt-3 p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] flex items-start gap-2 leading-relaxed">
                     <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                     <span>
-                        Vocabulary is private to your account. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save vocabulary terms on this page.
+                        Vocabulary is private to your account. <Link to={signInPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save vocabulary terms on this page.
                     </span>
                 </div>
             )}

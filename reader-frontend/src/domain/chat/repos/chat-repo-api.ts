@@ -11,7 +11,6 @@ import {
 
 export class ChatRepoApi implements IChatRepo {
     async getChatCompletion(params: {
-        userId: string;
         modelId: string;
         systemPrompt: string;
         userPrompt: string;

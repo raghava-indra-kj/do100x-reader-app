@@ -2,7 +2,6 @@ import { createPage, editPage, getPage } from "@domain/page/services/pages-servi
 import type { Page } from "@domain/page/models/page";
 import { DataState } from "@lib/utils/data-state";
 import { extractFrontmatterTitle, type ExtractedPaste } from "@lib/md-parser";
-import { useAuthStore } from "@modules/auth/provider";
 import { Button } from "@modules/core/ui/primitives/button";
 import { Dialog } from "@modules/core/ui/primitives/dialog";
 import { FormLabel } from "@modules/core/ui/primitives/form-label";
@@ -40,7 +39,6 @@ export function UpsertPageDialog({
     initialCategory,
 }: UpsertPageDialogProps) {
     const navigate = useNavigate();
-    const authStore = useAuthStore();
     const store = usePageStore();
     const editId = editPageId ?? page?.id;
     const isEdit = !!editId;
@@ -164,7 +162,6 @@ export function UpsertPageDialog({
             }
         } else {
             const result = await createPage({
-                userId: authStore.optCurrentUser?.id || '',
                 parentPageId,
                 title: title.trim(),
                 content,
@@ -181,7 +178,7 @@ export function UpsertPageDialog({
                 setSubmitState(DataState.error(result.error));
             }
         }
-    }, [title, content, category, isEdit, editId, parentPageId, authStore, navigate, onOpenChange, store, meaningSystemPrompt, explanationSystemPrompt, doubtSystemPrompt]);
+    }, [title, content, category, isEdit, editId, parentPageId, navigate, onOpenChange, store, meaningSystemPrompt, explanationSystemPrompt, doubtSystemPrompt]);
 
     return (
         <Dialog

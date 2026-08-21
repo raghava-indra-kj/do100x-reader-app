@@ -6,9 +6,9 @@ import { UserModelSchema, type UserModelData } from '../models/user-model';
 import type { ISettingsRepo } from './settings-repo';
 
 export class SettingsRepoApi implements ISettingsRepo {
-    async getModelConfig({ userId }: { userId: string }): AsyncResult<ModelConfigData, AppError> {
+    async getModelConfig(): AsyncResult<ModelConfigData, AppError> {
         try {
-            const { data } = await apiClient.get('/model-config', { params: { userId } });
+            const { data } = await apiClient.get('/model-config');
             return ok(ModelConfigSchema.parse(data));
         } catch (error) {
             return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch model configuration'), cause: error }));
@@ -16,7 +16,6 @@ export class SettingsRepoApi implements ISettingsRepo {
     }
 
     async saveModelConfig(params: {
-        userId: string;
         baseUrl: string;
         apiKey: string;
         explanationModelId?: string;
@@ -34,16 +33,16 @@ export class SettingsRepoApi implements ISettingsRepo {
         }
     }
 
-    async getUserModels({ userId }: { userId: string }): AsyncResult<UserModelData[], AppError> {
+    async getUserModels(): AsyncResult<UserModelData[], AppError> {
         try {
-            const { data } = await apiClient.get('/user-models', { params: { userId } });
+            const { data } = await apiClient.get('/user-models');
             return ok((data as unknown[]).map(item => UserModelSchema.parse(item)));
         } catch (error) {
             return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch user models'), cause: error }));
         }
     }
 
-    async createUserModel(params: { userId: string; name: string; modelId: string; baseUrl?: string; apiKey?: string }): AsyncResult<string, AppError> {
+    async createUserModel(params: { name: string; modelId: string; baseUrl?: string; apiKey?: string }): AsyncResult<string, AppError> {
         try {
             const { data } = await apiClient.post('/user-models', params);
             return ok(data as string);

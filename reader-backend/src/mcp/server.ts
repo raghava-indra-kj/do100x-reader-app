@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerPageTools } from "./tools/pages";
+import { registerPropertyTools } from "./tools/properties";
 import { registerCommentTools } from "./tools/comments";
 import { registerVocabularyTools } from "./tools/vocabulary";
 import { registerTaskTools } from "./tools/tasks";
@@ -17,6 +18,7 @@ export function createReaderMcpServer(userId: string): McpServer {
   });
 
   registerPageTools(server, userId);
+  registerPropertyTools(server, userId);
   registerCommentTools(server, userId);
   registerVocabularyTools(server, userId);
   registerTaskTools(server, userId);

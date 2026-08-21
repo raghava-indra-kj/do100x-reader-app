@@ -5,7 +5,6 @@ import type { ChatCompletionResult } from '../models/chat-types';
 import { container, TYPES } from '@di/container';
 
 export async function getChatCompletion(params: {
-    userId: string;
     modelId: string;
     systemPrompt: string;
     userPrompt: string;

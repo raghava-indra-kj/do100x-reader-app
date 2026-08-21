@@ -169,28 +169,6 @@ export class MeaningStore {
         const entry = this.history.find(e => e.id === entryId);
         if (!entry) return;
 
-        let currentUserId = '';
-        try {
-            const raw = localStorage.getItem('current_user');
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                currentUserId = parsed.id || '';
-            }
-        } catch {}
-
-        if (!currentUserId) {
-            runInAction(() => {
-                entry.isLoading = false;
-                entry.error = 'Sign in required to use AI features.';
-                entry.errorDetails = {
-                    errorType: 'CONFIG_ERROR',
-                    message: 'Authentication Required',
-                    description: 'Please sign in to configure and use your personal AI models.',
-                };
-            });
-            return;
-        }
-
         // Cancel previous inflight request if any
         const prevController = this.abortControllers.get(entryId);
         if (prevController) {
@@ -200,7 +178,7 @@ export class MeaningStore {
         this.abortControllers.set(entryId, controller);
         
         // 1. Fetch user's settings to get meaningModelId
-        const configRes = await getModelConfig({ userId: currentUserId });
+        const configRes = await getModelConfig();
         if (!configRes.ok) {
             this.abortControllers.delete(entryId);
             runInAction(() => {
@@ -243,7 +221,6 @@ Please provide a concise, clear definition, part of speech, pronunciation if app
 
         // 2. Query chat endpoint
         const chatRes = await getChatCompletion({
-            userId: currentUserId,
             modelId,
             systemPrompt: 'You are a dictionary assistant. Provide a concise, clear definition, part of speech, pronunciation if applicable, and 2-3 usage examples for the selected word or text, matching the context of the page/topic. Return the output cleanly formatted in Markdown.',
             userPrompt,

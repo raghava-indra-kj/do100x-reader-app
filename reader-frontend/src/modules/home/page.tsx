@@ -1,4 +1,4 @@
-import { loginPageRoute, pagesPageWithIdRouteValue } from '@boot/routes';
+import { pagesPageWithIdRouteValue, signInPageRoute } from '@boot/routes';
 import { useAuthStore } from '@modules/auth/provider/store';
 import { AppBar } from '@modules/core/ui/components/appbar';
 import { Button } from '@modules/core/ui/primitives/button';
@@ -61,7 +61,7 @@ function HeroSection() {
                             const redirectUrl = pagesPageWithIdRouteValue(authStore.currentUser.homepageId);
                             return <Button size="lg" onClick={() => navigate(redirectUrl)}>Open Reader</Button>;
                         }
-                        return <Button size="lg" onClick={() => navigate(loginPageRoute)}>Open Reader</Button>;
+                        return <Button size="lg" onClick={() => navigate(signInPageRoute)}>Open Reader</Button>;
                     }}
                 </Observer>
             </div>

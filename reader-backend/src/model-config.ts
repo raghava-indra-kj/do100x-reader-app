@@ -3,14 +3,9 @@ import { prisma } from "./prisma";
 
 const router = Router();
 
-// GET /backend-api/model-config?userId=
+// GET /backend-api/model-config
 router.get("/", async (req, res) => {
-  const { userId } = req.query as { userId?: string };
-
-  if (!userId) {
-    res.status(400).json({ message: "userId query parameter is required" });
-    return;
-  }
+  const userId = req.auth!.user.id;
 
   const config = await prisma.model_config.findUnique({ where: { userId } });
 
@@ -25,7 +20,6 @@ router.get("/", async (req, res) => {
 // POST /backend-api/model-config  (upsert — creates or updates)
 router.post("/", async (req, res) => {
   const {
-    userId,
     baseUrl,
     apiKey,
     explanationModelId,
@@ -35,7 +29,6 @@ router.post("/", async (req, res) => {
     explanationSystemPrompt,
     doubtSystemPrompt,
   } = req.body as {
-    userId: string;
     baseUrl: string;
     apiKey: string;
     explanationModelId?: string;
@@ -46,12 +39,14 @@ router.post("/", async (req, res) => {
     doubtSystemPrompt?: string;
   };
 
-  if (!userId || !baseUrl || !apiKey) {
+  if (!baseUrl || !apiKey) {
     res
       .status(400)
-      .json({ message: "userId, baseUrl, and apiKey are required" });
+      .json({ message: "baseUrl and apiKey are required" });
     return;
   }
+
+  const userId = req.auth!.user.id;
 
   const config = await prisma.model_config.upsert({
     where: { userId },

@@ -10,7 +10,7 @@ import { Input } from '@modules/core/ui/primitives/input';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link as LinkIcon, Unlink, NotebookPen, ShieldCheck } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { pagesPageWithIdRouteValue, loginPageRoute } from '@boot/routes';
+import { pagesPageWithIdRouteValue, signInPageRoute } from '@boot/routes';
 
 function formatRelativeTime(date: Date): string {
     const now = Date.now();
@@ -310,6 +310,10 @@ export const PageComments = observer(function PageComments() {
     const commentsVersion = store.commentsVersion;
 
     const load = useCallback(() => {
+        if (!authStore.isAuthenticated) {
+            setDataState(DataState.data([]));
+            return;
+        }
         setDataState(DataState.loading());
         getComments({ pageId: store.pageId }).then((result) => {
             if (!mountedRef.current) return;
@@ -319,7 +323,7 @@ export const PageComments = observer(function PageComments() {
                 setDataState(DataState.error(result.error));
             }
         });
-    }, [store.pageId, commentsVersion]);
+    }, [authStore.isAuthenticated, store.pageId, commentsVersion]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -390,7 +394,7 @@ export const PageComments = observer(function PageComments() {
                 <div className="mx-3 mt-3 p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] flex items-start gap-2 leading-relaxed">
                     <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                     <span>
-                        Comments are private to each user. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save personal notes on this page.
+                        Comments are private to each user. <Link to={signInPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save personal notes on this page.
                     </span>
                 </div>
             )}

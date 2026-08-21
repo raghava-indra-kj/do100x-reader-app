@@ -33,8 +33,8 @@ export default observer(function TasksPage() {
     };
   }, [store]);
 
-  const userInitial = authStore.optCurrentUser?.username
-    ? authStore.optCurrentUser.username.charAt(0).toUpperCase()
+  const userInitial = authStore.optCurrentUser?.displayName
+    ? authStore.optCurrentUser.displayName.charAt(0).toUpperCase()
     : 'U';
 
   return (
@@ -112,7 +112,7 @@ export default observer(function TasksPage() {
             <button
               type="button"
               onClick={() => navigate(settingsPageRoute)}
-              title={`Logged in as ${authStore.currentUser?.username || 'User'} (Settings)`}
+              title={`Logged in as ${authStore.currentUser?.displayName || 'User'} (Settings)`}
               className="w-8 h-8 rounded-full bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-bold text-xs flex items-center justify-center hover:ring-2 hover:ring-[var(--color-brand)] transition cursor-pointer shadow-xs"
             >
               {userInitial}

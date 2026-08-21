@@ -43,10 +43,10 @@ export function AppBar() {
                 <Observer>
                     {() => {
                         if (!authStore.isAuthenticated) return null;
-                        const username = authStore.currentUser.username || 'User';
-                        const firstChar = username.charAt(0).toUpperCase();
+                        const displayName = authStore.currentUser.displayName || 'User';
+                        const firstChar = displayName.charAt(0).toUpperCase();
                         return (
-                            <Link to={settingsPageRoute} title={`Logged in as ${username} — Open Settings`}>
+                            <Link to={settingsPageRoute} title={`Logged in as ${displayName} — Open Settings`}>
                                 <div className="flex items-center justify-center w-8 h-8 rounded-full bg-[var(--color-brand)] text-[var(--color-surface-canvas)] font-semibold text-xs shadow-xs hover:opacity-90 transition-all cursor-pointer ring-2 ring-[var(--color-border-subtle)] hover:ring-[var(--color-brand)] select-none">
                                     {firstChar}
                                 </div>

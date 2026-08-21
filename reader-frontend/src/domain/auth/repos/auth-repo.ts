@@ -3,6 +3,8 @@ import type { AppError } from '../../../core/errors/app-error';
 import type { CurrentUserData } from '../models/current-user';
 
 export interface IAuthRepo {
-    me(params: { username: string; password: string }): AsyncResult<CurrentUserData, AppError>;
-    signup(params: { username: string; password: string }): AsyncResult<CurrentUserData, AppError>;
+    signInWithGoogle(params: { idToken: string }): AsyncResult<CurrentUserData, AppError>;
+    getCurrentUser(): AsyncResult<CurrentUserData, AppError>;
+    logout(): AsyncResult<void, AppError>;
+    createMcpAccessToken(): AsyncResult<string, AppError>;
 }

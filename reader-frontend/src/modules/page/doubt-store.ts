@@ -184,28 +184,6 @@ export class DoubtStore {
         const entry = this.history.find(e => e.id === entryId);
         if (!entry) return;
 
-        let currentUserId = '';
-        try {
-            const raw = localStorage.getItem('current_user');
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                currentUserId = parsed.id || '';
-            }
-        } catch {}
-
-        if (!currentUserId) {
-            runInAction(() => {
-                entry.isLoading = false;
-                entry.error = 'Sign in required to use AI features.';
-                entry.errorDetails = {
-                    errorType: 'CONFIG_ERROR',
-                    message: 'Authentication Required',
-                    description: 'Please sign in to configure and use your personal AI models.',
-                };
-            });
-            return;
-        }
-
         // Cancel previous inflight request if any
         const prevController = this.abortControllers.get(entryId);
         if (prevController) {
@@ -215,7 +193,7 @@ export class DoubtStore {
         this.abortControllers.set(entryId, controller);
         
         // 1. Fetch user's settings to get doubtModelId
-        const configRes = await getModelConfig({ userId: currentUserId });
+        const configRes = await getModelConfig();
         if (!configRes.ok) {
             this.abortControllers.delete(entryId);
             runInAction(() => {
@@ -259,7 +237,6 @@ Please help me understand this and directly answer my doubt.`;
 
         // 2. Query chat endpoint
         const chatRes = await getChatCompletion({
-            userId: currentUserId,
             modelId,
             systemPrompt: 'You are a learning assistant. The user is studying a passage and has a question/doubt about it. Provide a clear, detailed, and helpful answer. Format your response cleanly in Markdown.',
             userPrompt,
@@ -298,17 +275,7 @@ Please help me understand this and directly answer my doubt.`;
         if (!entry || !entry.responseMarkdown || entry.isSaved || entry.isSavingPage) return;
 
         entry.isSavingPage = true;
-        let currentUserId = '';
-        try {
-            const raw = localStorage.getItem('current_user');
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                currentUserId = parsed.id || '';
-            }
-        } catch {}
-
         const result = await createPage({
-            userId: currentUserId,
             parentPageId: this.pageStore.pageId,
             title: `Doubt: ${entry.searchTerm}`,
             content: `### Context\n\n> ${entry.selectedText.split('\n').join('\n> ')}\n\n### Doubt\n\n*${entry.searchTerm}*\n\n### Answer\n\n${entry.responseMarkdown}`,

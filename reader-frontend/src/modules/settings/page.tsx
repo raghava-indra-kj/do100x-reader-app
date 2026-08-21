@@ -67,18 +67,18 @@ const TABS: TabItem[] = [
 
 export default function SettingsPage() {
   const authStore = useAuthStore();
-  const store = useMemo(() => new SettingsStore({ userId: authStore.currentUser.id }), [authStore]);
+  const store = useMemo(() => new SettingsStore(), []);
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
 
-  // Credential Visibility & Copy States
-  const [showPassword, setShowPassword] = useState(false);
-  const [copiedPassword, setCopiedPassword] = useState(false);
+  // API key visibility and copy state
   const [showApiKey, setShowApiKey] = useState(false);
   const [copiedApiKey, setCopiedApiKey] = useState(false);
   const [copiedGuide, setCopiedGuide] = useState(false);
-  const [copiedMcpUrl, setCopiedMcpUrl] = useState(false);
   const [copiedMcpJson, setCopiedMcpJson] = useState(false);
+  const [mcpConfigJson, setMcpConfigJson] = useState<string | null>(null);
+  const [mcpTokenError, setMcpTokenError] = useState<string | null>(null);
+  const [isGeneratingMcpConfig, setIsGeneratingMcpConfig] = useState(false);
   const [showNewModelApiKey, setShowNewModelApiKey] = useState(false);
   const [showEditModelApiKey, setShowEditModelApiKey] = useState(false);
 
@@ -103,18 +103,26 @@ export default function SettingsPage() {
     store.load();
   }, [store]);
 
-  const mcpUrl = `${window.location.origin}/sse/${authStore.currentUser.id}`;
-  const mcpConfigJson = JSON.stringify(
-    {
+  const generateMcpConfig = async () => {
+    setIsGeneratingMcpConfig(true);
+    setMcpTokenError(null);
+    const result = await authStore.createMcpAccessToken();
+    setIsGeneratingMcpConfig(false);
+    if (!result.ok) {
+      setMcpTokenError(result.error.message);
+      return;
+    }
+
+    const config = JSON.stringify({
       mcpServers: {
-        reader: {
-          serverUrl: mcpUrl,
-        },
+        reader: { serverUrl: `${window.location.origin}/sse/${result.data}` },
       },
-    },
-    null,
-    2
-  );
+    }, null, 2);
+    setMcpConfigJson(config);
+    navigator.clipboard.writeText(config);
+    setCopiedMcpJson(true);
+    setTimeout(() => setCopiedMcpJson(false), 1500);
+  };
 
   return (
     <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
@@ -207,7 +215,7 @@ export default function SettingsPage() {
                         <div>
                           <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Account & Preferences</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Your credentials and personal settings
+                            Your Google account and personal settings
                           </p>
                         </div>
 
@@ -222,45 +230,17 @@ export default function SettingsPage() {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                             <div>
-                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Username</span>
+                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Name</span>
                               <p className="text-sm font-medium text-[var(--color-text-strong)] mt-1.5 bg-[var(--color-surface-canvas)] px-3 py-2 rounded-xl border border-[var(--color-border-default)]">
-                                {authStore.currentUser.username}
+                                {authStore.currentUser.displayName}
                               </p>
                             </div>
 
                             <div>
-                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Password</span>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                <p className="text-sm font-mono text-[var(--color-text-strong)] bg-[var(--color-surface-canvas)] px-3 py-2 rounded-xl border border-[var(--color-border-default)] select-all flex-1 min-w-[140px]">
-                                  {showPassword ? authStore.currentUser.password || '(no password set)' : '••••••••••••'}
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowPassword((prev) => !prev)}
-                                  className="p-2 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border-default)] transition-colors cursor-pointer"
-                                  title={showPassword ? 'Hide password' : 'Show password'}
-                                >
-                                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                                </button>
-                                {authStore.currentUser.password && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(authStore.currentUser.password);
-                                      setCopiedPassword(true);
-                                      setTimeout(() => setCopiedPassword(false), 1500);
-                                    }}
-                                    className={`p-2 rounded-xl border border-[var(--color-border-default)] transition-colors cursor-pointer ${
-                                      copiedPassword
-                                        ? 'text-[var(--color-brand)] bg-[var(--color-surface-hover)]'
-                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-hover)]'
-                                    }`}
-                                    title={copiedPassword ? 'Copied!' : 'Copy password'}
-                                  >
-                                    {copiedPassword ? <Check size={15} /> : <Copy size={15} />}
-                                  </button>
-                                )}
-                              </div>
+                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Google account</span>
+                              <p className="text-sm text-[var(--color-text-strong)] mt-1.5 bg-[var(--color-surface-canvas)] px-3 py-2 rounded-xl border border-[var(--color-border-default)] truncate">
+                                {authStore.currentUser.email}
+                              </p>
                             </div>
                           </div>
                         </section>
@@ -756,45 +736,22 @@ export default function SettingsPage() {
                             </span>
                           </div>
 
-                          {/* Secret URL Card */}
-                          <div className="space-y-2 pt-1">
-                            <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">
-                              Server URL
-                            </span>
-                            <div className="flex items-center gap-2">
-                              <p className="text-xs font-mono text-[var(--color-text-strong)] bg-[var(--color-surface-canvas)] px-3.5 py-2.5 rounded-xl border border-[var(--color-border-default)] select-all flex-1 truncate">
-                                {mcpUrl}
-                              </p>
-                              <Button
-                                variant="outlined"
-                                size="sm"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(mcpUrl);
-                                  setCopiedMcpUrl(true);
-                                  setTimeout(() => setCopiedMcpUrl(false), 1500);
-                                }}
-                                className="flex items-center gap-1.5 shrink-0 text-xs"
-                              >
-                                {copiedMcpUrl ? <Check size={14} className="text-[var(--color-brand)]" /> : <Copy size={14} />}
-                                <span>{copiedMcpUrl ? 'Copied' : 'Copy URL'}</span>
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(mcpConfigJson);
-                                  setCopiedMcpJson(true);
-                                  setTimeout(() => setCopiedMcpJson(false), 1500);
-                                }}
-                                className="flex items-center gap-1.5 shrink-0 text-xs"
-                              >
-                                {copiedMcpJson ? <Check size={14} /> : <Copy size={14} />}
-                                <span>{copiedMcpJson ? 'Copied Config' : 'Copy JSON Config'}</span>
-                              </Button>
-                            </div>
+                          <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 px-3.5 py-3 text-xs leading-relaxed text-[var(--color-text-body)]">
+                            Generate a dedicated access token before connecting an MCP client. Generating a new config revokes the previous MCP token.
                           </div>
+                          <Button
+                            size="sm"
+                            onClick={generateMcpConfig}
+                            loading={isGeneratingMcpConfig}
+                            className="w-fit flex items-center gap-1.5"
+                          >
+                            {copiedMcpJson ? <Check size={14} /> : <Copy size={14} />}
+                            <span>{copiedMcpJson ? 'Config copied' : 'Generate & copy config'}</span>
+                          </Button>
+                          {mcpTokenError && <p className="text-xs text-red-600 dark:text-red-400">{mcpTokenError}</p>}
 
                           {/* Config Snippet */}
-                          <div className="rounded-2xl bg-[var(--color-surface-canvas)] p-4 border border-[var(--color-border-subtle)] space-y-2">
+                          {mcpConfigJson && <div className="rounded-2xl bg-[var(--color-surface-canvas)] p-4 border border-[var(--color-border-subtle)] space-y-2">
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-semibold text-[var(--color-text-strong)]">
                                 Configuration Snippet
@@ -814,7 +771,7 @@ export default function SettingsPage() {
                             <pre className="font-mono text-xs text-[var(--color-text-body)] overflow-x-auto p-3.5 rounded-xl bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] leading-relaxed">
                               {mcpConfigJson}
                             </pre>
-                          </div>
+                          </div>}
                         </section>
                       </div>
                     )}

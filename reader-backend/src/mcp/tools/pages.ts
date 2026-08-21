@@ -8,6 +8,7 @@ import {
   insertSectionAfterIndex,
 } from "../utils/sectionizer";
 import { FORMAT_LLM_MD_CONTENT } from "../constants/format-guide";
+import { getPagePropertiesMap } from "../utils/properties";
 
 export function registerPageTools(server: McpServer, userId: string) {
   // 0. Get Format Guide
@@ -99,7 +100,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   // 2. Get single page (with raw markdown and line count)
   server.tool(
     "reader_get_page",
-    "Fetch full content, line-numbered markdown, and metadata of a reader page by ID",
+    "Fetch full content, line-numbered markdown, metadata, and custom properties of a reader page by ID",
     {
       pageId: z.string().describe("The UUID of the page to retrieve"),
       includeLineNumbers: z.boolean().optional().default(false).describe("If true, returns line-numbered markdown lines for precision edits"),
@@ -124,6 +125,8 @@ export function registerPageTools(server: McpServer, userId: string) {
         formattedContent = lines.map((l, i) => `${i + 1}: ${l}`).join("\n");
       }
 
+      const propertiesMap = await getPagePropertiesMap(userId, [pageId]);
+
       return {
         content: [
           {
@@ -142,6 +145,7 @@ export function registerPageTools(server: McpServer, userId: string) {
                 meaningSystemPrompt: page.meaningSystemPrompt,
                 explanationSystemPrompt: page.explanationSystemPrompt,
                 doubtSystemPrompt: page.doubtSystemPrompt,
+                properties: propertiesMap.get(pageId) ?? {},
                 createdAt: page.createdAt.toISOString(),
                 updatedAt: page.updatedAt.toISOString(),
               },
@@ -537,6 +541,7 @@ export function registerPageTools(server: McpServer, userId: string) {
       }
 
       const now = new Date();
+      const deletedIds: string[] = [];
 
       async function softDeleteRecursive(id: string) {
         const children = await prisma.page.findMany({
@@ -546,6 +551,7 @@ export function registerPageTools(server: McpServer, userId: string) {
         for (const child of children) {
           await softDeleteRecursive(child.id);
         }
+        deletedIds.push(id);
         await prisma.page.update({
           where: { id },
           data: { deletedAt: now },
@@ -553,6 +559,10 @@ export function registerPageTools(server: McpServer, userId: string) {
       }
 
       await softDeleteRecursive(pageId);
+
+      await prisma.page_property.deleteMany({
+        where: { userId, pageId: { in: deletedIds } },
+      });
 
       if (page.parentId) {
         await prisma.page.update({
@@ -1056,6 +1066,23 @@ export function registerPageTools(server: McpServer, userId: string) {
           await prisma.page.update({
             where: { id: pId },
             data: { childrenCount: { increment: 1 }, updatedAt: now },
+          });
+        }
+
+        const srcProperties = await prisma.page_property.findMany({
+          where: { userId, pageId: srcPage.id },
+          select: { key: true, value: true },
+        });
+        if (srcProperties.length > 0) {
+          await prisma.page_property.createMany({
+            data: srcProperties.map((prop) => ({
+              pageId: cloned.id,
+              userId,
+              key: prop.key,
+              value: prop.value,
+              createdAt: now,
+              updatedAt: now,
+            })),
           });
         }
 

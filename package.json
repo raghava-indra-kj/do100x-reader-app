@@ -7,12 +7,16 @@
     "reader-frontend",
     "reader-backend"
   ],
+  "overrides": {
+    "dompurify": "3.4.14"
+  },
   "scripts": {
     "build:frontend": "cd reader-frontend && npm run build",
     "build:backend": "cd reader-backend && npm run build",
     "build": "npm run build:frontend && npm run build:backend",
     "db:generate": "cd reader-backend && npx prisma generate",
     "db:push": "cd reader-backend && npx prisma db push",
+    "db:reset": "cd reader-backend && npx prisma db push --force-reset --accept-data-loss",
     "setup": "npm install && npm run db:generate && npm run db:push && npm run build",
     "start": "cd reader-backend && npm run start",
     "prod": "npm run setup && cd reader-backend && node dist/index.js"

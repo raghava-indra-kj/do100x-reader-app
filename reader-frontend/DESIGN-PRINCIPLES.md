@@ -1125,13 +1125,14 @@ export const THEMES: ThemeOption[] = [
 
 (Adding a whole second design system for the marketing site is a different move — see Part XI.5.)
 
-## 6.3 Auth & the current user — 🛠️ Planned
+## 6.3 Auth & the current user
 
-Covered structurally in §4.8; here's the cross-cutting reasoning. Auth touches routing, storage, and most features, so it's designed as **a swappable capability from day one**, even though today's implementation is trivial.
+Auth touches routing, storage, and most features, so it is isolated behind a repository port and application identity is kept independent of Reader-specific state.
 
-- **Today (planned first version):** a **name-only current user** — a `CurrentUser { name }` value object kept in `localStorage`, with a `RequireUser` route guard. No passwords, no server.
-- **The seam:** identity is read through a `UserRepository` **port**, implemented today by a `localStorage` adapter. Swapping to real auth (OAuth, a backend session) is an **adapter change at the composition root** — features that only know "there is a current user named X" don't change.
-- **The guard:** composed in `boot/router.tsx`, wrapping protected routes; redirects to a name-entry screen when no user is present.
+- **Today:** Google Identity Services supplies an ID token, the backend verifies it with Google's Node auth library, and the backend issues an opaque HTTP-only session cookie. No password or user ID is persisted in browser storage.
+- **The seam:** identity is read through the `IAuthRepo` port. The Google/session adapter is bound at the composition root, so a future provider remains an adapter change.
+- **App boundary:** `user_account` is generic identity; `reader_profile` owns Reader's home page. New apps, workspaces, and teams can use their own profile and membership models without coupling to Reader navigation data.
+- **The guard:** composed in `boot/router.tsx`, waits for session restoration, then redirects unauthenticated users to the Google sign-in screen.
 
 ```tsx
 // the only auth knowledge a feature needs — a value object behind a hook

@@ -16,7 +16,6 @@ export class PageRepoApi implements IPagesRepo {
     }
 
     async createPage(params: {
-        userId: string;
         parentPageId: string | null;
         title: string;
         content: string;

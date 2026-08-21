@@ -2,8 +2,8 @@ import "dotenv/config";
 import express from "express";
 import fs from "fs";
 import path from "path";
-import meRouter from "./me";
-import signupRouter from "./signup";
+import authRouter from "./auth-router";
+import { attachAuth, requireAuth, requireTrustedOrigin } from "./auth";
 import pagesRouter from "./pages";
 import commentsRouter from "./comments";
 import vocabularyRouter from "./vocabulary";
@@ -19,6 +19,25 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const frontendDist = path.resolve(__dirname, "../../reader-frontend/dist");
 const hasFrontend = fs.existsSync(path.join(frontendDist, "index.html"));
+
+app.disable("x-powered-by");
+app.use((_, res, next) => {
+  res.setHeader("Content-Security-Policy", [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "script-src 'self' https://accounts.google.com/gsi/client",
+    "style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style",
+    "frame-src 'self' https:",
+    "connect-src 'self' https://accounts.google.com/gsi/",
+    "img-src 'self' data: https:",
+  ].join("; "));
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  next();
+});
 
 app.use(express.json({ limit: '10mb' }));
 
@@ -38,21 +57,21 @@ app.use("/backend-api", (_req, res, next) => {
   res.setHeader("Surrogate-Control", "no-store");
   next();
 });
+app.use("/backend-api", requireTrustedOrigin, attachAuth);
 
 app.get("/backend-api/status", (_req, res) => {
   res.json({ success: true });
 });
-app.use("/backend-api/me", meRouter);
-app.use("/backend-api/signup", signupRouter);
+app.use("/backend-api/auth", authRouter);
 app.use("/backend-api/pages", pagesRouter);
-app.use("/backend-api/comments", commentsRouter);
-app.use("/backend-api/vocabulary", vocabularyRouter);
-app.use("/backend-api/model-config", modelConfigRouter);
-app.use("/backend-api/user-models", userModelsRouter);
-app.use("/backend-api/chat", chatRouter);
-app.use("/backend-api/tasks", tasksRouter);
-app.use("/backend-api/task-lists", taskListsRouter);
-app.use("/backend-api/timer", timerRouter);
+app.use("/backend-api/comments", requireAuth, commentsRouter);
+app.use("/backend-api/vocabulary", requireAuth, vocabularyRouter);
+app.use("/backend-api/model-config", requireAuth, modelConfigRouter);
+app.use("/backend-api/user-models", requireAuth, userModelsRouter);
+app.use("/backend-api/chat", requireAuth, chatRouter);
+app.use("/backend-api/tasks", requireAuth, tasksRouter);
+app.use("/backend-api/task-lists", requireAuth, taskListsRouter);
+app.use("/backend-api/timer", requireAuth, timerRouter);
 
 if (hasFrontend) {
   app.get("*splat", (_req, res) => {
@@ -66,6 +85,17 @@ process.on("uncaughtException", (err) => {
 
 process.on("unhandledRejection", (reason) => {
   console.error("Unhandled rejection:", reason);
+});
+
+app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error("Unhandled request error:", error);
+  if (!res.headersSent) {
+    if (error instanceof SyntaxError && "body" in error) {
+      res.status(400).json({ message: "Malformed JSON request body" });
+      return;
+    }
+    res.status(500).json({ message: "Unexpected server error" });
+  }
 });
 
 process.title = `Reader App [Port ${PORT}]`;

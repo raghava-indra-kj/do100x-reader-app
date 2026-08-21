@@ -5,13 +5,13 @@ import { createReaderMcpServer } from "../src/mcp/server";
 async function runMcpFullTest() {
   console.log("Starting Comprehensive Reader MCP Full Audit & Verification...\n");
 
-  const user = await prisma.appuser.findFirst();
+  const user = await prisma.user_account.findFirst();
   if (!user) {
     console.error("No user found in DB to test with.");
     process.exit(1);
   }
 
-  console.log(`Testing MCP Server strictly locked to user: ${user.username} (${user.id})`);
+  console.log(`Testing MCP Server strictly locked to user: ${user.displayName} (${user.id})`);
 
   const server = createReaderMcpServer(user.id);
   const toolMap = (server as any)._registeredTools;

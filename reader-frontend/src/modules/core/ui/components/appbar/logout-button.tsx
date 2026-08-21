@@ -1,4 +1,5 @@
-import { loginPageRoute } from '@boot/routes';
+import { signInPageRoute } from '@boot/routes';
+import { disableGoogleAutoSelect } from '@modules/auth/sign-in/google-sign-in-button';
 import { useAuthStore } from '@modules/auth/provider/store';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Dialog } from '@modules/core/ui/primitives/dialog';
@@ -12,9 +13,10 @@ export function LogoutButton() {
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
 
-    const handleLogout = useCallback(() => {
-        authStore.logout();
-        navigate(loginPageRoute, { replace: true });
+    const handleLogout = useCallback(async () => {
+        await authStore.logout();
+        disableGoogleAutoSelect();
+        navigate(signInPageRoute, { replace: true });
     }, [authStore, navigate]);
 
     return (

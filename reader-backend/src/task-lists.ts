@@ -4,7 +4,7 @@ import { prisma } from "./prisma";
 const router = Router();
 
 function getUserId(req: Request): string | undefined {
-  return (req.headers["x-user-id"] as string) || (req.query.userId as string) || undefined;
+  return req.auth?.user.id;
 }
 
 // GET /backend-api/task-lists - Get all lists for user with task counts

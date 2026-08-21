@@ -63,8 +63,7 @@ async function resolveSystemPrompt(
 
 // POST /backend-api/chat
 router.post("/", async (req, res) => {
-  const { userId, modelId, systemPrompt, userPrompt, pageId, actionType } = req.body as {
-    userId: string;
+  const { modelId, systemPrompt, userPrompt, pageId, actionType } = req.body as {
     modelId: string;
     systemPrompt: string;
     userPrompt: string;
@@ -73,17 +72,19 @@ router.post("/", async (req, res) => {
   };
 
   // 1. Validate inputs
-  if (!userId || !modelId || !systemPrompt || !userPrompt) {
+  if (!modelId || !systemPrompt || !userPrompt) {
     res.status(400).json({
       error: {
         type: "CONFIG_ERROR",
         message: "Missing required fields",
-        description: "userId, modelId, systemPrompt, and userPrompt are all required.",
+        description: "modelId, systemPrompt, and userPrompt are all required.",
         rawError: { body: req.body },
       },
     });
     return;
   }
+
+  const userId = req.auth!.user.id;
 
   // 2. Resolve System Prompt
   const resolvedSystemPrompt = await resolveSystemPrompt(userId, pageId, actionType, systemPrompt);

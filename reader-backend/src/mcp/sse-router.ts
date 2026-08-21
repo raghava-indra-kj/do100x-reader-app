@@ -8,9 +8,16 @@ export function createMcpSseRouter(): Router {
 
   // CORS & Reverse Proxy Streaming Headers
   router.use((req, res, next) => {
+    // This router is mounted at root for the legacy /sse and /messages MCP
+    // paths. Do not apply permissive CORS headers to normal application APIs.
+    if (!/^\/(sse|messages)(?:\/|$)/.test(req.path)) {
+      next();
+      return;
+    }
+
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-user-id, x-mcp-token");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-mcp-token");
     res.setHeader("X-Accel-Buffering", "no"); // Disables Nginx response buffering for SSE
     res.setHeader("Cache-Control", "no-cache, no-transform");
 
@@ -29,15 +36,11 @@ export function createMcpSseRouter(): Router {
     // 1. Path param (if /:token or /sse/:token)
     if (req.params.token) return req.params.token;
 
-    // 2. Query param (?token=... or ?userId=... or ?key=...)
+    // 2. Query param (?token=... or ?key=...)
     if (typeof req.query.token === "string" && req.query.token) return req.query.token;
-    if (typeof req.query.userId === "string" && req.query.userId) return req.query.userId;
     if (typeof req.query.key === "string" && req.query.key) return req.query.key;
 
-    // 3. Headers (x-user-id, x-mcp-token, or Authorization: Bearer <token>)
-    const xUserId = req.headers["x-user-id"];
-    if (typeof xUserId === "string" && xUserId) return xUserId;
-
+    // 3. Headers (x-mcp-token or Authorization: Bearer <token>)
     const xMcpToken = req.headers["x-mcp-token"];
     if (typeof xMcpToken === "string" && xMcpToken) return xMcpToken;
 
@@ -55,7 +58,7 @@ export function createMcpSseRouter(): Router {
 
     if (!user) {
       res.status(401).json({
-        error: "Unauthorized: Valid user identifier or secret token is required to connect to the Reader MCP server. No unauthenticated access permitted.",
+        error: "Unauthorized: A valid Reader MCP access token is required to connect. No unauthenticated access is permitted.",
       });
       return;
     }

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const EnvSchema = z.object({
-
+    googleClientId: z.string().default(''),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
