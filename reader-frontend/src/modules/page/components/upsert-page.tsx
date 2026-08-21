@@ -218,150 +218,157 @@ export function UpsertPageDialog({
         <Dialog
             open={open}
             onOpenChange={onOpenChange}
-            className="flex flex-col inset-0 h-full max-w-none rounded-none -translate-x-0 -translate-y-0 p-0"
+            className="inset-0 flex h-dvh w-screen max-w-none flex-col overflow-y-auto rounded-none bg-[var(--color-surface-canvas)] p-0 lg:overflow-hidden -translate-x-0 -translate-y-0"
         >
-            <div className="flex items-center justify-between shrink-0 px-6 pt-6 pb-4">
-                <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
-                    {isEdit ? "Edit Page" : "New Page"}
-                </h2>
-                <Button
-                    variant="outlined"
-                    size="sm"
-                    onClick={() => setReadNowOpen(true)}
-                    disabled={!content.trim()}
-                >
-                    Read Now
-                </Button>
-            </div>
-            <div className="flex flex-col gap-5 px-6 pb-4 min-h-0 flex-1">
-                <div className="flex gap-4 shrink-0">
-                    <div className="flex flex-col gap-2 flex-1">
-                        <FormLabel>Title</FormLabel>
-                        <Input
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="Page title"
-                            autoFocus
-                        />
-                    </div>
-                    <div className="flex flex-col gap-2 w-48 shrink-0">
-                        <FormLabel>Category</FormLabel>
-                        <Input
-                            value={category ?? ""}
-                            onChange={(e) => setCategory(e.target.value || null)}
-                            placeholder="e.g. Recall, Note"
-                        />
-                    </div>
-                </div>
-                <div className="flex flex-col gap-2 min-h-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
-                        <FormLabel>Content</FormLabel>
-                        <div className="inline-flex rounded-[var(--radius-sm)] border border-[var(--color-border-default)] bg-[var(--color-surface-soft)] p-0.5 text-xs">
-                            <button
-                                type="button"
-                                onClick={() => setEditorMode("visual")}
-                                className={`rounded-[calc(var(--radius-sm)-2px)] px-2.5 py-1 transition-colors ${editorMode === "visual" ? "bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] shadow-sm" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]"}`}
+            <div className="flex min-h-0 flex-col lg:flex-1 lg:flex-row">
+                <section className="flex min-h-[65dvh] min-w-0 flex-col border-b border-[var(--color-border-default)] bg-[var(--color-surface-raised)] lg:min-h-0 lg:flex-1 lg:border-b-0 lg:border-r">
+                    <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--color-border-default)] px-4 py-3 sm:px-6">
+                        <div>
+                            <p className="text-sm font-semibold text-[var(--color-text-strong)]">Content</p>
+                            <p className="hidden text-xs text-[var(--color-text-muted)] sm:block">Markdown is saved as the source of truth.</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outlined"
+                                size="sm"
+                                onClick={() => setReadNowOpen(true)}
+                                disabled={!content.trim()}
                             >
-                                Visual
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setEditorMode("markdown")}
-                                className={`rounded-[calc(var(--radius-sm)-2px)] px-2.5 py-1 transition-colors ${editorMode === "markdown" ? "bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] shadow-sm" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]"}`}
-                            >
-                                Markdown
-                            </button>
+                                Read Now
+                            </Button>
+                            <div className="inline-flex rounded-[var(--radius-sm)] border border-[var(--color-border-default)] bg-[var(--color-surface-soft)] p-0.5 text-xs">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditorMode("visual")}
+                                    className={`rounded-[calc(var(--radius-sm)-2px)] px-2.5 py-1 transition-colors ${editorMode === "visual" ? "bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] shadow-sm" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]"}`}
+                                >
+                                    Visual
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setEditorMode("markdown")}
+                                    className={`rounded-[calc(var(--radius-sm)-2px)] px-2.5 py-1 transition-colors ${editorMode === "markdown" ? "bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] shadow-sm" : "text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]"}`}
+                                >
+                                    Markdown
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    {editorMode === "visual" ? (
-                        <Suspense
-                            fallback={
-                                <div className="flex flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-soft)] text-sm text-[var(--color-text-muted)]">
-                                    Loading visual editor…
-                                </div>
-                            }
-                        >
-                            <RichMarkdownEditor
-                                key={`reader-editor-${editId ?? "new"}-${editorGeneration}`}
-                                documentKey={`${editId ?? "new"}-${editorGeneration}`}
-                                initialMarkdown={content}
-                                onMarkdownChange={setContent}
+                    <div className="flex min-h-0 flex-1 p-3 sm:p-5">
+                        {editorMode === "visual" ? (
+                            <Suspense
+                                fallback={
+                                    <div className="flex flex-1 items-center justify-center rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-soft)] text-sm text-[var(--color-text-muted)]">
+                                        Loading visual editor…
+                                    </div>
+                                }
+                            >
+                                <RichMarkdownEditor
+                                    key={`reader-editor-${editId ?? "new"}-${editorGeneration}`}
+                                    documentKey={`${editId ?? "new"}-${editorGeneration}`}
+                                    initialMarkdown={content}
+                                    onMarkdownChange={setContent}
+                                />
+                            </Suspense>
+                        ) : (
+                            <textarea
+                                value={content}
+                                onChange={(e) => setContent(e.target.value)}
+                                onPaste={handleTextareaPaste}
+                                placeholder="Write your content here…"
+                                className="min-h-0 w-full flex-1 resize-none rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-4 py-3 font-mono text-sm text-[var(--color-text-strong)] outline-none transition-colors placeholder:text-[var(--color-text-subtle)]"
                             />
-                        </Suspense>
-                    ) : (
-                        <textarea
-                            value={content}
-                            onChange={(e) => setContent(e.target.value)}
-                            onPaste={handleTextareaPaste}
-                            placeholder="Write your content here…"
-                            className="w-full flex-1 resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-4 py-2.5 text-sm rounded-[var(--radius-md)] transition-colors outline-none overflow-y-auto font-mono"
-                        />
-                    )}
-                </div>
-                {/* Collapsible AI Prompts section */}
-                <div className="shrink-0 space-y-3">
-                    <button
-                        type="button"
-                        onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                        className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-subtle)] hover:text-[var(--color-text-strong)] cursor-pointer select-none"
-                    >
-                        <span className="w-3 text-center">{isAdvancedOpen ? '▼' : '▶'}</span>
-                        <span>AI Prompt Customizations (Optional)</span>
-                    </button>
-
-                    {isAdvancedOpen && (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-lg bg-[var(--color-surface-soft)] border border-[var(--color-border-subtle)] animate-in fade-in slide-in-from-top-2 duration-150">
-                            <div className="space-y-2">
-                                <FormLabel>Prompt for Explanation</FormLabel>
-                                <textarea
-                                    value={explanationSystemPrompt}
-                                    onChange={(e) => setExplanationSystemPrompt(e.target.value)}
-                                    placeholder="Use inherited page prompt..."
-                                    className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <FormLabel>Prompt for Meanings</FormLabel>
-                                <textarea
-                                    value={meaningSystemPrompt}
-                                    onChange={(e) => setMeaningSystemPrompt(e.target.value)}
-                                    placeholder="Use inherited page prompt..."
-                                    className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <FormLabel>Prompt for Asking Doubts</FormLabel>
-                                <textarea
-                                    value={doubtSystemPrompt}
-                                    onChange={(e) => setDoubtSystemPrompt(e.target.value)}
-                                    placeholder="Use inherited page prompt..."
-                                    className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
-                                />
-                            </div>
+                        )}
+                    </div>
+                </section>
+                <aside className="flex w-full shrink-0 flex-col bg-[var(--color-surface-canvas)] lg:w-[22rem]">
+                    <div className="shrink-0 border-b border-[var(--color-border-default)] px-5 py-4">
+                        <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
+                            {isEdit ? "Edit Page" : "New Page"}
+                        </h2>
+                        <p className="mt-1 text-xs text-[var(--color-text-muted)]">Page details and writing settings</p>
+                    </div>
+                    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
+                        <div className="flex flex-col gap-2">
+                            <FormLabel>Title</FormLabel>
+                            <Input
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="Page title"
+                                autoFocus
+                            />
                         </div>
-                    )}
-                </div>
-                {submitState.isError && (
-                    <p className="text-sm shrink-0 text-[var(--color-error)]">
-                        {submitState.error.message}
-                    </p>
-                )}
-            </div>
-            <div className="flex justify-end gap-3 shrink-0 border-t border-[var(--color-border-default)] px-6 py-4">
-                <Button
-                    variant="outlined"
-                    onClick={() => onOpenChange(false)}
-                    disabled={submitState.isLoading}
-                >
-                    Cancel
-                </Button>
-                <Button
-                    onClick={handleSubmit}
-                    loading={submitState.isLoading}
-                    disabled={!title.trim()}
-                >
-                    {isEdit ? "Save" : "Create"}
-                </Button>
+                        <div className="flex flex-col gap-2">
+                            <FormLabel>Category</FormLabel>
+                            <Input
+                                value={category ?? ""}
+                                onChange={(e) => setCategory(e.target.value || null)}
+                                placeholder="e.g. Recall, Note"
+                            />
+                        </div>
+                        <div className="border-t border-[var(--color-border-default)] pt-5">
+                            <button
+                                type="button"
+                                onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                                className="flex w-full items-center justify-between gap-3 text-left text-sm font-semibold text-[var(--color-text-body)] hover:text-[var(--color-text-strong)]"
+                                aria-expanded={isAdvancedOpen}
+                            >
+                                <span>AI prompt customizations</span>
+                                <span className="text-xs text-[var(--color-text-muted)]">{isAdvancedOpen ? "Hide" : "Optional"}</span>
+                            </button>
+                            {isAdvancedOpen && (
+                                <div className="mt-4 space-y-4">
+                                    <div className="space-y-2">
+                                        <FormLabel>Prompt for Explanation</FormLabel>
+                                        <textarea
+                                            value={explanationSystemPrompt}
+                                            onChange={(e) => setExplanationSystemPrompt(e.target.value)}
+                                            placeholder="Use inherited page prompt..."
+                                            className="h-24 w-full resize-y rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs text-[var(--color-text-strong)] outline-none placeholder:text-[var(--color-text-subtle)]"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <FormLabel>Prompt for Meanings</FormLabel>
+                                        <textarea
+                                            value={meaningSystemPrompt}
+                                            onChange={(e) => setMeaningSystemPrompt(e.target.value)}
+                                            placeholder="Use inherited page prompt..."
+                                            className="h-24 w-full resize-y rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs text-[var(--color-text-strong)] outline-none placeholder:text-[var(--color-text-subtle)]"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <FormLabel>Prompt for Asking Doubts</FormLabel>
+                                        <textarea
+                                            value={doubtSystemPrompt}
+                                            onChange={(e) => setDoubtSystemPrompt(e.target.value)}
+                                            placeholder="Use inherited page prompt..."
+                                            className="h-24 w-full resize-y rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs text-[var(--color-text-strong)] outline-none placeholder:text-[var(--color-text-subtle)]"
+                                        />
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        {submitState.isError && (
+                            <p className="text-sm text-[var(--color-error)]">{submitState.error.message}</p>
+                        )}
+                    </div>
+                    <div className="flex shrink-0 justify-end gap-3 border-t border-[var(--color-border-default)] px-5 py-4">
+                        <Button
+                            variant="outlined"
+                            onClick={() => onOpenChange(false)}
+                            disabled={submitState.isLoading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleSubmit}
+                            loading={submitState.isLoading}
+                            disabled={!title.trim()}
+                        >
+                            {isEdit ? "Save" : "Create"}
+                        </Button>
+                    </div>
+                </aside>
             </div>
             {readNowOpen && (
                 <ReadNowDialog
