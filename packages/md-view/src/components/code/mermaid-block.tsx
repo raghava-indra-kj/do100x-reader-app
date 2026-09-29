@@ -133,10 +133,9 @@ export function MermaidBlock({ children }: { children?: unknown }) {
         className="md-mermaid-fullscreen-btn"
         onClick={() => setIsFullscreen(true)}
         title="View in full screen"
-        aria-label="View mind map in full screen"
+        aria-label="View Mermaid diagram in full screen"
       >
-        <Maximize2 size={14} />
-        <span>Full screen</span>
+        <Maximize2 size={16} aria-hidden="true" />
       </button>
 
       <div

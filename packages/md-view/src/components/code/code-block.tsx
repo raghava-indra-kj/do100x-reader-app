@@ -57,6 +57,7 @@ export function CodeBlock({ language, codeClassName, children }: CodeBlockProps)
 
   return (
     <pre className="md-code-block">
+      {language && <span className="md-code-block-language" aria-label={`Language: ${language}`}>{language}</span>}
       <button
         type="button"
         className="md-code-block-copy"

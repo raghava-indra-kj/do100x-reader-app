@@ -111,8 +111,7 @@ export function D2Block({
         title="View diagram in full screen"
         aria-label="View D2 diagram in full screen"
       >
-        <Maximize2 size={14} />
-        <span>Full screen</span>
+        <Maximize2 size={16} aria-hidden="true" />
       </button>
 
       <div
