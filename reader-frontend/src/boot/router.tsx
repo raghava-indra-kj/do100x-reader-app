@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider, AuthGuard } from '@modules/auth/provider';
+import { MotivationPreferencesProvider } from '@modules/core/preferences/motivation-preferences';
 import { homePageRoute, loginPageRoute, mdParserLibDemoRoute, mdViewLibDemoRoute, pagesPageWithIdRoute, signupPageRoute, settingsPageRoute, tasksPageRoute } from './routes';
 
 const HomePage = lazy(() => import('../modules/home/page'));
@@ -16,6 +17,7 @@ export function AppRouter() {
     return (
         <BrowserRouter>
             <AuthProvider>
+              <MotivationPreferencesProvider>
                 <Routes>
                     <Route path={homePageRoute} element={<HomePage />} />
                     <Route path={pagesPageWithIdRoute} element={<PagePage />} />
@@ -26,6 +28,7 @@ export function AppRouter() {
                     <Route path={settingsPageRoute} element={<AuthGuard><SettingsPage /></AuthGuard>} />
                     <Route path={tasksPageRoute} element={<AuthGuard><TasksPage /></AuthGuard>} />
                 </Routes>
+              </MotivationPreferencesProvider>
             </AuthProvider>
         </BrowserRouter>
     );

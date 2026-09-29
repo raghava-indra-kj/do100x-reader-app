@@ -72,6 +72,7 @@ router.get("/:pageId", async (req, res) => {
     sortOrder: page.sortOrder,
     childrenCount: page.childrenCount,
     isPublic: page.isPublic,
+    isPubliclyAccessible: isPublic,
     isOwner,
     createdAt: page.createdAt,
     updatedAt: page.updatedAt,
@@ -228,7 +229,7 @@ router.patch("/:pageId/share", async (req, res) => {
     return;
   }
 
-  await prisma.page.update({
+  const updatedPage = await prisma.page.update({
     where: { id: pageId },
     data: {
       isPublic: Boolean(isPublic),
@@ -236,7 +237,8 @@ router.patch("/:pageId/share", async (req, res) => {
     },
   });
 
-  res.json({ success: true, isPublic: Boolean(isPublic) });
+  const isPubliclyAccessible = await isPagePubliclyAccessible(updatedPage);
+  res.json({ success: true, isPublic: updatedPage.isPublic, isPubliclyAccessible });
 });
 
 // PUT /pages/:pageId

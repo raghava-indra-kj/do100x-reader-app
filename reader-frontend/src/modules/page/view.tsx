@@ -21,6 +21,8 @@ import { Button } from '@modules/core/ui/primitives/button';
 import { PageContext, PageStore, usePageStore } from './store';
 import type { Motivation } from './store';
 import { useClipboardPaste } from './hooks/use-clipboard-paste';
+import { useAuthStore } from '@modules/auth/provider/store';
+import { canShowMotivations, useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
 
 const SCROLL_STEP = 80;
 
@@ -73,7 +75,16 @@ const SidebarPanel = observer(function SidebarPanel() {
 
 const PageContent = observer(function PageContent() {
     const store = usePageStore();
+    const authStore = useAuthStore();
+    const motivationPreferences = useMotivationPreferences();
     const uiSettings = store.uiSettingsStore;
+    const userId = authStore.optCurrentUser?.id ?? null;
+    const currentPage = store.optCurrentPage;
+    const motivationsAvailable = Boolean(currentPage) && canShowMotivations(
+        authStore.isAuthenticated,
+        motivationPreferences.motivationsEnabled,
+        currentPage?.isPubliclyAccessible,
+    );
     const contentPanelRef = usePanelRef();
     const scrollRef = useRef<HTMLElement>(null);
     const isOpen = uiSettings.sidebarPanelOpen;
@@ -165,30 +176,49 @@ const PageContent = observer(function PageContent() {
     const completedPagesRef = useRef<Set<string>>(new Set());
 
     useEffect(() => {
+        completedPagesRef.current = new Set();
+        prevProgressRef.current = null;
+        if (!userId) return;
         try {
-            const stored = localStorage.getItem('motivation_completed_pages');
+            const stored = localStorage.getItem(`motivation_completed_pages:${userId}`);
             if (stored) completedPagesRef.current = new Set(JSON.parse(stored));
         } catch { }
-    }, []);
+    }, [userId]);
 
     useEffect(() => {
-        fetch('/motivations.json').then(r => r.json()).then(setMotivations);
-    }, []);
+        prevProgressRef.current = null;
+    }, [store.pageId]);
+
+    useEffect(() => {
+        if (!motivationsAvailable) {
+            setMotivations([]);
+            store.dismissMotivation();
+            return;
+        }
+        let cancelled = false;
+        fetch('/motivations.json')
+            .then(r => r.json())
+            .then((data: Motivation[]) => { if (!cancelled && Array.isArray(data)) setMotivations(data); })
+            .catch(() => { if (!cancelled) setMotivations([]); });
+        return () => { cancelled = true; };
+    }, [motivationsAvailable, store]);
 
     useEffect(() => {
         const progress = store.readingProgress;
         if (prevProgressRef.current !== null
+            && motivationsAvailable
+            && userId
             && progress === 100
             && prevProgressRef.current < 100
             && motivations.length > 0
             && !completedPagesRef.current.has(store.pageId)
         ) {
-            const idx = parseInt(localStorage.getItem('motivation_index') || '0', 10);
+            const idx = parseInt(localStorage.getItem(`motivation_index:${userId}`) || '0', 10);
             const quote = motivations[idx % motivations.length];
             store.triggerMotivation(quote);
-            localStorage.setItem('motivation_index', String(idx + 1));
+            localStorage.setItem(`motivation_index:${userId}`, String(idx + 1));
             completedPagesRef.current.add(store.pageId);
-            localStorage.setItem('motivation_completed_pages', JSON.stringify([...completedPagesRef.current]));
+            localStorage.setItem(`motivation_completed_pages:${userId}`, JSON.stringify([...completedPagesRef.current]));
         }
         prevProgressRef.current = progress;
     });
@@ -273,7 +303,7 @@ const PageContent = observer(function PageContent() {
             <Observer>
                 {() => {
                     const quote = store.motivationQuote;
-                    if (!quote) return null;
+                    if (!motivationsAvailable || !quote) return null;
                     return (
                         <Dialog open={true} onOpenChange={() => store.dismissMotivation()}>
                             <div className="flex flex-col gap-5">

@@ -14,6 +14,12 @@ model appuser {
   homepageId String? @db.VarChar(36)
 }
 
+model user_preferences {
+  userId              String   @id @db.VarChar(36)
+  motivationsEnabled Boolean  @default(false)
+  updatedAt           DateTime @updatedAt @db.DateTime(6)
+}
+
 model page {
   id                      String    @id @default(uuid()) @db.VarChar(36)
   userId                  String    @db.VarChar(36)

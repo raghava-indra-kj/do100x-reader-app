@@ -14,6 +14,7 @@ export class Page {
     readonly sections: Section[];
     readonly childrenCount: number;
     readonly isPublic: boolean;
+    readonly isPubliclyAccessible: boolean;
     readonly isOwner: boolean;
     readonly meaningSystemPrompt: string | null;
     readonly explanationSystemPrompt: string | null;
@@ -31,6 +32,7 @@ export class Page {
         sections: Section[];
         childrenCount: number;
         isPublic?: boolean;
+        isPubliclyAccessible?: boolean;
         isOwner?: boolean;
         meaningSystemPrompt?: string | null;
         explanationSystemPrompt?: string | null;
@@ -47,6 +49,7 @@ export class Page {
         this.sections = params.sections;
         this.childrenCount = params.childrenCount;
         this.isPublic = params.isPublic ?? false;
+        this.isPubliclyAccessible = params.isPubliclyAccessible ?? false;
         this.isOwner = params.isOwner ?? true;
         this.meaningSystemPrompt = params.meaningSystemPrompt ?? null;
         this.explanationSystemPrompt = params.explanationSystemPrompt ?? null;

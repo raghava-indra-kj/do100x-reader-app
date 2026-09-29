@@ -16,16 +16,18 @@ import {
     Share2, 
     Globe 
 } from 'lucide-react';
-import { Observer } from 'mobx-react-lite';
+import { Observer, observer } from 'mobx-react-lite';
 import { useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { usePageStore } from '../store';
 import { PageHeadingLevel } from '../theme/page-heading-level';
 import type { Section } from '@domain/page/models/section';
 import { PageSettingsDialog } from './settings';
 import { ShareDialog } from './share-dialog';
 import { MotivationReelsDialog } from '@modules/core/ui/components/motivation-reels';
+import { useAuthStore } from '@modules/auth/provider/store';
+import { canShowMotivations, useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
 
 function collectLevels(sections: Section[]): Set<number> {
     const levels = new Set<number>();
@@ -39,19 +41,33 @@ function collectLevels(sections: Section[]): Set<number> {
     return levels;
 }
 
-export function PageAppbar() {
+export const PageAppbar = observer(function PageAppbar() {
     const store = usePageStore();
+    const authStore = useAuthStore();
+    const motivationPreferences = useMotivationPreferences();
     const uiSettings = store.uiSettingsStore;
     const navigate = useNavigate();
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [shareOpen, setShareOpen] = useState(false);
     const [reelsOpen, setReelsOpen] = useState(false);
+    const page = store.optCurrentPage;
+    const motivationsAvailable = Boolean(page) && canShowMotivations(
+        authStore.isAuthenticated,
+        motivationPreferences.motivationsEnabled,
+        page?.isPubliclyAccessible,
+    );
+
+    useEffect(() => {
+        if (!motivationsAvailable) setReelsOpen(false);
+    }, [motivationsAvailable]);
 
     useHotkeys('-', () => uiSettings.decreaseFontSize(), { useKey: true, preventDefault: true });
     useHotkeys('+', () => uiSettings.increaseFontSize(), { useKey: true, splitKey: '|', preventDefault: true });
     useHotkeys('ArrowLeft', () => store.goToPrevSection(), { preventDefault: true });
     useHotkeys('ArrowRight', () => store.goToNextSection(), { preventDefault: true });
-    useHotkeys('alt+b', () => setReelsOpen(prev => !prev), { preventDefault: true });
+    useHotkeys('alt+b', () => {
+        if (motivationsAvailable) setReelsOpen(prev => !prev);
+    }, { preventDefault: true, enabled: motivationsAvailable }, [motivationsAvailable]);
 
     return (
         <header className="shrink-0 flex items-center justify-between border-b border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-4 py-2.5 sm:px-6">
@@ -242,7 +258,7 @@ export function PageAppbar() {
                         );
                     }}
                 </Observer>
-                <Button 
+                {motivationsAvailable && <Button
                     variant="outlined" 
                     size="sm" 
                     onClick={() => setReelsOpen(true)} 
@@ -251,14 +267,14 @@ export function PageAppbar() {
                 >
                     <Sparkles size={14} className="text-[var(--color-brand)] animate-pulse shrink-0" />
                     <span className="hidden sm:inline font-medium">Bored?</span>
-                </Button>
+                </Button>}
                 <Button variant="outlined" size="sm" iconOnly onClick={() => setSettingsOpen(true)} tooltip="Settings">
                     <Settings size={16} />
                 </Button>
                 <PageSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
                 <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />
-                <MotivationReelsDialog open={reelsOpen} onOpenChange={setReelsOpen} />
+                {motivationsAvailable && <MotivationReelsDialog open={reelsOpen} onOpenChange={setReelsOpen} />}
             </div>
         </header>
     );
-}
+});

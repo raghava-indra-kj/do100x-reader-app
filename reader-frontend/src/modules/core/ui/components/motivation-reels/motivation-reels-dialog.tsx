@@ -22,6 +22,7 @@ import {
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { TimePerspectivePanel } from './time-perspective-panel';
 import { DeepBreathPanel } from './deep-breath-panel';
+import { useAuthStore } from '@modules/auth/provider/store';
 
 export interface Motivation {
     quote: string;
@@ -67,6 +68,8 @@ export interface MotivationReelsDialogProps {
 }
 
 export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDialogProps) {
+    const authStore = useAuthStore();
+    const reelIndexKey = `motivation_reels_index:${authStore.optCurrentUser?.id ?? 'anonymous'}`;
     const [quotes, setQuotes] = useState<Motivation[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [direction, setDirection] = useState<'up' | 'down' | 'none'>('none');
@@ -92,12 +95,12 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
             .then((data: Motivation[]) => {
                 if (Array.isArray(data) && data.length > 0) {
                     setQuotes(data);
-                    const savedIdx = parseInt(localStorage.getItem('motivation_reels_index') || '0', 10);
+                    const savedIdx = parseInt(localStorage.getItem(reelIndexKey) || '0', 10);
                     setCurrentIndex(savedIdx % data.length);
                 }
             })
             .catch(err => console.error('Failed to load motivations:', err));
-    }, [open]);
+    }, [open, reelIndexKey]);
 
     // Handle speech cancellation on index change or close
     useEffect(() => {
@@ -107,6 +110,12 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
         }
     }, [currentIndex, open, isTiredBreakMode, isDeepBreathMode]);
 
+    useEffect(() => () => {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
+    }, []);
+
     const goToNext = useCallback(() => {
         if (quotes.length === 0 || isAnimating || isTiredBreakMode || isDeepBreathMode) return;
         setIsAnimating(true);
@@ -114,12 +123,12 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
         setTimeout(() => {
             setCurrentIndex(prev => {
                 const next = (prev + 1) % quotes.length;
-                localStorage.setItem('motivation_reels_index', String(next));
+                localStorage.setItem(reelIndexKey, String(next));
                 return next;
             });
             setIsAnimating(false);
         }, 220);
-    }, [quotes.length, isAnimating, isTiredBreakMode, isDeepBreathMode]);
+    }, [quotes.length, isAnimating, isTiredBreakMode, isDeepBreathMode, reelIndexKey]);
 
     const goToPrev = useCallback(() => {
         if (quotes.length === 0 || isAnimating || isTiredBreakMode || isDeepBreathMode) return;
@@ -128,12 +137,12 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
         setTimeout(() => {
             setCurrentIndex(prev => {
                 const next = (prev - 1 + quotes.length) % quotes.length;
-                localStorage.setItem('motivation_reels_index', String(next));
+                localStorage.setItem(reelIndexKey, String(next));
                 return next;
             });
             setIsAnimating(false);
         }, 220);
-    }, [quotes.length, isAnimating, isTiredBreakMode, isDeepBreathMode]);
+    }, [quotes.length, isAnimating, isTiredBreakMode, isDeepBreathMode, reelIndexKey]);
 
     const goToRandom = useCallback(() => {
         if (quotes.length <= 1 || isAnimating || isTiredBreakMode || isDeepBreathMode) return;
@@ -145,10 +154,10 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                 next = (next + 1) % quotes.length;
             }
             setCurrentIndex(next);
-            localStorage.setItem('motivation_reels_index', String(next));
+            localStorage.setItem(reelIndexKey, String(next));
             setIsAnimating(false);
         }, 220);
-    }, [quotes.length, isAnimating, currentIndex, isTiredBreakMode, isDeepBreathMode]);
+    }, [quotes.length, isAnimating, currentIndex, isTiredBreakMode, isDeepBreathMode, reelIndexKey]);
 
     // Copy Quote to clipboard
     const handleCopy = useCallback(() => {

@@ -53,12 +53,12 @@ export class PageRepoApi implements IPagesRepo {
     async updateShareStatus(params: {
         pageId: string;
         isPublic: boolean;
-    }): AsyncResult<{ isPublic: boolean }, AppError> {
+    }): AsyncResult<{ isPublic: boolean; isPubliclyAccessible: boolean }, AppError> {
         try {
             const { data } = await apiClient.patch(`/pages/${params.pageId}/share`, {
                 isPublic: params.isPublic,
             });
-            return ok(data as { isPublic: boolean });
+            return ok(data as { isPublic: boolean; isPubliclyAccessible: boolean });
         } catch (error) {
             return err(new AppError({ message: getApiErrorMessage(error, 'Failed to update share status'), cause: error }));
         }

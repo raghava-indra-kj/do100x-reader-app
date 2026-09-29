@@ -13,6 +13,7 @@ import chatRouter from "./chat";
 import tasksRouter from "./tasks";
 import taskListsRouter from "./task-lists";
 import timerRouter from "./timer";
+import userPreferencesRouter from "./user-preferences";
 import { createMcpSseRouter } from "./mcp/sse-router";
 
 const app = express();
@@ -48,6 +49,7 @@ app.use("/backend-api/pages", pagesRouter);
 app.use("/backend-api/comments", commentsRouter);
 app.use("/backend-api/vocabulary", vocabularyRouter);
 app.use("/backend-api/model-config", modelConfigRouter);
+app.use("/backend-api/user-preferences", userPreferencesRouter);
 app.use("/backend-api/user-models", userModelsRouter);
 app.use("/backend-api/chat", chatRouter);
 app.use("/backend-api/tasks", tasksRouter);

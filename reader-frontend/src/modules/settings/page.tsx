@@ -25,9 +25,11 @@ import {
   X,
   Layers,
   Plus,
+  Sparkles,
 } from 'lucide-react';
 import { getLifePerspectiveConfig, saveLifePerspectiveConfig } from '@modules/core/utils/time-perspective';
 import { FORMAT_LLM_MD_CONTENT } from '@modules/core/constants/format-llm-guide';
+import { useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
 
 type SettingsTab = 'account' | 'ai' | 'mcp' | 'guide';
 
@@ -67,9 +69,11 @@ const TABS: TabItem[] = [
 
 export default function SettingsPage() {
   const authStore = useAuthStore();
+  const motivationPreferences = useMotivationPreferences();
   const store = useMemo(() => new SettingsStore({ userId: authStore.currentUser.id }), [authStore]);
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
+  const [motivationError, setMotivationError] = useState(false);
 
   // Credential Visibility & Copy States
   const [showPassword, setShowPassword] = useState(false);
@@ -263,6 +267,38 @@ export default function SettingsPage() {
                               </div>
                             </div>
                           </div>
+                        </section>
+
+                        <section className="p-6 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)]">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] shrink-0">
+                                <Sparkles size={15} />
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Motivations</h3>
+                                <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                                  Show inspirations and a quote when you finish reading a private page. Always off on public pages.
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-label="Enable motivations"
+                              aria-checked={motivationPreferences.motivationsEnabled}
+                              disabled={motivationPreferences.isLoading || motivationPreferences.isSaving}
+                              onClick={async () => {
+                                setMotivationError(false);
+                                const saved = await motivationPreferences.setMotivationsEnabled(!motivationPreferences.motivationsEnabled);
+                                if (!saved) setMotivationError(true);
+                              }}
+                              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)] cursor-pointer disabled:cursor-wait disabled:opacity-50 ${motivationPreferences.motivationsEnabled ? 'bg-[var(--color-brand)]' : 'bg-[var(--color-surface-soft)]'}`}
+                            >
+                              <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${motivationPreferences.motivationsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                            </button>
+                          </div>
+                          {motivationError && <p className="mt-3 text-xs text-red-500" role="alert">Could not save this preference. Please try again.</p>}
                         </section>
 
                         {/* Life Perspective Card */}

@@ -267,6 +267,7 @@ export class PageStore {
                         sections: this._currentPage.sections,
                         childrenCount: this._currentPage.childrenCount,
                         isPublic: result.data.isPublic,
+                        isPubliclyAccessible: result.data.isPubliclyAccessible,
                         isOwner: this._currentPage.isOwner,
                         meaningSystemPrompt: this._currentPage.meaningSystemPrompt,
                         explanationSystemPrompt: this._currentPage.explanationSystemPrompt,

@@ -49,6 +49,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         sections,
         childrenCount: dbPage.childrenCount,
         isPublic: dbPage.isPublic,
+        isPubliclyAccessible: dbPage.isPubliclyAccessible,
         isOwner: dbPage.isOwner,
         meaningSystemPrompt: dbPage.meaningSystemPrompt,
         explanationSystemPrompt: dbPage.explanationSystemPrompt,

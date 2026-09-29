@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ThemeSelector } from '@modules/core/ui/components/theme-selector';
 import { AppBarLogo } from './appbar-logo';
 import { LogoutButton } from './logout-button';
@@ -6,13 +6,20 @@ import { Sparkles, ListTodo } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { settingsPageRoute, tasksPageRoute } from '@boot/routes';
 import { useAuthStore } from '@modules/auth/provider/store';
-import { Observer } from 'mobx-react-lite';
+import { Observer, observer } from 'mobx-react-lite';
 import { Button } from '@modules/core/ui/primitives/button';
 import { MotivationReelsDialog } from '../motivation-reels';
+import { canShowMotivations, useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
 
-export function AppBar() {
+export const AppBar = observer(function AppBar() {
     const authStore = useAuthStore();
+    const motivationPreferences = useMotivationPreferences();
     const [reelsOpen, setReelsOpen] = useState(false);
+    const motivationsAvailable = canShowMotivations(authStore.isAuthenticated, motivationPreferences.motivationsEnabled);
+
+    useEffect(() => {
+        if (!motivationsAvailable) setReelsOpen(false);
+    }, [motivationsAvailable]);
 
     return (
         <header className="shrink-0 flex items-center justify-between border-b border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-4 py-2.5 sm:px-6">
@@ -30,7 +37,7 @@ export function AppBar() {
                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 dark:text-amber-400 uppercase tracking-wider">Beta</span>
                     </Button>
                 </Link>
-                <Button 
+                {motivationsAvailable && <Button
                     variant="outlined" 
                     size="sm" 
                     onClick={() => setReelsOpen(true)} 
@@ -39,7 +46,7 @@ export function AppBar() {
                 >
                     <Sparkles size={14} className="text-[var(--color-brand)] animate-pulse shrink-0" />
                     <span className="hidden sm:inline font-medium">Bored?</span>
-                </Button>
+                </Button>}
                 <Observer>
                     {() => {
                         if (!authStore.isAuthenticated) return null;
@@ -57,7 +64,7 @@ export function AppBar() {
                 <ThemeSelector className="h-8 py-0 text-xs" />
                 <LogoutButton />
             </div>
-            <MotivationReelsDialog open={reelsOpen} onOpenChange={setReelsOpen} />
+            {motivationsAvailable && <MotivationReelsDialog open={reelsOpen} onOpenChange={setReelsOpen} />}
         </header>
     );
-}
+});

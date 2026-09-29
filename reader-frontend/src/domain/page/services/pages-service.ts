@@ -64,7 +64,7 @@ export async function editPage(
 
 export async function updatePageShareStatus(
     params: { pageId: string; isPublic: boolean }
-): AsyncResult<{ isPublic: boolean }, AppError> {
+): AsyncResult<{ isPublic: boolean; isPubliclyAccessible: boolean }, AppError> {
     const repo = container.get<IPagesRepo>(TYPES.IPagesRepo);
     return repo.updateShareStatus(params);
 }

@@ -31,7 +31,7 @@ export interface IPagesRepo {
     updateShareStatus(params: {
         pageId: string;
         isPublic: boolean;
-    }): AsyncResult<{ isPublic: boolean }, AppError>;
+    }): AsyncResult<{ isPublic: boolean; isPubliclyAccessible: boolean }, AppError>;
 
     deletePage(params: { pageId: string }): AsyncResult<void, AppError>;
 

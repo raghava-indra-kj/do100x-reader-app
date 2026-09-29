@@ -135,7 +135,7 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     </Button>
                     <div className="flex justify-center">
                         <Link to={settingsPageRoute} onClick={() => onOpenChange(false)} className="text-xs text-[var(--color-brand)] font-medium hover:underline">
-                            Configure AI models, MCP &amp; Lifespan &rarr;
+                            Account preferences, AI models &amp; MCP &rarr;
                         </Link>
                     </div>
                 </div>
