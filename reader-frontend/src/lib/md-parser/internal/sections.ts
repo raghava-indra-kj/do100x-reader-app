@@ -1,6 +1,7 @@
 import { toString } from "mdast-util-to-string";
 import type { Root, Heading } from "mdast";
 import type { MdSection } from "../types";
+import { locateSections } from "@reader/md-ast";
 
 /** A child node of the remark root */
 type AstNode = Root["children"][number];
@@ -90,6 +91,7 @@ function makePreamble(nodes: AstNode[], source: string): MdSection {
  * Result: `[Intro(children:[Details]), Conclusion]`
  */
 export function buildSections(tree: Root, source: string): MdSection[] {
+    const sourceRanges = locateSections(source, tree);
     const roots: MdSection[] = [];
     const stack: MdSection[] = [];
     let buffer: AstNode[] = [];
@@ -107,7 +109,7 @@ export function buildSections(tree: Root, source: string): MdSection[] {
 
         // flush buffer to preamble or current section
         if (stack.length === 0) {
-            if (buffer.length > 0) roots.push(makePreamble(buffer, source));
+            if (buffer.length > 0) roots.push({ ...makePreamble(buffer, source), sourceRange: sourceRanges.find((range) => range.kind === "preamble") });
         } else {
             stack[stack.length - 1].content = sliceContent(buffer, source);
         }
@@ -134,6 +136,7 @@ export function buildSections(tree: Root, source: string): MdSection[] {
             level: heading.depth,
             content: null,
             children: [],
+            sourceRange: sourceRanges.find((range) => range.headingStart === heading.position?.start.offset),
         };
 
         if (stack.length === 0) roots.push(section);
@@ -144,7 +147,7 @@ export function buildSections(tree: Root, source: string): MdSection[] {
 
     // flush any trailing content after the last heading
     if (buffer.length > 0) {
-        if (stack.length === 0) roots.push(makePreamble(buffer, source));
+        if (stack.length === 0) roots.push({ ...makePreamble(buffer, source), sourceRange: sourceRanges.find((range) => range.kind === "preamble") });
         else stack[stack.length - 1].content = sliceContent(buffer, source);
     }
 

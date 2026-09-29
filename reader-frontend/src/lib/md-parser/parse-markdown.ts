@@ -1,15 +1,7 @@
-import { unified } from "unified";
-import remarkParse from "remark-parse";
-import remarkFrontmatter from "remark-frontmatter";
+import { parseSourceTree } from "@reader/md-ast";
 import { MdParseError, type MdDocument, type ParseResult } from "./types";
 import { extractFrontmatter } from "./internal/frontmatter";
 import { buildSections } from "./internal/sections";
-
-/**
- * Shared remark processor with frontmatter support.
- * Created once at module level — safe to reuse across calls since parse() is stateless.
- */
-const processor = unified().use(remarkParse).use(remarkFrontmatter);
 
 /**
  * Parses a markdown string into a structured MdDocument.
@@ -37,7 +29,7 @@ const processor = unified().use(remarkParse).use(remarkFrontmatter);
 export function parseMarkdown(source: string): MdDocument {
     let tree;
     try {
-        tree = processor.parse(source);
+        tree = parseSourceTree(source);
     } catch (error) {
         throw new MdParseError("Failed to parse markdown", { cause: error });
     }

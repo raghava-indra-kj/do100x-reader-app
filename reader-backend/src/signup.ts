@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { randomUUID } from "crypto";
 import { prisma } from "./prisma";
+import { issueSession } from "./session";
 
 const router = Router();
 
@@ -41,6 +42,7 @@ router.post("/", async (req, res) => {
 
   const user = await prisma.appuser.findUniqueOrThrow({ where: { id: userId } });
 
+  issueSession(res, user.id);
   res.status(201).json(user);
 });
 

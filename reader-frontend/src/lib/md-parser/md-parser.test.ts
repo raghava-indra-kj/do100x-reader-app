@@ -7,6 +7,27 @@ import {
     MdParseError,
 } from "./index";
 import type { MdSection } from "./index";
+import { locateSections } from '@reader/md-ast';
+
+describe('editor source ranges match the reading section tree', () => {
+    it('keeps duplicate and nested headings bound to their exact offsets', () => {
+        const source = '## Same\r\n\r\nfirst\r\n\r\n### Child\r\n\r\nchild\r\n\r\n## Same\r\n\r\nlast';
+        const doc = parseMarkdown(source);
+        expect([doc.sections[0].sourceRange, doc.sections[0].children[0].sourceRange, doc.sections[1].sourceRange]).toEqual(locateSections(source));
+    });
+    it('supports an introduction after frontmatter and Setext headings', () => {
+        const source = '---\ntitle: metadata\n---\n\nIntro 😀\n\nTitle\n=====\n\nbody\n\n## Next ##\n\nnext';
+        const doc = parseMarkdown(source);
+        expect([doc.sections[0].sourceRange, doc.sections[1].sourceRange, doc.sections[1].children[0].sourceRange]).toEqual(locateSections(source));
+        expect(source.slice(doc.sections[0].sourceRange!.bodyStart, doc.sections[0].sourceRange!.bodyEnd)).toContain('Intro 😀');
+    });
+    it('does not treat diagram comments, quoted headings, or math as editable sections', () => {
+        const source = '## Real\n\n```d2\n# diagram comment\na -> b\n```\n\n> ## Quoted\n\n$$\n# equation\n$$';
+        const doc = parseMarkdown(source);
+        expect(doc.sections).toHaveLength(1);
+        expect(doc.sections[0].sourceRange).toEqual(locateSections(source)[0]);
+    });
+});
 
 // ---------------------------------------------------------------------------
 // Helpers

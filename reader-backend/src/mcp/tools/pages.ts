@@ -1,6 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
+import { editSectionBody, contentHash } from "../../page-content";
+import { sectionBodyTarget, editableSectionBody } from "@reader/md-ast";
 import {
   parseMarkdownSections,
   updateSectionByIndex,
@@ -134,6 +136,7 @@ export function registerPageTools(server: McpServer, userId: string) {
                 parentPageId: page.parentId,
                 title: page.title,
                 content: formattedContent,
+                contentVersion: page.contentVersion,
                 totalLines: rawContent.split(/\r?\n/).length,
                 category: page.category,
                 sortOrder: page.sortOrder,
@@ -181,6 +184,7 @@ export function registerPageTools(server: McpServer, userId: string) {
             type: "text",
             text: JSON.stringify(
               sections.map((s) => ({
+                contentVersion: page.contentVersion,
                 index: s.index,
                 level: s.level,
                 heading: s.heading,
@@ -201,14 +205,15 @@ export function registerPageTools(server: McpServer, userId: string) {
   // 4. Update Section by Numeric Index (100% immune to duplicate titles or double quotes)
   server.tool(
     "reader_update_section",
-    "Update a specific section's body content using its numeric sectionIndex (from reader_get_page_sections). 100% immune to duplicate titles, quotes, or formatting quirks.",
+    "Update one section body using its index and contentVersion from reader_get_page_sections. Nested sections are untouched; stale writes and structural body changes are rejected.",
     {
       pageId: z.string().describe("The UUID of the page to update"),
       sectionIndex: z.number().int().min(0).describe("0-based numeric index of the section to update (from reader_get_page_sections)"),
+      contentVersion: z.number().int().nonnegative().describe("Version returned by reader_get_page_sections; required to prevent stale edits"),
       newContent: z.string().describe("The new markdown body text for this section"),
       preserveHeading: z.boolean().optional().default(true).describe("Whether to keep the existing # heading line and replace only the body below it (default: true)"),
     },
-    async ({ pageId, sectionIndex, newContent, preserveHeading }) => {
+    async ({ pageId, sectionIndex, contentVersion, newContent, preserveHeading }) => {
       const page = await prisma.page.findFirst({
         where: { id: pageId, userId, deletedAt: null },
       });
@@ -221,6 +226,14 @@ export function registerPageTools(server: McpServer, userId: string) {
       }
 
       try {
+        if (page.contentVersion !== contentVersion) throw new Error("Page changed. Fetch its sections again before editing.");
+        if (preserveHeading !== false) {
+          const section = parseMarkdownSections(page.content ?? "")[sectionIndex];
+          if (!section) throw new Error("Invalid section index");
+          const target = sectionBodyTarget(page.content ?? "", section.range);
+          const result = await editSectionBody(prisma, userId, pageId, { contentVersion, target, expectedBodyHash: contentHash(target.expectedBody), newBody: newContent });
+          return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, pageId, sectionIndex, contentVersion: result.contentVersion }) }] };
+        }
         const { updatedMarkdown, section } = updateSectionByIndex(
           page.content ?? "",
           sectionIndex,
@@ -229,7 +242,7 @@ export function registerPageTools(server: McpServer, userId: string) {
         );
 
         await prisma.page.update({
-          where: { id: pageId },
+          where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
           data: {
             content: updatedMarkdown,
             updatedAt: new Date(),
@@ -274,8 +287,9 @@ export function registerPageTools(server: McpServer, userId: string) {
       endLine: z.number().int().min(1).describe("Ending line number (1-indexed, inclusive)"),
       replacementContent: z.string().describe("The new text to replace the specified line range"),
       expectedContent: z.string().optional().describe("Optional safety check: expected text currently occupying lines [startLine..endLine]"),
+      contentVersion: z.number().int().nonnegative().describe("Version returned by reader_get_page"),
     },
-    async ({ pageId, startLine, endLine, replacementContent, expectedContent }) => {
+    async ({ pageId, startLine, endLine, replacementContent, expectedContent, contentVersion }) => {
       const page = await prisma.page.findFirst({
         where: { id: pageId, userId, deletedAt: null },
       });
@@ -288,6 +302,7 @@ export function registerPageTools(server: McpServer, userId: string) {
       }
 
       try {
+        if (page.contentVersion !== contentVersion) throw new Error("Page changed. Fetch its content again before editing.");
         const updatedMarkdown = replaceLines(
           page.content ?? "",
           startLine,
@@ -297,7 +312,7 @@ export function registerPageTools(server: McpServer, userId: string) {
         );
 
         await prisma.page.update({
-          where: { id: pageId },
+          where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
           data: {
             content: updatedMarkdown,
             updatedAt: new Date(),
@@ -340,9 +355,10 @@ export function registerPageTools(server: McpServer, userId: string) {
       pageId: z.string().describe("The UUID of the page"),
       heading: z.string().describe("The markdown heading line (e.g. '## 2.5 Security Considerations')"),
       content: z.string().describe("The body content for the new section"),
-      afterSectionIndex: z.number().int().optional().describe("0-based section index to insert after (omit to append at the bottom)"),
+      afterSectionIndex: z.number().int().min(-1).optional().describe("0-based section index to insert after (-1 to prepend; omit to append at the bottom)"),
+      contentVersion: z.number().int().nonnegative().optional().describe("Required when afterSectionIndex is supplied; obtain from reader_get_page_sections"),
     },
-    async ({ pageId, heading, content, afterSectionIndex }) => {
+    async ({ pageId, heading, content, afterSectionIndex, contentVersion }) => {
       const page = await prisma.page.findFirst({
         where: { id: pageId, userId, deletedAt: null },
       });
@@ -354,6 +370,9 @@ export function registerPageTools(server: McpServer, userId: string) {
         };
       }
 
+      if ((afterSectionIndex !== undefined || contentVersion !== undefined) && contentVersion !== page.contentVersion) {
+        return { isError: true, content: [{ type: "text" as const, text: "A matching contentVersion is required for indexed insertion. Fetch the sections again." }] };
+      }
       const updatedMarkdown = insertSectionAfterIndex(
         page.content ?? "",
         afterSectionIndex,
@@ -362,7 +381,7 @@ export function registerPageTools(server: McpServer, userId: string) {
       );
 
       await prisma.page.update({
-        where: { id: pageId },
+        where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
         data: {
           content: updatedMarkdown,
           updatedAt: new Date(),
@@ -465,6 +484,7 @@ export function registerPageTools(server: McpServer, userId: string) {
       pageId: z.string().describe("The UUID of the page to update"),
       title: z.string().optional().describe("Updated title"),
       content: z.string().optional().describe("Updated Markdown body content (overwrites full page)"),
+      contentVersion: z.number().int().nonnegative().optional().describe("Required when replacing content; obtain from reader_get_page"),
       category: z.string().nullable().optional().describe("Updated category"),
       meaningSystemPrompt: z.string().nullable().optional().describe("Updated custom AI prompt for meanings"),
       explanationSystemPrompt: z.string().nullable().optional().describe("Updated custom AI prompt for explanations"),
@@ -474,6 +494,7 @@ export function registerPageTools(server: McpServer, userId: string) {
       pageId,
       title,
       content,
+      contentVersion,
       category,
       meaningSystemPrompt,
       explanationSystemPrompt,
@@ -493,6 +514,9 @@ export function registerPageTools(server: McpServer, userId: string) {
       const updateData: Record<string, unknown> = {
         updatedAt: new Date(),
       };
+      if (content !== undefined && contentVersion !== existing.contentVersion) {
+        return { isError: true, content: [{ type: "text" as const, text: "A matching contentVersion is required to replace page content. Fetch reader_get_page again." }] };
+      }
 
       if (title !== undefined) updateData.title = title;
       if (content !== undefined) updateData.content = content;
@@ -502,7 +526,7 @@ export function registerPageTools(server: McpServer, userId: string) {
       if (doubtSystemPrompt !== undefined) updateData.doubtSystemPrompt = doubtSystemPrompt;
 
       const updated = await prisma.page.update({
-        where: { id: pageId },
+        where: { id: pageId, userId, deletedAt: null, ...(content !== undefined ? { contentVersion: existing.contentVersion } : {}) },
         data: updateData,
       });
 
@@ -793,10 +817,11 @@ export function registerPageTools(server: McpServer, userId: string) {
     {
       pageId: z.string().describe("Target page ID"),
       content: z.string().describe("Markdown content to append"),
-      sectionIndex: z.number().optional().describe("Optional sectionIndex (from reader_get_page_sections) to append to. If omitted, appends to the end of the entire page."),
+      sectionIndex: z.number().int().nonnegative().optional().describe("Optional sectionIndex (from reader_get_page_sections) to append to. If omitted, appends to the end of the entire page."),
+      contentVersion: z.number().int().nonnegative().optional().describe("Required when sectionIndex is supplied; obtain from reader_get_page_sections"),
       separator: z.string().optional().describe("Separator before appended content (default: blank lines)"),
     },
-    async ({ pageId, content, sectionIndex, separator = "\n\n" }) => {
+    async ({ pageId, content, sectionIndex, contentVersion, separator = "\n\n" }) => {
       const page = await prisma.page.findFirst({
         where: { id: pageId, userId, deletedAt: null },
       });
@@ -805,6 +830,9 @@ export function registerPageTools(server: McpServer, userId: string) {
       }
 
       const existingContent = page.content || "";
+      if ((sectionIndex !== undefined || contentVersion !== undefined) && contentVersion !== page.contentVersion) {
+        return { isError: true, content: [{ type: "text" as const, text: "A matching contentVersion is required for indexed append. Fetch the sections again." }] };
+      }
       let updatedContent = "";
 
       if (sectionIndex !== undefined) {
@@ -812,16 +840,26 @@ export function registerPageTools(server: McpServer, userId: string) {
         if (sectionIndex < 0 || sectionIndex >= sections.length) {
           return { isError: true, content: [{ type: "text", text: `Invalid sectionIndex: ${sectionIndex}` }] };
         }
-        const target = sections[sectionIndex];
-        const newSectionContent = target.content ? `${target.content}${separator}${content.trim()}` : content.trim();
-        const res = updateSectionByIndex(existingContent, sectionIndex, newSectionContent, true);
-        updatedContent = res.updatedMarkdown;
+        const range = sections[sectionIndex].range;
+        const body = editableSectionBody(existingContent, range);
+        const target = sectionBodyTarget(existingContent, range);
+        try {
+          const result = await editSectionBody(prisma, userId, pageId, {
+            contentVersion: page.contentVersion, target, expectedBodyHash: contentHash(target.expectedBody),
+            newBody: body ? `${body}${separator}${content}` : content,
+          });
+          return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, pageId, sectionIndex, contentVersion: result.contentVersion }) }] };
+        } catch (error) {
+          return { isError: true, content: [{ type: "text" as const, text: error instanceof Error ? error.message : "Failed to append to section" }] };
+        }
       } else {
-        updatedContent = existingContent.trim() ? `${existingContent.trim()}${separator}${content.trim()}` : content.trim();
+        const eol = existingContent.includes("\r\n") ? "\r\n" : "\n";
+        const appended = `${existingContent ? separator : ""}${content}`.replace(/\r\n|\r|\n/g, eol);
+        updatedContent = existingContent + appended;
       }
 
       const updated = await prisma.page.update({
-        where: { id: pageId },
+        where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
         data: {
           content: updatedContent,
           updatedAt: new Date(),
@@ -1180,7 +1218,7 @@ export function registerPageTools(server: McpServer, userId: string) {
 
       const pages = await prisma.page.findMany({
         where,
-        select: { id: true, title: true, content: true, category: true },
+        select: { id: true, title: true, content: true, category: true, contentVersion: true },
       });
 
       let regex: RegExp;
@@ -1205,7 +1243,7 @@ export function registerPageTools(server: McpServer, userId: string) {
 
           if (!dryRun) {
             await prisma.page.update({
-              where: { id: p.id },
+              where: { id: p.id, userId, deletedAt: null, contentVersion: p.contentVersion },
               data: { content: newContent, updatedAt: now },
             });
           }
@@ -1444,7 +1482,7 @@ export function registerPageTools(server: McpServer, userId: string) {
 
       if (autoFix && fixed) {
         await prisma.page.update({
-          where: { id: pageId },
+          where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
           data: { content: markdown, updatedAt: new Date() },
         });
       }

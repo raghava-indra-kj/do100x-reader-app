@@ -2,6 +2,7 @@ import type { CurrentUser } from '@domain/auth/models/current-user';
 import { CurrentUser as CurrentUserClass } from '@domain/auth/models/current-user';
 import { computed, makeObservable, observable, runInAction } from 'mobx';
 import { createContext, useContext } from 'react';
+import { apiClient } from '@core/api/api-client';
 
 const AUTH_STORAGE_KEY = 'current_user';
 
@@ -61,6 +62,7 @@ export class AuthStore {
     }
 
     logout() {
+        void apiClient.post('/me/logout').catch(() => {});
         runInAction(() => {
             this._currentUser = null;
             localStorage.removeItem(AUTH_STORAGE_KEY);

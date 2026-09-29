@@ -4,16 +4,18 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev": "nodemon --watch src --watch ../packages/md-ast/src --exec \"node scripts/build.js && node dist/index.js\"",
     "postinstall": "prisma generate",
     "build": "node scripts/build.js",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@reader/md-ast": "*",
     "@modelcontextprotocol/sdk": "^1.6.1",
     "@prisma/client": "^5.22.0",
     "dotenv": "^17.4.2",
@@ -23,6 +25,8 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "esbuild": "0.28.2",
+    "vitest": "^4.1.9",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.3",
     "cross-env": "^10.1.0",

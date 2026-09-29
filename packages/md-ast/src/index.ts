@@ -17,3 +17,7 @@ export { safeToMarkdown, toMarkdown } from "./to-markdown";
 export { fromJson, safeFromJson, toJson } from "./json";
 export { reuseIds } from "./reuse-ids";
 
+/* Exact source ranges for safe, section-scoped editing. */
+export { editableSectionBody, locateSections, parseSourceTree, replaceSectionBody, sectionBodyTarget } from "./section-edit";
+export type { MarkdownSectionRange, SectionBodyTarget } from "./section-edit";
+

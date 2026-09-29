@@ -2,8 +2,11 @@ import type { AsyncResult } from '@raghava.indra/result-ts';
 import type { AppError } from '../../../core/errors/app-error';
 import type { DbPage } from '../models/db-page';
 import type { DbPageListItem } from '../models/db-page-list-item';
+import type { SectionEditSnapshot, SectionEditParams } from '../models/section-edit';
 
 export interface IPagesRepo {
+    getSectionEditSnapshot(pageId: string): AsyncResult<SectionEditSnapshot, AppError>;
+    editSectionBody(params: SectionEditParams): AsyncResult<{ content: string; contentVersion: number }, AppError>;
 
     getPage(params: { pageId: string }): AsyncResult<DbPage, AppError>;
 
@@ -20,6 +23,7 @@ export interface IPagesRepo {
 
     editPage(params: {
         pageId: string;
+        contentVersion: number;
         title: string;
         content: string;
         category: string | null;

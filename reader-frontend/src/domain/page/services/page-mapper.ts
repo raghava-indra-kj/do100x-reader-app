@@ -43,6 +43,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         parentPageId: dbPage.parentPageId,
         title: dbPage.title,
         content: dbPage.content,
+        contentVersion: dbPage.contentVersion,
         category: dbPage.category,
         createdAt: dbPage.createdAt,
         updatedAt: dbPage.updatedAt,
@@ -67,5 +68,6 @@ function toSection({ mdSection, pageId }: { mdSection: MdSection, pageId: string
         level: mdSection.level,
         content: mdSection.content,
         children: mdSection.children.map((s) => toSection({ mdSection: s, pageId })),
+        sourceRange: mdSection.sourceRange,
     });
 }

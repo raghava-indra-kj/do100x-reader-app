@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
+import { issueSession, clearSession } from "./session";
 
 const router = Router();
 
@@ -16,7 +17,13 @@ router.post("/", async (req, res) => {
     return;
   }
 
+  issueSession(res, user.id);
   res.json(user);
+});
+
+router.post("/logout", (_req, res) => {
+  clearSession(res);
+  res.status(204).send();
 });
 
 export default router;

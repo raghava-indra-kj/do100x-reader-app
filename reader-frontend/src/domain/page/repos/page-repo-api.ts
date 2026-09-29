@@ -1,11 +1,27 @@
 import { err, ok, type AsyncResult } from '@raghava.indra/result-ts';
+import { z } from 'zod';
 import { AppError } from '../../../core/errors/app-error';
 import { apiClient, getApiErrorMessage } from '../../../core/api/api-client';
 import { DbPageSchema, type DbPage } from '../models/db-page';
 import { DbPageListItemSchema, type DbPageListItem } from '../models/db-page-list-item';
 import type { IPagesRepo } from './pages-repo';
+import { SectionEditSnapshotSchema, type SectionEditSnapshot, type SectionEditParams } from '../models/section-edit';
 
 export class PageRepoApi implements IPagesRepo {
+    async getSectionEditSnapshot(pageId: string): AsyncResult<SectionEditSnapshot, AppError> {
+        try {
+            const { data } = await apiClient.get(`/pages/${pageId}/edit-targets`);
+            return ok(SectionEditSnapshotSchema.parse(data));
+        } catch (error) { return err(new AppError({ message: getApiErrorMessage(error, 'Failed to load section for editing'), cause: error })); }
+    }
+
+    async editSectionBody(params: SectionEditParams): AsyncResult<{ content: string; contentVersion: number }, AppError> {
+        try {
+            const { pageId, ...body } = params;
+            const { data } = await apiClient.patch(`/pages/${pageId}/section-body`, body);
+            return ok(z.object({ content: z.string(), contentVersion: z.number().int() }).parse(data));
+        } catch (error) { return err(new AppError({ message: getApiErrorMessage(error, 'Failed to save section'), cause: error })); }
+    }
     async getPage({ pageId }: { pageId: string }): AsyncResult<DbPage, AppError> {
         try {
             const { data } = await apiClient.get(`/pages/${pageId}`);
@@ -35,6 +51,7 @@ export class PageRepoApi implements IPagesRepo {
 
     async editPage(params: {
         pageId: string;
+        contentVersion: number;
         title: string;
         content: string;
         category: string | null;

@@ -7,6 +7,15 @@ import type { PageListItem } from '../models/page-list-item';
 import type { IPagesRepo } from '../repos/pages-repo';
 import { container, TYPES } from '@di/container';
 import { toPage, toPageListItem } from './page-mapper';
+import type { SectionEditParams, SectionEditSnapshot } from '../models/section-edit';
+
+export async function getSectionEditSnapshot(pageId: string): AsyncResult<SectionEditSnapshot, AppError> {
+    return container.get<IPagesRepo>(TYPES.IPagesRepo).getSectionEditSnapshot(pageId);
+}
+
+export async function saveSectionBody(params: SectionEditParams): AsyncResult<{ content: string; contentVersion: number }, AppError> {
+    return container.get<IPagesRepo>(TYPES.IPagesRepo).editSectionBody(params);
+}
 
 export async function getPage(
     params: { pageId: string }
@@ -45,6 +54,7 @@ export async function createPage(
 export async function editPage(
     params: {
         pageId: string;
+        contentVersion: number;
         title: string;
         content: string;
         category: string | null;

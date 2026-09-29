@@ -47,6 +47,8 @@ export function UpsertPageDialog({
 
     const [title, setTitle] = useState("");
     const [content, setContent] = useState("");
+    const [contentVersion, setContentVersion] = useState<number | null>(null);
+    const [isLoadingPage, setIsLoadingPage] = useState(false);
     const [category, setCategory] = useState<string | null>(null);
     const [meaningSystemPrompt, setMeaningSystemPrompt] = useState("");
     const [explanationSystemPrompt, setExplanationSystemPrompt] = useState("");
@@ -62,6 +64,8 @@ export function UpsertPageDialog({
             setDialogConsuming(false);
             setTitle("");
             setContent("");
+            setContentVersion(null);
+            setIsLoadingPage(false);
             setCategory(null);
             setMeaningSystemPrompt("");
             setExplanationSystemPrompt("");
@@ -77,6 +81,7 @@ export function UpsertPageDialog({
         if (page) {
             setTitle(page.title);
             setContent(page.content ?? "");
+            setContentVersion(page.contentVersion);
             setCategory(page.category);
             setMeaningSystemPrompt(page.meaningSystemPrompt ?? "");
             setExplanationSystemPrompt(page.explanationSystemPrompt ?? "");
@@ -84,7 +89,7 @@ export function UpsertPageDialog({
             return;
         }
 
-        if (initialTitle !== undefined || initialContent !== undefined || initialCategory !== undefined) {
+        if (!isEdit && (initialTitle !== undefined || initialContent !== undefined || initialCategory !== undefined)) {
             setTitle(initialTitle ?? "");
             setContent(initialContent ?? "");
             setCategory(initialCategory ?? null);
@@ -97,18 +102,23 @@ export function UpsertPageDialog({
         if (isEdit && editId) {
             if (loadingRef.current) return;
             loadingRef.current = true;
+            setIsLoadingPage(true);
+            let cancelled = false;
             getPage({ pageId: editId }).then((result) => {
-                if (!open) return;
+                if (cancelled) return;
                 loadingRef.current = false;
+                setIsLoadingPage(false);
                 if (result.ok) {
                     setTitle(result.data.title);
                     setContent(result.data.content ?? "");
+                    setContentVersion(result.data.contentVersion);
                     setCategory(result.data.category);
                     setMeaningSystemPrompt(result.data.meaningSystemPrompt ?? "");
                     setExplanationSystemPrompt(result.data.explanationSystemPrompt ?? "");
                     setDoubtSystemPrompt(result.data.doubtSystemPrompt ?? "");
-                }
+                } else setSubmitState(DataState.error(result.error));
             });
+            return () => { cancelled = true; loadingRef.current = false; };
         }
     }, [open, isEdit, editId, page, initialTitle, initialContent, initialCategory]);
 
@@ -137,7 +147,7 @@ export function UpsertPageDialog({
     );
 
     const handleSubmit = useCallback(async () => {
-        if (!title.trim()) return;
+        if (!title.trim() || (isEdit && contentVersion === null)) return;
         setSubmitState(DataState.loading());
         const trimmedCategory = category?.trim() || null;
         const meaningPromptValue = meaningSystemPrompt.trim() || undefined;
@@ -148,6 +158,7 @@ export function UpsertPageDialog({
             if (!editId) return;
             const result = await editPage({
                 pageId: editId,
+                contentVersion: contentVersion!,
                 title: title.trim(),
                 content,
                 category: trimmedCategory,
@@ -181,7 +192,7 @@ export function UpsertPageDialog({
                 setSubmitState(DataState.error(result.error));
             }
         }
-    }, [title, content, category, isEdit, editId, parentPageId, authStore, navigate, onOpenChange, store, meaningSystemPrompt, explanationSystemPrompt, doubtSystemPrompt]);
+    }, [title, content, contentVersion, category, isEdit, editId, parentPageId, authStore, navigate, onOpenChange, store, meaningSystemPrompt, explanationSystemPrompt, doubtSystemPrompt]);
 
     return (
         <Dialog
@@ -292,7 +303,7 @@ export function UpsertPageDialog({
                 <Button
                     onClick={handleSubmit}
                     loading={submitState.isLoading}
-                    disabled={!title.trim()}
+                    disabled={!title.trim() || isLoadingPage || (isEdit && contentVersion === null)}
                 >
                     {isEdit ? "Save" : "Create"}
                 </Button>

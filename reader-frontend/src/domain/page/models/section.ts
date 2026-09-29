@@ -1,3 +1,5 @@
+import type { MarkdownSectionRange } from '@reader/md-ast';
+
 export class Section {
     readonly id: string;
     readonly pageId: string;
@@ -6,6 +8,7 @@ export class Section {
     readonly level: number;
     readonly content: string | null;
     readonly children: Section[];
+    readonly sourceRange?: MarkdownSectionRange;
 
     constructor(params: {
         id: string;
@@ -15,6 +18,7 @@ export class Section {
         level: number;
         content: string | null;
         children: Section[];
+        sourceRange?: MarkdownSectionRange;
     }) {
         this.id = params.id;
         this.pageId = params.pageId;
@@ -23,6 +27,7 @@ export class Section {
         this.level = params.level;
         this.content = params.content;
         this.children = params.children;
+        this.sourceRange = params.sourceRange;
     }
 
     /** The heading line rebuilt with ATX markers, e.g. `## Functions`. Null for a preamble (level 0). */

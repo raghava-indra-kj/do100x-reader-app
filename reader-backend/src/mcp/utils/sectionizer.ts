@@ -1,224 +1,59 @@
+import { editableSectionBody, locateSections, replaceSectionBody, sectionBodyTarget, type MarkdownSectionRange } from "@reader/md-ast";
+
 export interface ParsedSection {
   index: number;
   level: number;
   heading: string;
-  startLine: number; // 1-indexed
-  endLine: number;   // 1-indexed, inclusive
-  content: string;   // body content excluding heading
-  rawBlock: string;  // full text including heading line
+  startLine: number;
+  endLine: number;
+  content: string;
+  rawBlock: string;
+  range: MarkdownSectionRange;
 }
 
-/**
- * Parses markdown into structured sections based on headings (# ...).
- * Accurately tracks line ranges and handles frontmatter and leading content.
- */
+const lineNumber = (source: string, offset: number) => source.slice(0, offset).split(/\r\n|\r|\n/).length;
+
+/** Sections share the UI parser: fenced code, Setext headings, and frontmatter are handled correctly. */
 export function parseMarkdownSections(markdown: string): ParsedSection[] {
-  const lines = markdown.split(/\r?\n/);
-  const sections: ParsedSection[] = [];
-
-  let inFrontmatter = false;
-  let frontmatterEndLine = -1;
-
-  // Check for YAML frontmatter
-  if (lines.length > 0 && lines[0].trim() === "---") {
-    inFrontmatter = true;
-    for (let i = 1; i < lines.length; i++) {
-      if (lines[i].trim() === "---") {
-        inFrontmatter = false;
-        frontmatterEndLine = i + 1; // 1-indexed
-        break;
-      }
-    }
-  }
-
-  interface HeadingMarker {
-    lineIndex: number; // 0-indexed
-    level: number;
-    headingText: string;
-    rawLine: string;
-  }
-
-  const markers: HeadingMarker[] = [];
-  const startScan = frontmatterEndLine > 0 ? frontmatterEndLine : 0;
-
-  for (let i = startScan; i < lines.length; i++) {
-    const line = lines[i];
-    const match = line.match(/^(#{1,6})\s+(.*)$/);
-    if (match) {
-      markers.push({
-        lineIndex: i,
-        level: match[1].length,
-        headingText: match[2].trim(),
-        rawLine: line,
-      });
-    }
-  }
-
-  // If there is content before the first heading, treat it as Section 0 (Preamble / Overview)
-  if (markers.length > 0 && markers[0].lineIndex > startScan) {
-    const preambleLines = lines.slice(startScan, markers[0].lineIndex);
-    const content = preambleLines.join("\n").trim();
-    if (content.length > 0) {
-      sections.push({
-        index: 0,
-        level: 0,
-        heading: "(Preamble / Header Content)",
-        startLine: startScan + 1,
-        endLine: markers[0].lineIndex,
-        content: preambleLines.join("\n"),
-        rawBlock: preambleLines.join("\n"),
-      });
-    }
-  }
-
-  for (let m = 0; m < markers.length; m++) {
-    const current = markers[m];
-    const nextLineIndex = m + 1 < markers.length ? markers[m + 1].lineIndex : lines.length;
-
-    const blockLines = lines.slice(current.lineIndex, nextLineIndex);
-    const bodyLines = lines.slice(current.lineIndex + 1, nextLineIndex);
-
-    sections.push({
-      index: sections.length,
-      level: current.level,
-      heading: current.headingText,
-      startLine: current.lineIndex + 1,
-      endLine: nextLineIndex,
-      content: bodyLines.join("\n").trim(),
-      rawBlock: blockLines.join("\n"),
-    });
-  }
-
-  // If document had no headings at all, treat entire document as Section 0
-  if (sections.length === 0) {
-    sections.push({
-      index: 0,
-      level: 0,
-      heading: "(Full Page Body)",
-      startLine: 1,
-      endLine: lines.length,
-      content: markdown,
-      rawBlock: markdown,
-    });
-  }
-
-  return sections;
+  return locateSections(markdown).map((range, index) => ({
+    index, level: range.level, heading: range.title ?? "(Preamble / Body)",
+    startLine: lineNumber(markdown, range.headingStart ?? range.bodyStart),
+    endLine: Math.max(1, lineNumber(markdown, Math.max(range.bodyStart, range.bodyEnd - 1))),
+    content: editableSectionBody(markdown, range),
+    rawBlock: markdown.slice(range.headingStart ?? range.bodyStart, range.bodyEnd),
+    range,
+  }));
 }
 
-/**
- * Updates a section by its 0-based index.
- */
-export function updateSectionByIndex(
-  markdown: string,
-  sectionIndex: number,
-  newContent: string,
-  preserveHeading = true
-): { updatedMarkdown: string; section: ParsedSection } {
+export function updateSectionByIndex(markdown: string, sectionIndex: number, newContent: string, preserveHeading = true) {
+  const section = parseMarkdownSections(markdown)[sectionIndex];
+  if (!section) throw new Error(`Invalid sectionIndex ${sectionIndex}`);
+  const updatedMarkdown = preserveHeading
+    ? replaceSectionBody({ source: markdown, target: sectionBodyTarget(markdown, section.range), newBody: newContent })
+    : markdown.slice(0, section.range.headingStart ?? section.range.bodyStart) + newContent + (section.range.bodyEnd < markdown.length ? "\n\n" : "") + markdown.slice(section.range.bodyEnd);
+  return { updatedMarkdown, section };
+}
+
+/** Replace exact source lines, preserving every character outside the selected range. */
+export function replaceLines(markdown: string, startLine: number, endLine: number, replacementContent: string, expectedContent?: string): string {
+  const starts = [0];
+  for (const match of markdown.matchAll(/\r\n|\r|\n/g)) starts.push(match.index! + match[0].length);
+  if (startLine < 1 || endLine < startLine || endLine > starts.length) throw new Error("Invalid line range");
+  const start = starts[startLine - 1];
+  const end = endLine < starts.length ? starts[endLine] : markdown.length;
+  const existing = markdown.slice(start, end).replace(/(?:\r\n|\r|\n)$/, "");
+  if (expectedContent !== undefined && existing !== expectedContent) throw new Error("Line content changed before this edit could be applied");
+  const eol = markdown.includes("\r\n") ? "\r\n" : "\n";
+  return markdown.slice(0, start) + replacementContent.replace(/\r\n|\r|\n/g, eol) + (end < markdown.length ? eol : "") + markdown.slice(end);
+}
+
+export function insertSectionAfterIndex(markdown: string, afterSectionIndex: number | undefined, heading: string, content: string): string {
   const sections = parseMarkdownSections(markdown);
-
-  if (sectionIndex < 0 || sectionIndex >= sections.length) {
-    throw new Error(
-      `Invalid sectionIndex ${sectionIndex}. Available section indices are 0 to ${sections.length - 1}.`
-    );
-  }
-
-  const target = sections[sectionIndex];
-  const lines = markdown.split(/\r?\n/);
-
-  let replacementLines: string[];
-  let replaceStart: number;
-  let replaceEnd: number;
-
-  if (preserveHeading && target.level > 0) {
-    // Keep heading line, replace lines below it
-    const headingLine = lines[target.startLine - 1];
-    replaceStart = target.startLine; // line after heading
-    replaceEnd = target.endLine;     // up to endLine
-    replacementLines = newContent.trim() ? ["", ...newContent.split(/\r?\n/)] : [];
-  } else {
-    // Replace full block including heading
-    replaceStart = target.startLine - 1;
-    replaceEnd = target.endLine;
-    replacementLines = newContent.split(/\r?\n/);
-  }
-
-  const before = lines.slice(0, replaceStart);
-  const after = lines.slice(replaceEnd);
-
-  const updatedLines = [...before, ...replacementLines, ...after];
-  return {
-    updatedMarkdown: updatedLines.join("\n"),
-    section: target,
-  };
-}
-
-/**
- * Replaces a 1-indexed line range [startLine, endLine] with new content.
- */
-export function replaceLines(
-  markdown: string,
-  startLine: number,
-  endLine: number,
-  replacementContent: string,
-  expectedContent?: string
-): string {
-  const lines = markdown.split(/\r?\n/);
-
-  if (startLine < 1 || startLine > lines.length) {
-    throw new Error(`startLine ${startLine} is out of bounds (1-${lines.length})`);
-  }
-  if (endLine < startLine || endLine > lines.length) {
-    throw new Error(`endLine ${endLine} is invalid (must be between startLine ${startLine} and ${lines.length})`);
-  }
-
-  if (expectedContent !== undefined) {
-    const existingSnippet = lines.slice(startLine - 1, endLine).join("\n");
-    if (existingSnippet.trim() !== expectedContent.trim()) {
-      throw new Error(
-        `Safety check failed: Content at lines ${startLine}-${endLine} did not match expectedContent.\nExisting:\n"""\n${existingSnippet}\n"""\nExpected:\n"""\n${expectedContent}\n"""`
-      );
-    }
-  }
-
-  const before = lines.slice(0, startLine - 1);
-  const after = lines.slice(endLine);
-  const replacementLines = replacementContent.split(/\r?\n/);
-
-  return [...before, ...replacementLines, ...after].join("\n");
-}
-
-/**
- * Inserts a new section after a given section index.
- */
-export function insertSectionAfterIndex(
-  markdown: string,
-  afterSectionIndex: number | undefined,
-  heading: string,
-  content: string
-): string {
-  const sections = parseMarkdownSections(markdown);
-  const lines = markdown.split(/\r?\n/);
-
-  const formattedNewSection = `\n\n${heading}\n${content.trim()}\n`;
-
-  if (afterSectionIndex === undefined || afterSectionIndex >= sections.length - 1) {
-    // Append to bottom
-    return markdown.trimEnd() + formattedNewSection;
-  }
-
-  if (afterSectionIndex < 0) {
-    // Prepend to top (after frontmatter if any)
-    const firstSection = sections[0];
-    const insertLine = firstSection.startLine - 1;
-    const before = lines.slice(0, insertLine);
-    const after = lines.slice(insertLine);
-    return [...before, `${heading}\n${content.trim()}\n`, ...after].join("\n");
-  }
-
-  const target = sections[afterSectionIndex];
-  const insertLine = target.endLine;
-  const before = lines.slice(0, insertLine);
-  const after = lines.slice(insertLine);
-
-  return [...before, formattedNewSection, ...after].join("\n");
+  const eol = markdown.includes("\r\n") ? "\r\n" : "\n";
+  const insertion = `${eol}${eol}${heading}${eol}${eol}${content}${eol}${eol}`;
+  if (afterSectionIndex === undefined) return markdown + insertion;
+  if (afterSectionIndex < -1 || afterSectionIndex >= sections.length) throw new Error("Invalid section index");
+  const target = afterSectionIndex === -1 ? sections[0]?.range.headingStart ?? sections[0]?.range.bodyStart ?? markdown.length : sections[afterSectionIndex]?.range.bodyEnd;
+  if (target === undefined) throw new Error("Invalid section index");
+  return markdown.slice(0, target) + insertion + markdown.slice(target);
 }

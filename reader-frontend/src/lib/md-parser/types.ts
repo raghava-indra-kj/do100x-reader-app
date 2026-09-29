@@ -1,4 +1,5 @@
 /** Front matter */
+import type { MarkdownSectionRange } from "@reader/md-ast";
 export type MdFrontmatter = Record<string, unknown>;
 
 /** A document section */
@@ -9,6 +10,7 @@ export interface MdSection {
     level: number;
     content: string | null;
     children: MdSection[];
+    sourceRange?: MarkdownSectionRange;
 }
 
 /** Parsed document */

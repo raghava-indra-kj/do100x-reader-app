@@ -1,7 +1,60 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
+import { z } from "zod";
+import { locateSections, sectionBodyTarget } from "@reader/md-ast";
+import { contentHash, editSectionBody, PageContentError } from "./page-content";
+import { readSession, requireSession } from "./session";
 
 const router = Router();
+router.use((req, res, next) => req.method === "GET" ? next() : requireSession(req, res, next));
+
+const sectionEditSchema = z.object({
+  contentVersion: z.number().int().nonnegative(),
+  target: z.object({
+    kind: z.enum(["heading", "preamble"]),
+    headingStart: z.number().int().nonnegative().nullable(),
+    bodyStart: z.number().int().nonnegative(),
+    expectedHeading: z.string().nullable(),
+    expectedBody: z.string(),
+  }),
+  expectedBodyHash: z.string().regex(/^[a-f0-9]{64}$/),
+  newBody: z.string(),
+});
+
+const fullPageEditSchema = z.object({
+  title: z.string().trim().min(1),
+  content: z.string(),
+  contentVersion: z.number().int().nonnegative(),
+  category: z.string().nullable().optional(),
+  meaningSystemPrompt: z.string().nullable().optional(),
+  explanationSystemPrompt: z.string().nullable().optional(),
+  doubtSystemPrompt: z.string().nullable().optional(),
+});
+
+// Owner-only snapshots bind each edit to exact source positions and a version.
+router.get("/:pageId/edit-targets", requireSession, async (req, res) => {
+  const pageId = req.params.pageId as string;
+  const page = await prisma.page.findFirst({ where: { id: pageId, userId: res.locals.userId, deletedAt: null } });
+  if (!page) { res.status(404).json({ message: "Page not found" }); return; }
+  const source = page.content ?? "";
+  res.json({
+    contentVersion: page.contentVersion,
+    sections: locateSections(source).map((range) => ({
+      range, target: sectionBodyTarget(source, range), expectedBodyHash: contentHash(source.slice(range.bodyStart, range.bodyEnd)),
+    })),
+  });
+});
+
+router.patch("/:pageId/section-body", async (req, res) => {
+  const parsed = sectionEditSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Invalid section edit request" }); return; }
+  try {
+    res.json(await editSectionBody(prisma, res.locals.userId, req.params.pageId, parsed.data));
+  } catch (error) {
+    if (error instanceof PageContentError) { res.status(error.status).json({ message: error.message }); return; }
+    throw error;
+  }
+});
 
 /**
  * Recursively checks if a page or any of its ancestors is marked as public.
@@ -26,7 +79,7 @@ async function isPagePubliclyAccessible(page: { id: string; isPublic: boolean; p
 // GET /pages/:pageId
 router.get("/:pageId", async (req, res) => {
   const { pageId } = req.params;
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
 
   const page = await prisma.page.findFirst({
     where: { id: pageId, deletedAt: null },
@@ -36,6 +89,7 @@ router.get("/:pageId", async (req, res) => {
       parentId: true,
       title: true,
       content: true,
+      contentVersion: true,
       category: true,
       sortOrder: true,
       childrenCount: true,
@@ -68,6 +122,7 @@ router.get("/:pageId", async (req, res) => {
     parentPageId: page.parentId,
     title: page.title,
     content: page.content ?? "",
+    contentVersion: page.contentVersion,
     category: page.category ?? null,
     sortOrder: page.sortOrder,
     childrenCount: page.childrenCount,
@@ -88,7 +143,7 @@ router.get("/", async (req, res) => {
     parentPageId?: string;
     searchQuery?: string;
   };
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
 
   // If parentPageId is specified, ensure it is accessible
   if (parentPageId && parentPageId !== "null") {
@@ -157,7 +212,6 @@ router.post("/", async (req, res) => {
     title,
     content,
     category,
-    userId,
     meaningSystemPrompt,
     explanationSystemPrompt,
     doubtSystemPrompt,
@@ -173,6 +227,11 @@ router.post("/", async (req, res) => {
   };
 
   const now = new Date();
+  const userId = res.locals.userId as string;
+  if (parentPageId) {
+    const parent = await prisma.page.findFirst({ where: { id: parentPageId, userId, deletedAt: null } });
+    if (!parent) { res.status(404).json({ message: "Parent page not found" }); return; }
+  }
 
   const maxSortOrderRow = await prisma.page.aggregate({
     where: { parentId: parentPageId ?? null, deletedAt: null },
@@ -213,7 +272,7 @@ router.post("/", async (req, res) => {
 router.patch("/:pageId/share", async (req, res) => {
   const { pageId } = req.params;
   const { isPublic } = req.body as { isPublic: boolean };
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = res.locals.userId as string;
 
   const page = await prisma.page.findFirst({
     where: { id: pageId, deletedAt: null },
@@ -244,22 +303,18 @@ router.patch("/:pageId/share", async (req, res) => {
 // PUT /pages/:pageId
 router.put("/:pageId", async (req, res) => {
   const { pageId } = req.params;
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = res.locals.userId as string;
+  const parsed = fullPageEditSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: "Title, Markdown content, and a valid contentVersion are required" }); return; }
   const {
     title,
     content,
+    contentVersion,
     category,
     meaningSystemPrompt,
     explanationSystemPrompt,
     doubtSystemPrompt,
-  } = req.body as {
-    title: string;
-    content: string;
-    category: string | null;
-    meaningSystemPrompt?: string;
-    explanationSystemPrompt?: string;
-    doubtSystemPrompt?: string;
-  };
+  } = parsed.data;
 
   const page = await prisma.page.findFirst({
     where: { id: pageId, deletedAt: null },
@@ -275,8 +330,8 @@ router.put("/:pageId", async (req, res) => {
     return;
   }
 
-  await prisma.page.update({
-    where: { id: pageId },
+  const saved = await prisma.page.updateMany({
+    where: { id: pageId, userId: reqUserId, deletedAt: null, contentVersion },
     data: {
       title,
       content,
@@ -288,13 +343,15 @@ router.put("/:pageId", async (req, res) => {
     },
   });
 
+  if (saved.count !== 1) { res.status(409).json({ message: "This page changed while you were editing. Reload before saving; your draft is preserved." }); return; }
+
   res.status(204).send();
 });
 
 // DELETE /pages/:pageId  (soft delete)
 router.delete("/:pageId", async (req, res) => {
   const { pageId } = req.params;
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = res.locals.userId as string;
   const now = new Date();
 
   const page = await prisma.page.findFirst({
@@ -334,8 +391,8 @@ router.post("/swap", async (req, res) => {
   };
 
   const [page1, page2] = await Promise.all([
-    prisma.page.findFirst({ where: { id: pageId1, deletedAt: null } }),
-    prisma.page.findFirst({ where: { id: pageId2, deletedAt: null } }),
+    prisma.page.findFirst({ where: { id: pageId1, userId: res.locals.userId, deletedAt: null } }),
+    prisma.page.findFirst({ where: { id: pageId2, userId: res.locals.userId, deletedAt: null } }),
   ]);
 
   if (!page1 || !page2) {

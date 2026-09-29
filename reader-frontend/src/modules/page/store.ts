@@ -261,6 +261,7 @@ export class PageStore {
                         parentPageId: this._currentPage.parentPageId,
                         title: this._currentPage.title,
                         content: this._currentPage.content,
+                        contentVersion: this._currentPage.contentVersion,
                         category: this._currentPage.category,
                         createdAt: this._currentPage.createdAt,
                         updatedAt: this._currentPage.updatedAt,

@@ -21,6 +21,7 @@ import { useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useEffect, useState } from 'react';
 import { usePageStore } from '../store';
+import { isDialogConsuming } from '../clipboard-paste';
 import { PageHeadingLevel } from '../theme/page-heading-level';
 import type { Section } from '@domain/page/models/section';
 import { PageSettingsDialog } from './settings';
@@ -63,8 +64,8 @@ export const PageAppbar = observer(function PageAppbar() {
 
     useHotkeys('-', () => uiSettings.decreaseFontSize(), { useKey: true, preventDefault: true });
     useHotkeys('+', () => uiSettings.increaseFontSize(), { useKey: true, splitKey: '|', preventDefault: true });
-    useHotkeys('ArrowLeft', () => store.goToPrevSection(), { preventDefault: true });
-    useHotkeys('ArrowRight', () => store.goToNextSection(), { preventDefault: true });
+    useHotkeys('ArrowLeft', () => { if (!isDialogConsuming()) store.goToPrevSection(); }, { preventDefault: true });
+    useHotkeys('ArrowRight', () => { if (!isDialogConsuming()) store.goToNextSection(); }, { preventDefault: true });
     useHotkeys('alt+b', () => {
         if (motivationsAvailable) setReelsOpen(prev => !prev);
     }, { preventDefault: true, enabled: motivationsAvailable }, [motivationsAvailable]);

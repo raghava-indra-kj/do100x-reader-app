@@ -1,9 +1,12 @@
 import { observer } from 'mobx-react-lite';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
+import type { Page } from '@domain/page/models/page';
+import type { MarkdownSectionRange } from '@reader/md-ast';
+import { SectionEditDialog } from './section-edit-dialog';
 import { usePageStore } from '../store';
 import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
-import { MarkdownRenderer } from '@reader/md-view';
+import { SectionReader } from './section-reader';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { PageSkeletonLoader } from './page-skeleton-loader';
 import { Button } from '@modules/core/ui/primitives/button';
@@ -16,10 +19,14 @@ export const PageMain = observer(function PageMain() {
     const store = usePageStore();
     const themeStore = useThemeStore();
     const contentRef = useRef<HTMLDivElement>(null);
+    // Pin the snapshot outside the keyed reader so a refresh never destroys an
+    // open draft. The server will reject a stale snapshot at save time.
+    const [editing, setEditing] = useState<{ page: Page; range: MarkdownSectionRange } | null>(null);
+    const editor = editing && <SectionEditDialog page={editing.page} range={editing.range} onClose={() => setEditing(null)} />;
 
     if (store.initDataState.isError) {
         return (
-            <div className="flex h-full items-center justify-center p-6">
+            <><div className="flex h-full items-center justify-center p-6">
                 <div className="flex flex-col items-center gap-4 text-center max-w-sm p-6 rounded-2xl bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] shadow-xs">
                     <div className="w-10 h-10 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center">
                         <AlertTriangle size={20} />
@@ -39,18 +46,18 @@ export const PageMain = observer(function PageMain() {
                         <span>Try again</span>
                     </Button>
                 </div>
-            </div>
+            </div>{editor}</>
         );
     }
 
     if (!store.optCurrentPage || store.initDataState.isLoading) {
-        return <PageSkeletonLoader />;
+        return <><PageSkeletonLoader />{editor}</>;
     }
 
     const page = store.optCurrentPage;
     const section = store.currentSection;
     if (!section || page.isEmpty) {
-        return <EmptyPagePlaceholder page={page} />;
+        return <><EmptyPagePlaceholder page={page} />{editor}</>;
     }
 
     const uiSettings = store.uiSettingsStore;
@@ -59,19 +66,22 @@ export const PageMain = observer(function PageMain() {
     const colors = schema.value;
 
     return (
-        <div ref={contentRef} className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">
-            <MarkdownRenderer
-                key={section.id}
-                markdown={section.chunkMarkdown(maxLevel)}
+        <><div ref={contentRef} className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">
+            <SectionReader
+                key={`${section.id}:${page.contentVersion}`}
+                page={page}
+                section={section}
+                maxLevel={maxLevel}
                 colors={colors}
                 fontSizes={uiSettings.fontSize.value}
                 fonts={uiSettings.fontFamilies.value}
+                onEdit={(range) => setEditing({ page, range })}
             />
-            <SelectionPopover
+            {!editing && <SelectionPopover
                 containerRef={contentRef}
                 page={page}
                 section={section}
-            />
-        </div>
+            />}
+        </div>{editor}</>
     );
 });
