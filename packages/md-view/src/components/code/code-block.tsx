@@ -49,7 +49,11 @@ export function CodeBlock({ language, codeClassName, children }: CodeBlockProps)
     resetFeedback();
   };
 
-  const label = copyState === "copied" ? "Copied" : copyState === "failed" ? "Retry" : "Copy";
+  const copyLabel = copyState === "copied"
+    ? "Code copied"
+    : copyState === "failed"
+      ? "Could not copy code. Try again."
+      : "Copy code";
 
   return (
     <pre className="md-code-block">
@@ -57,11 +61,10 @@ export function CodeBlock({ language, codeClassName, children }: CodeBlockProps)
         type="button"
         className="md-code-block-copy"
         onClick={copyCode}
-        title={copyState === "failed" ? "Could not copy code. Try again." : "Copy code"}
-        aria-label={copyState === "failed" ? "Could not copy code. Try again." : "Copy code"}
+        title={copyLabel}
+        aria-label={copyLabel}
       >
         {copyState === "copied" ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-        <span>{label}</span>
       </button>
       <code
         ref={codeRef}
