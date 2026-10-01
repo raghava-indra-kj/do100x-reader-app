@@ -14,6 +14,8 @@ import tasksRouter from "./tasks";
 import taskListsRouter from "./task-lists";
 import timerRouter from "./timer";
 import userPreferencesRouter from "./user-preferences";
+import { createQuizRouter } from "./quiz/quiz-router";
+import { prisma } from "./prisma";
 import { createMcpSseRouter } from "./mcp/sse-router";
 
 const app = express();
@@ -46,6 +48,7 @@ app.get("/backend-api/status", (_req, res) => {
 app.use("/backend-api/me", meRouter);
 app.use("/backend-api/signup", signupRouter);
 app.use("/backend-api/pages", pagesRouter);
+app.use("/backend-api/quizzes", createQuizRouter(prisma));
 app.use("/backend-api/comments", commentsRouter);
 app.use("/backend-api/vocabulary", vocabularyRouter);
 app.use("/backend-api/model-config", modelConfigRouter);

@@ -7,6 +7,7 @@ import type { ExtractedPaste } from '@lib/md-parser';
 import { PageAppbar } from './components/appbar';
 import { NavRail } from './components/nav-rail';
 import { PageSubpages } from './components/subpages';
+import { PageQuizzes } from './quizzes/quiz-panel';
 import { PageToc } from './components/toc';
 import { PageComments } from './components/comments-panel';
 import { PageVocabulary } from './components/vocabulary-panel';
@@ -54,6 +55,9 @@ const SidebarPanel = observer(function SidebarPanel() {
 
     if (uiSettings.sidebarPanel === 'subpages') {
         return <PageSubpages />;
+    }
+    if (uiSettings.sidebarPanel === 'quizzes') {
+        return <PageQuizzes />;
     }
     if (uiSettings.sidebarPanel === 'comments') {
         return <PageComments />;
@@ -119,6 +123,13 @@ const PageContent = observer(function PageContent() {
             uiSettings.setSidebarPanelOpen(false);
         } else {
             uiSettings.setSidebarPanel('subpages');
+        }
+    }, { preventDefault: true, enableOnFormTags: false });
+    useHotkeys('alt+q', () => {
+        if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'quizzes') {
+            uiSettings.setSidebarPanelOpen(false);
+        } else {
+            uiSettings.setSidebarPanel('quizzes');
         }
     }, { preventDefault: true, enableOnFormTags: false });
     useHotkeys('alt+m', () => {

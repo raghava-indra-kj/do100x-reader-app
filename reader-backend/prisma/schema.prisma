@@ -9,9 +9,11 @@ datasource db {
 
 model appuser {
   id         String  @id @default(uuid()) @db.VarChar(36)
-  username   String  @db.VarChar(15)
-  password   String  @db.VarChar(4)
+  username   String  @db.VarChar(255)
+  password   String  @db.VarChar(255)
   homepageId String? @db.VarChar(36)
+
+  quizAttempts quiz_attempt[]
 }
 
 model user_preferences {
@@ -37,6 +39,165 @@ model page {
   meaningSystemPrompt     String?   @db.Text
   explanationSystemPrompt String?   @db.Text
   doubtSystemPrompt       String?   @db.Text
+
+  quizzes quiz[]
+}
+
+enum quiz_question_kind {
+  OBJECTIVE
+  SUBJECTIVE
+}
+
+enum quiz_selection_mode {
+  SINGLE
+  MULTIPLE
+}
+
+enum quiz_response_length {
+  SHORT
+  LONG
+}
+
+enum quiz_attempt_status {
+  IN_PROGRESS
+  SUBMITTED
+}
+
+enum quiz_evaluation_source {
+  OBJECTIVE
+  AI
+}
+
+enum quiz_evaluation_verdict {
+  CORRECT
+  PARTIAL
+  INCORRECT
+  UNANSWERED
+  NEEDS_REVIEW
+}
+
+model quiz {
+  id                String    @id @default(uuid()) @db.VarChar(36)
+  pageId            String    @db.VarChar(36)
+  currentRevisionNo Int       @default(1)
+  sortOrder         Int       @default(0)
+  archivedAt        DateTime? @db.DateTime(6)
+  createdAt         DateTime  @default(now()) @db.DateTime(6)
+  updatedAt         DateTime  @updatedAt @db.DateTime(6)
+
+  page      page            @relation(fields: [pageId], references: [id], onDelete: Restrict)
+  revisions quiz_revision[]
+
+  @@index([pageId, archivedAt, sortOrder])
+}
+
+model quiz_revision {
+  id                   String   @id @default(uuid()) @db.VarChar(36)
+  quizId               String   @db.VarChar(36)
+  revisionNo           Int
+  title                String   @db.VarChar(255)
+  instructionsMarkdown String?  @db.LongText
+  createdAt            DateTime @default(now()) @db.DateTime(6)
+
+  quiz      quiz            @relation(fields: [quizId], references: [id], onDelete: Restrict)
+  questions quiz_question[]
+  attempts  quiz_attempt[]
+
+  @@unique([quizId, revisionNo])
+}
+
+model quiz_question {
+  id                      String                @id @default(uuid()) @db.VarChar(36)
+  revisionId              String                @db.VarChar(36)
+  position                Int
+  kind                    quiz_question_kind
+  selectionMode           quiz_selection_mode?
+  responseLength          quiz_response_length?
+  promptMarkdown          String                @db.LongText
+  referenceAnswerMarkdown String?               @db.LongText
+  explanationMarkdown     String                @db.LongText
+
+  revision quiz_revision         @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  options  quiz_option[]
+  answers  quiz_attempt_answer[]
+
+  @@unique([revisionId, position])
+}
+
+model quiz_option {
+  id           String  @id @default(uuid()) @db.VarChar(36)
+  questionId   String  @db.VarChar(36)
+  position     Int
+  bodyMarkdown String  @db.LongText
+  isCorrect    Boolean
+
+  question   quiz_question          @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selections quiz_answer_selection[]
+
+  @@unique([questionId, position])
+}
+
+model quiz_attempt {
+  id              String              @id @default(uuid()) @db.VarChar(36)
+  revisionId      String              @db.VarChar(36)
+  userId          String              @db.VarChar(36)
+  status          quiz_attempt_status @default(IN_PROGRESS)
+  startRequestKey String              @db.VarChar(36)
+  startedAt       DateTime            @default(now()) @db.DateTime(6)
+  submittedAt     DateTime?           @db.DateTime(6)
+
+  revision quiz_revision         @relation(fields: [revisionId], references: [id], onDelete: Restrict)
+  user     appuser               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  answers  quiz_attempt_answer[]
+
+  @@unique([userId, startRequestKey])
+  @@index([userId, startedAt])
+  @@index([revisionId])
+}
+
+model quiz_attempt_answer {
+  id               String   @id @default(uuid()) @db.VarChar(36)
+  attemptId        String   @db.VarChar(36)
+  questionId       String   @db.VarChar(36)
+  responseMarkdown String?  @db.LongText
+  updatedAt        DateTime @updatedAt @db.DateTime(6)
+
+  attempt     quiz_attempt             @relation(fields: [attemptId], references: [id], onDelete: Restrict)
+  question    quiz_question            @relation(fields: [questionId], references: [id], onDelete: Restrict)
+  selections  quiz_answer_selection[]
+  evaluations quiz_answer_evaluation[]
+
+  @@unique([attemptId, questionId])
+  @@index([questionId])
+}
+
+model quiz_answer_selection {
+  answerId String @db.VarChar(36)
+  optionId String @db.VarChar(36)
+
+  answer quiz_attempt_answer @relation(fields: [answerId], references: [id], onDelete: Restrict)
+  option quiz_option         @relation(fields: [optionId], references: [id], onDelete: Restrict)
+
+  @@id([answerId, optionId])
+  @@index([optionId])
+}
+
+model quiz_answer_evaluation {
+  id               String                  @id @default(uuid()) @db.VarChar(36)
+  answerId         String                  @db.VarChar(36)
+  requestKey       String                  @db.VarChar(36)
+  source           quiz_evaluation_source
+  verdict          quiz_evaluation_verdict
+  scorePercent     Int?
+  feedbackMarkdown String                  @db.LongText
+  modelId          String?                 @db.VarChar(255)
+  promptVersion    String?                 @db.VarChar(50)
+  createdAt        DateTime                @default(now()) @db.DateTime(6)
+
+  answer quiz_attempt_answer @relation(fields: [answerId], references: [id], onDelete: Restrict)
+
+  @@unique([answerId, requestKey])
+  @@index([answerId, createdAt])
 }
 
 model comment {

@@ -1,77 +1,252 @@
 [
   {
     "quote": "Reading maketh a full man; conference a ready man; and writing an exact man.",
-    "meaning": "Reading expands knowledge, discussion develops readiness of thought, and writing forces precision.",
+    "meaning": "Reading expands knowledge, discussion sharpens thought, and writing forces precision.",
     "by": "Francis Bacon"
   },
   {
     "quote": "Reading furnishes the mind only with materials of knowledge; it is thinking that makes what we read ours.",
-    "meaning": "Reading gives us information, but reflection is what converts information into genuine understanding.",
+    "meaning": "Information becomes understanding only when we actively think about it.",
     "by": "John Locke"
   },
   {
     "quote": "A man ought to read just as inclination leads him; for what he reads as a task will do him little good.",
-    "meaning": "Curiosity and genuine interest can make reading deeper, more memorable, and more rewarding.",
+    "meaning": "Curiosity makes reading deeper and more memorable than obligation alone.",
     "by": "Samuel Johnson"
   },
   {
-    "quote": "No book was so bad but some good might be got out of it.",
-    "meaning": "A thoughtful reader can often discover something useful even in an imperfect book.",
-    "by": "Pliny the Elder"
-  },
-  {
     "quote": "Books are the treasured wealth of the world and the fit inheritance of generations and nations.",
-    "meaning": "Books preserve knowledge and experience so that one generation can pass them to another.",
+    "meaning": "Books allow knowledge and experience to survive beyond a single lifetime.",
     "by": "Henry David Thoreau"
   },
   {
-    "quote": "A book must be the axe for the frozen sea within us.",
-    "meaning": "The most valuable books do more than entertain; they disturb comfortable thinking and change us.",
-    "by": "Franz Kafka"
+    "quote": "The reading of all good books is like a conversation with the finest minds of past centuries.",
+    "meaning": "Reading gives us access to thinkers whom we could never meet personally.",
+    "by": "René Descartes"
   },
   {
-    "quote": "Far and away the best prize that life offers is the chance to work hard at work worth doing.",
-    "meaning": "Hard work becomes deeply satisfying when the work itself has meaning and value.",
-    "by": "Theodore Roosevelt"
+    "quote": "I have always imagined that Paradise will be a kind of library.",
+    "meaning": "A life surrounded by books can represent endless discovery and intellectual possibility.",
+    "by": "Jorge Luis Borges"
   },
   {
-    "quote": "Genius is one percent inspiration, ninety-nine percent perspiration.",
-    "meaning": "Ideas matter, but sustained effort is what turns ideas into accomplishments.",
-    "by": "Thomas Edison"
+    "quote": "If you find a book you really want to read but it hasn't been written yet, then you must write it.",
+    "meaning": "When something valuable is missing, creation can be more useful than waiting for someone else to provide it.",
+    "by": "Toni Morrison"
   },
   {
-    "quote": "In the fields of observation chance favours only the prepared mind.",
-    "meaning": "Opportunities and discoveries become useful when preparation enables us to recognize them.",
-    "by": "Louis Pasteur"
+    "quote": "Books are a uniquely portable magic.",
+    "meaning": "A small physical object can carry entire worlds, ideas, histories, and experiences.",
+    "by": "Stephen King"
   },
   {
-    "quote": "We learn wisdom from failure much more than from success.",
-    "meaning": "Failure exposes weaknesses and mistaken assumptions that success can sometimes hide.",
-    "by": "Samuel Smiles"
+    "quote": "The more that you read, the more things you will know. The more that you learn, the more places you'll go.",
+    "meaning": "Learning expands both understanding and the range of possibilities available to us.",
+    "by": "Dr. Seuss"
   },
   {
-    "quote": "Nothing ever comes to one, that is worth having, except as a result of hard work.",
-    "meaning": "Achievements of lasting value usually require persistence, patience, and substantial effort.",
-    "by": "Booker T. Washington"
+    "quote": "You don't have to burn books to destroy a culture. Just get people to stop reading them.",
+    "meaning": "A culture can lose intellectual depth simply by losing the habit of serious reading.",
+    "by": "Ray Bradbury"
   },
   {
-    "quote": "The only way to do great work is to love what you do.",
-    "meaning": "Long-term excellence becomes easier to sustain when genuine interest exists in the work itself.",
-    "by": "Steve Jobs"
+    "quote": "I cannot live without books.",
+    "meaning": "Books can become a permanent part of an intellectually active life.",
+    "by": "Thomas Jefferson"
   },
   {
-    "quote": "It is not that we have a short time to live, but that we waste much of it.",
-    "meaning": "The value of time depends less on how much we possess than on how deliberately we use it.",
+    "quote": "The person, be it gentleman or lady, who has not pleasure in a good novel, must be intolerably stupid.",
+    "meaning": "A good novel can offer both pleasure and insight into human life.",
+    "by": "Jane Austen"
+  },
+  {
+    "quote": "If I have seen further it is by standing on the shoulders of Giants.",
+    "meaning": "New knowledge grows from understanding and extending the work of people who came before us.",
+    "by": "Isaac Newton"
+  },
+  {
+    "quote": "A little learning is a dangerous thing; drink deep, or taste not the Pierian spring.",
+    "meaning": "Shallow knowledge can create unjustified confidence; deeper study reveals complexity.",
+    "by": "Alexander Pope"
+  },
+  {
+    "quote": "The mind is not a vessel to be filled but a fire to be kindled.",
+    "meaning": "Education should awaken curiosity and independent thought rather than merely accumulate information.",
+    "by": "Plutarch"
+  },
+  {
+    "quote": "For the things we have to learn before we can do them, we learn by doing them.",
+    "meaning": "Real competence develops through practice, not through theory alone.",
+    "by": "Aristotle"
+  },
+  {
+    "quote": "While we teach, we learn.",
+    "meaning": "Explaining something to another person strengthens our own understanding of it.",
     "by": "Seneca"
   },
   {
+    "quote": "It is impossible for a man to begin to learn what he has a conceit that he already knows.",
+    "meaning": "Learning requires enough humility to admit that our current understanding may be incomplete.",
+    "by": "Epictetus"
+  },
+  {
+    "quote": "The first principle is that you must not fool yourself—and you are the easiest person to fool.",
+    "meaning": "Clear thinking requires actively questioning our own assumptions and biases.",
+    "by": "Richard Feynman"
+  },
+  {
+    "quote": "The important thing is not to stop questioning. Curiosity has its own reason for existing.",
+    "meaning": "Continuous questioning keeps learning alive long after formal education ends.",
+    "by": "Albert Einstein"
+  },
+  {
+    "quote": "Nothing in life is to be feared; it is only to be understood.",
+    "meaning": "Understanding can replace vague fear with knowledge and better judgment.",
+    "by": "Marie Curie"
+  },
+  {
     "quote": "A man who dares to waste one hour of time has not discovered the value of life.",
-    "meaning": "Time is a limited resource, so meaningful goals deserve deliberate attention rather than endless postponement.",
+    "meaning": "Time deserves deliberate use because it is the material from which a life is built.",
     "by": "Charles Darwin"
   },
   {
-    "quote": "One never notices what has been done; one can only see what remains to be done.",
-    "meaning": "Serious work continually reveals new problems, giving achievement a natural path toward further growth.",
-    "by": "Marie Curie"
+    "quote": "Chance favors the prepared mind.",
+    "meaning": "Preparation makes us capable of recognizing and using opportunities that others might overlook.",
+    "by": "Louis Pasteur"
+  },
+  {
+    "quote": "Far and away the best prize that life offers is the chance to work hard at work worth doing.",
+    "meaning": "Hard work becomes rewarding when it is directed toward something genuinely meaningful.",
+    "by": "Theodore Roosevelt"
+  },
+  {
+    "quote": "Genius is one percent inspiration and ninety-nine percent perspiration.",
+    "meaning": "Ideas matter, but sustained effort is what turns ideas into results.",
+    "by": "Thomas Edison"
+  },
+  {
+    "quote": "Nothing ever comes to one, that is worth having, except as a result of hard work.",
+    "meaning": "Achievements of lasting value generally demand sustained effort.",
+    "by": "Booker T. Washington"
+  },
+  {
+    "quote": "We learn wisdom from failure much more than from success.",
+    "meaning": "Failure reveals weaknesses and mistaken assumptions that success can sometimes conceal.",
+    "by": "Samuel Smiles"
+  },
+  {
+    "quote": "Lost time is never found again.",
+    "meaning": "Time cannot be recovered, making deliberate priorities more important than good intentions.",
+    "by": "Benjamin Franklin"
+  },
+  {
+    "quote": "Our main business is not to see what lies dimly at a distance, but to do what lies clearly at hand.",
+    "meaning": "Long-term goals are reached through attention to the useful work immediately in front of us.",
+    "by": "Thomas Carlyle"
+  },
+  {
+    "quote": "Waste no more time arguing about what a good man should be. Be one.",
+    "meaning": "Principles matter most when they become behavior rather than remaining discussion.",
+    "by": "Marcus Aurelius"
+  },
+  {
+    "quote": "Knowing is not enough; we must apply. Willing is not enough; we must do.",
+    "meaning": "Knowledge and intention create value only when they lead to action.",
+    "by": "Johann Wolfgang von Goethe"
+  },
+  {
+    "quote": "Nothing great was ever achieved without enthusiasm.",
+    "meaning": "Sustained interest provides energy for difficult and ambitious work.",
+    "by": "Ralph Waldo Emerson"
+  },
+  {
+    "quote": "Persistence and determination alone are omnipotent.",
+    "meaning": "Long-term persistence can matter more than temporary advantages in talent or opportunity.",
+    "by": "Calvin Coolidge"
+  },
+  {
+    "quote": "The only way to do great work is to love what you do.",
+    "meaning": "Genuine interest makes sustained effort and craftsmanship easier to maintain.",
+    "by": "Steve Jobs"
+  },
+  {
+    "quote": "If people knew how hard I had to work to gain my mastery, it would not seem so wonderful at all.",
+    "meaning": "What appears to be extraordinary talent often rests on years of invisible practice.",
+    "by": "Michelangelo"
+  },
+  {
+    "quote": "Don't only practice your art, but force your way into its secrets.",
+    "meaning": "Mastery requires understanding why a craft works, not merely repeating its visible techniques.",
+    "by": "Ludwig van Beethoven"
+  },
+  {
+    "quote": "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+    "meaning": "Excellence emerges from repeated behavior rather than occasional exceptional effort.",
+    "by": "Will Durant"
+  },
+  {
+    "quote": "Alone we can do so little; together we can do so much.",
+    "meaning": "Collaboration can multiply what individual effort is capable of producing.",
+    "by": "Helen Keller"
+  },
+  {
+    "quote": "There is nothing so useless as doing efficiently that which should not be done at all.",
+    "meaning": "Productivity begins with choosing the right work, not merely performing tasks faster.",
+    "by": "Peter Drucker"
+  },
+  {
+    "quote": "You must do the thing you think you cannot do.",
+    "meaning": "Capability often grows only after we attempt work beyond our present comfort.",
+    "by": "Eleanor Roosevelt"
+  },
+  {
+    "quote": "Becoming is better than being.",
+    "meaning": "Growth matters more than protecting a fixed image of what we already are.",
+    "by": "Carol Dweck"
+  },
+  {
+    "quote": "Enthusiasm is common. Endurance is rare.",
+    "meaning": "Starting with excitement is easy; continuing after the excitement disappears is much harder and more valuable.",
+    "by": "Angela Duckworth"
+  },
+  {
+    "quote": "You do not rise to the level of your goals. You fall to the level of your systems.",
+    "meaning": "Reliable routines determine long-term results more consistently than ambitious intentions alone.",
+    "by": "James Clear"
+  },
+  {
+    "quote": "First forget inspiration. Habit is more dependable.",
+    "meaning": "Creative and intellectual work becomes reliable when it no longer depends on waiting for motivation.",
+    "by": "Octavia E. Butler"
+  },
+  {
+    "quote": "Almost all good writing begins with terrible first efforts.",
+    "meaning": "Quality usually appears through revision rather than through producing a perfect first attempt.",
+    "by": "Anne Lamott"
+  },
+  {
+    "quote": "To know what you know and what you do not know, that is true knowledge.",
+    "meaning": "Recognizing the limits of our understanding is itself an important form of wisdom.",
+    "by": "Confucius"
+  },
+  {
+    "quote": "Just as iron rusts from disuse, even so does inaction sap the vigor of the mind.",
+    "meaning": "Abilities remain strong when they are exercised rather than merely possessed.",
+    "by": "Leonardo da Vinci"
+  },
+  {
+    "quote": "A journey of a thousand miles begins beneath one's feet.",
+    "meaning": "Large accomplishments begin with a concrete first action.",
+    "by": "Lao Tzu"
+  },
+  {
+    "quote": "The more I study, the more insatiable do I feel my genius for it to be.",
+    "meaning": "Serious learning can increase curiosity rather than satisfy it.",
+    "by": "Ada Lovelace"
+  },
+  {
+    "quote": "Ever tried. Ever failed. No matter. Try again. Fail again. Fail better.",
+    "meaning": "Failure becomes useful when each attempt produces a better next attempt.",
+    "by": "Samuel Beckett"
   }
 ]
