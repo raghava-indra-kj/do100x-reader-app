@@ -29,8 +29,8 @@ export class ChatRepoApi implements IChatRepo {
             if (axios.isCancel(error)) {
                 return err(new ChatAppError({
                     errorType: 'CANCELLED',
-                    message: 'Request was cancelled',
-                    description: 'The AI request was stopped by the user.',
+                    message: 'Request cancelled',
+                    description: 'The request was cancelled.',
                     rawError: { name: 'CanceledError', message: error.message },
                 }, error));
             }
@@ -39,7 +39,7 @@ export class ChatRepoApi implements IChatRepo {
             if (backendError) {
                 const details: ChatErrorDetails = {
                     errorType: (backendError.type as ChatErrorType) || 'UNKNOWN',
-                    message: backendError.message || 'AI request failed',
+                    message: backendError.message || 'Couldn’t get a response. Try again.',
                     description: backendError.description,
                     status: error?.response?.status,
                     rawError: backendError.rawError || error?.response?.data,
@@ -49,8 +49,8 @@ export class ChatRepoApi implements IChatRepo {
 
             const details: ChatErrorDetails = {
                 errorType: 'UNKNOWN',
-                message: error?.message || 'AI request failed',
-                description: error?.response?.statusText || 'Unable to reach the AI server.',
+                message: error?.message || 'Couldn’t get a response. Try again.',
+                description: error?.response?.statusText || 'Couldn’t reach the AI service. Check your connection and try again.',
                 status: error?.response?.status,
                 rawError: error?.response?.data || error?.message,
             };

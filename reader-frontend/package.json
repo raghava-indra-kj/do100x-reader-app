@@ -19,6 +19,7 @@
         "@fontsource/atkinson-hyperlegible": "^5.2.8",
         "@raghava.indra/result-ts": "^1.1.1",
         "@reader/md-ast": "*",
+        "@reader/finance-core": "*",
         "@reader/md-view": "*",
         "ai": "^6.0.205",
         "axios": "^1.18.0",

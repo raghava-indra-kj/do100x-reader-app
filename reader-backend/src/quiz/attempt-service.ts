@@ -18,7 +18,7 @@ async function transact<T>(db: QuizDb, run: (tx: QuizTx) => Promise<T>): Promise
 }
 function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   const value = schema.safeParse(input);
-  if (!value.success) throw new QuizError(422, value.error.issues[0]?.message ?? "Invalid answer");
+  if (!value.success) throw new QuizError(422, value.error.issues[0]?.message ?? "Check your answer and try again.");
   return value.data;
 }
 function conflict(message: string): QuizError { return new QuizError(409, message); }
@@ -37,7 +37,7 @@ export async function startAttempt(db: QuizDb, userId: string, quizId: string, s
   parse(uuid, startRequestKey);
   const existing = await db.quiz_attempt.findUnique({ where: { userId_startRequestKey: { userId, startRequestKey } }, include: { revision: true } });
   if (existing) {
-    if (existing.revision.quizId !== quizId) throw conflict("Start request key belongs to another quiz");
+    if (existing.revision.quizId !== quizId) throw conflict("This attempt request belongs to a different quiz.");
     return getAttempt(db, userId, existing.id);
   }
   try {
@@ -57,7 +57,7 @@ export async function startAttempt(db: QuizDb, userId: string, quizId: string, s
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const retried = await db.quiz_attempt.findUnique({ where: { userId_startRequestKey: { userId, startRequestKey } }, include: { revision: true } });
       if (retried?.revision.quizId === quizId) return getAttempt(db, userId, retried.id);
-      throw conflict("Start request key belongs to another quiz");
+      throw conflict("This attempt request belongs to a different quiz.");
     }
     throw error;
   }
@@ -68,21 +68,21 @@ export async function saveAttemptAnswer(db: QuizDb, userId: string, attemptId: s
   const value = parse(saveAnswerSchema, input);
   return transact(db, async (tx) => {
     const attempt = await ownedAttempt(tx, attemptId, userId);
-    if (attempt.status !== "IN_PROGRESS") throw conflict("Submitted answers cannot be changed");
+    if (attempt.status !== "IN_PROGRESS") throw conflict("Submitted answers can’t be changed.");
     const question = attempt.revision.questions.find((item) => item.id === value.questionId);
-    if (!question) throw new QuizError(422, "Question is not in this attempt's revision");
+    if (!question) throw new QuizError(422, "This question isn’t part of this attempt.");
     if (question.kind === "OBJECTIVE") {
-      if (value.responseMarkdown !== undefined || value.selectedOptionIds === undefined) throw new QuizError(422, "Use selectedOptionIds for an objective question");
+      if (value.responseMarkdown !== undefined || value.selectedOptionIds === undefined) throw new QuizError(422, "Select an option for an objective question.");
       const ids = value.selectedOptionIds;
-      if (new Set(ids).size !== ids.length || (question.selectionMode === "SINGLE" && ids.length > 1)) throw new QuizError(422, "Invalid option selection");
+      if (new Set(ids).size !== ids.length || (question.selectionMode === "SINGLE" && ids.length > 1)) throw new QuizError(422, "Choose an option from this question.");
       const valid = new Set(question.options.map((option) => option.id));
-      if (ids.some((id) => !valid.has(id))) throw new QuizError(422, "Option does not belong to this question");
+      if (ids.some((id) => !valid.has(id))) throw new QuizError(422, "This option isn’t part of this question.");
     } else if (value.responseMarkdown === undefined || value.selectedOptionIds !== undefined) {
-      throw new QuizError(422, "Use responseMarkdown for a subjective question");
+      throw new QuizError(422, "Write an answer for a subjective question.");
     }
     // A conditional write serializes saves against submit and other saves.
     const locked = await tx.quiz_attempt.updateMany({ where: { id: attempt.id, status: "IN_PROGRESS" }, data: { status: "IN_PROGRESS" } });
-    if (locked.count !== 1) throw conflict("Attempt was already submitted");
+    if (locked.count !== 1) throw conflict("This attempt has already been submitted.");
     const answer = await tx.quiz_attempt_answer.upsert({
       where: { attemptId_questionId: { attemptId, questionId: question.id } },
       create: { attemptId, questionId: question.id, responseMarkdown: value.responseMarkdown ?? null },
@@ -158,10 +158,10 @@ export async function getAttempt(db: QuizDb, userId: string, attemptId: string) 
 
 export async function listAttempts(db: QuizDb, userId: string, quizId: string, input: { cursor?: string; take?: number } = {}) {
   const take = input.take ?? 30;
-  if (!Number.isInteger(take) || take < 1 || take > 100) throw new QuizError(422, "take must be between 1 and 100");
+  if (!Number.isInteger(take) || take < 1 || take > 100) throw new QuizError(422, "Load between 1 and 100 items at a time.");
   if (input.cursor) {
     const cursor = await db.quiz_attempt.findFirst({ where: { id: input.cursor, userId, revision: { quizId } }, select: { id: true } });
-    if (!cursor) throw new QuizError(422, "Invalid attempt cursor");
+    if (!cursor) throw new QuizError(422, "Couldn’t load more attempts. Refresh and try again.");
   }
   const rows = await db.quiz_attempt.findMany({
     where: { userId, revision: { quizId } },

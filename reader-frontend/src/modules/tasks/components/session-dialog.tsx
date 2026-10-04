@@ -20,7 +20,7 @@ export const SessionDialog = observer(({ store }: Props) => {
             </div>
             <div>
               <h2 className="text-xs font-bold text-[var(--color-text-strong)]">
-                {store.editingSessionId ? 'Edit Time Session' : 'Log Time Session'}
+                {store.editingSessionId ? 'Edit time entry' : 'Add time entry'}
               </h2>
             </div>
           </div>
@@ -38,7 +38,7 @@ export const SessionDialog = observer(({ store }: Props) => {
           {/* Duration Counter & Presets */}
           <div className="p-3 rounded-lg bg-[var(--color-surface-soft)]/50 border border-[var(--color-border-subtle)] space-y-2.5">
             <label className="text-[11px] font-bold text-[var(--color-text-strong)] block">
-              Focus Duration
+              Duration
             </label>
 
             {/* Stepper + Input */}
@@ -106,7 +106,7 @@ export const SessionDialog = observer(({ store }: Props) => {
 
           {/* Notes */}
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[var(--color-text-strong)]">Session Notes (Optional)</label>
+            <label className="text-[11px] font-bold text-[var(--color-text-strong)]">Notes (optional)</label>
             <textarea
               rows={2}
               value={store.sessionNotesInput}
@@ -131,7 +131,7 @@ export const SessionDialog = observer(({ store }: Props) => {
             onClick={() => store.saveSession()}
             className="px-3.5 py-1.5 bg-[var(--color-brand)] text-white text-xs font-semibold rounded-md shadow-xs hover:bg-[var(--color-brand-hover)] transition cursor-pointer"
           >
-            {store.editingSessionId ? 'Update Session' : 'Add Session'}
+            {store.editingSessionId ? 'Save' : 'Add time entry'}
           </button>
         </div>
       </div>

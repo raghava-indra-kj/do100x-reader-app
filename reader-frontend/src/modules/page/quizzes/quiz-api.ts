@@ -49,7 +49,7 @@ async function json<T>(path: string, method = 'GET', body?: unknown): Promise<T>
         body: body === undefined ? undefined : JSON.stringify(body),
     });
     const data = await response.json().catch(() => null);
-    if (!response.ok) throw new QuizApiError(response.status, data?.message || 'Could not complete the quiz request');
+    if (!response.ok) throw new QuizApiError(response.status, data?.message || 'Couldn’t complete the quiz request. Try again.');
     return data as T;
 }
 

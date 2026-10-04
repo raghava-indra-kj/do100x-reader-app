@@ -23,13 +23,13 @@ export function extractFrontmatter(tree: Root): MdAstFrontmatter | null {
     try {
         parsed = load(node.value, { schema: JSON_SCHEMA });
     } catch (error) {
-        throw new MdAstError({ message: "Invalid YAML in front matter", options: { cause: error } });
+        throw new MdAstError({ message: "Check the YAML in the page’s front matter.", options: { cause: error } });
     }
 
     if (parsed == null) return null;
     if (typeof parsed !== "object" || Array.isArray(parsed)) {
         const kind = Array.isArray(parsed) ? "array" : typeof parsed;
-        throw new MdAstError({ message: `Front matter must be a mapping, got ${kind}` });
+        throw new MdAstError({ message: `Front matter must contain key-value pairs, not ${kind}.` });
     }
     return parsed as MdAstFrontmatter;
 }

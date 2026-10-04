@@ -19,7 +19,7 @@ export function loadGoogleIdentityServices(): Promise<GoogleIdentityApi> {
             window.clearTimeout(timeout);
             script.remove();
             loading = null;
-            reject(new Error('Google sign-in could not load. Check your connection or browser blockers, then retry.'));
+            reject(new Error('Couldn’t load Google sign-in. Check your connection and browser blockers, then try again.'));
         };
         script.onerror = fail;
         script.onload = () => {

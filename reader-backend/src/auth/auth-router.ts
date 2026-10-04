@@ -26,16 +26,16 @@ export function createAuthRouter(db: PrismaClient = prisma, verify: VerifyGoogle
   });
   router.post("/google", requireTrustedOrigin, async (req, res) => {
     const input = inputSchema.safeParse(req.body);
-    if (!input.success) { res.status(400).json({ message: "Invalid Google credential request" }); return; }
+    if (!input.success) { res.status(400).json({ message: "Couldn’t complete Google sign-in. Try again." }); return; }
     const challengeId = readCookie(req, CHALLENGE_COOKIE);
     const csrf = req.get("x-login-csrf");
-    if (!challengeId || !csrf) { res.status(403).json({ message: "Sign-in challenge is missing. Please retry." }); return; }
+    if (!challengeId || !csrf) { res.status(403).json({ message: "Please start Google sign-in again." }); return; }
     const challenge = await db.auth_login_challenge.findUnique({ where: { idHash: hash(challengeId) } });
-    if (!challenge || challenge.expiresAt.getTime() <= Date.now() || challenge.nonceHash !== hash(csrf)) { res.status(403).json({ message: "Sign-in challenge expired. Please retry." }); return; }
+    if (!challenge || challenge.expiresAt.getTime() <= Date.now() || challenge.nonceHash !== hash(csrf)) { res.status(403).json({ message: "Sign-in expired. Please start again." }); return; }
     let profile: GoogleProfile;
     try { profile = await verify(input.data.credential); }
-    catch { res.status(401).json({ message: "Google sign-in could not be verified. Please retry." }); return; }
-    if (hash(profile.nonce) !== challenge.nonceHash) { res.status(403).json({ message: "Google sign-in challenge does not match" }); return; }
+    catch { res.status(401).json({ message: "Couldn’t verify Google sign-in. Please start again." }); return; }
+    if (hash(profile.nonce) !== challenge.nonceHash) { res.status(403).json({ message: "Couldn’t verify this sign-in. Please start again." }); return; }
     // Challenge consumption and account provisioning are atomic. Unique identities
     // and bounded retries handle separate concurrent first sign-ins safely.
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -48,7 +48,7 @@ export function createAuthRouter(db: PrismaClient = prisma, verify: VerifyGoogle
           if (identity) return tx.appuser.update({ where: { id: identity.userId }, data, select: profileSelection });
           return tx.appuser.create({ data: { ...data, identities: { create: { provider: "GOOGLE", providerSubject: profile.subject } } }, select: profileSelection });
         });
-        if (!user) { res.status(403).json({ message: "Sign-in response was already used. Please retry." }); return; }
+        if (!user) { res.status(403).json({ message: "Please start a new Google sign-in." }); return; }
         res.clearCookie(CHALLENGE_COOKIE, { httpOnly: true, secure: authConfig().secureCookies, sameSite: "strict", path: "/backend-api/auth" });
         issueSession(res, user.id);
         res.json(user);
@@ -61,9 +61,9 @@ export function createAuthRouter(db: PrismaClient = prisma, verify: VerifyGoogle
   });
   router.get("/session", async (req, res) => {
     const userId = readSession(req);
-    if (!userId) { res.status(401).json({ message: "Not signed in" }); return; }
+    if (!userId) { res.status(401).json({ message: "Sign in to continue." }); return; }
     const user = await db.appuser.findUnique({ where: { id: userId }, select: profileSelection });
-    if (!user) { clearSession(res); res.status(401).json({ message: "Not signed in" }); return; }
+    if (!user) { clearSession(res); res.status(401).json({ message: "Sign in to continue." }); return; }
     res.json(user);
   });
   router.post("/logout", requireTrustedOrigin, (_req, res) => { clearSession(res); res.status(204).send(); });

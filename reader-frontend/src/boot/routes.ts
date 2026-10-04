@@ -1,9 +1,8 @@
 export const homePageRoute = "/"
-export const pagesPageWithIdRoute = "/pages/:id"
-export const pagesPageWithIdRouteValue = (pageId: string) => `/pages/${pageId}`
-export const mdViewLibDemoRoute = "/md-view"
-export const mdParserLibDemoRoute = "/md-parser"
+export const readerPageWithIdRoute = "/reader/pages/:id"
+export const readerPageWithIdRouteValue = (pageId: string) => `/reader/pages/${encodeURIComponent(pageId)}`
 export const loginPageRoute = "/login"
 export const readerPageRoute = "/reader"
 export const settingsPageRoute = "/settings"
 export const tasksPageRoute = "/tasks"
+export const financePageRoute = "/finance"

@@ -73,7 +73,7 @@ export function D2Block({
       .catch((err) => {
         if (!cancelled) {
           const msg = err instanceof Error ? err.message : String(err);
-          setError(msg || "Failed to render D2 diagram");
+          setError(msg || "Couldn’t render this D2 diagram.");
         }
       });
 
@@ -88,7 +88,7 @@ export function D2Block({
       <div className="md-d2-error-wrapper">
         <div className="md-d2-error-header">
           <AlertCircle size={15} />
-          <span>D2 Diagram Error</span>
+          <span>D2 diagram error</span>
         </div>
         <pre className="md-d2-error-msg">{error}</pre>
         <pre className="md-code-block">
@@ -108,8 +108,8 @@ export function D2Block({
         type="button"
         className="md-d2-fullscreen-btn"
         onClick={() => setIsFullscreen(true)}
-        title="View diagram in full screen"
-        aria-label="View D2 diagram in full screen"
+        title="Open diagram fullscreen"
+        aria-label="Open D2 diagram fullscreen"
       >
         <Maximize2 size={16} aria-hidden="true" />
       </button>

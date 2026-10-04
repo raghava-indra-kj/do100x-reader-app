@@ -15,7 +15,7 @@ async function transact<T>(db: QuizDb, run: (tx: QuizTx) => Promise<T>): Promise
 
 function parseInput<T>(schema: { safeParse: (value: unknown) => { success: true; data: T } | { success: false; error: { issues: { message: string }[] } } }, input: unknown): T {
   const result = schema.safeParse(input);
-  if (!result.success) throw new QuizError(422, result.error.issues[0]?.message ?? "Invalid quiz input");
+  if (!result.success) throw new QuizError(422, result.error.issues[0]?.message ?? "Check the quiz details and try again.");
   return result.data;
 }
 
@@ -116,7 +116,7 @@ async function loadRevision(db: QuizDb, quizId: string, revisionNo: number) {
     where: { quizId_revisionNo: { quizId, revisionNo } },
     include: questionsInclude,
   });
-  if (!revision) throw new QuizError(404, "Quiz revision not found");
+  if (!revision) throw new QuizError(404, "Quiz version not found");
   return revision;
 }
 
@@ -176,10 +176,10 @@ export async function listQuizzesForPage(db: QuizDb, input: ListQuizzesInput) {
     ...(input.archivedOnly && input.userId !== page.userId ? { revisions: { some: { attempts: { some: { userId: input.userId } } } } } : {}),
   };
   const take = input.take ?? 50;
-  if (!Number.isInteger(take) || take < 1 || take > 100) throw new QuizError(422, "take must be between 1 and 100");
+  if (!Number.isInteger(take) || take < 1 || take > 100) throw new QuizError(422, "Load between 1 and 100 items at a time.");
   if (input.cursor) {
     const cursor = await db.quiz.findFirst({ where: { ...where, id: input.cursor }, select: { id: true } });
-    if (!cursor) throw new QuizError(422, "Invalid quiz cursor");
+    if (!cursor) throw new QuizError(422, "Couldn’t load more quizzes. Refresh and try again.");
   }
   const rows = await db.quiz.findMany({
     where,
@@ -212,7 +212,7 @@ export async function getQuizRevision(db: QuizDb, input: { quizId: string; userI
     if (quiz.archivedAt || (input.revisionNo !== undefined && input.revisionNo !== quiz.currentRevisionNo)) throw new QuizError(404, "Quiz not found");
   }
   const revisionNo = input.revisionNo ?? quiz.currentRevisionNo;
-  if (!Number.isInteger(revisionNo) || revisionNo < 1 || revisionNo > quiz.currentRevisionNo) throw new QuizError(404, "Quiz revision not found");
+  if (!Number.isInteger(revisionNo) || revisionNo < 1 || revisionNo > quiz.currentRevisionNo) throw new QuizError(404, "Quiz version not found");
   const revision = await loadRevision(db, quiz.id, revisionNo);
   return input.view === "author" ? authorRevision(quiz.id, revision) : learnerRevision(quiz.id, revision);
 }
@@ -226,7 +226,7 @@ export async function applyQuizChanges(db: QuizDb, userId: string, quizId: strin
       if (!quiz) throw new QuizError(404, "Quiz not found");
       await requirePageOwner(tx, quiz.pageId, userId);
       if (quiz.archivedAt) throw new QuizError(404, "Quiz not found");
-      if (quiz.currentRevisionNo !== value.expectedRevisionNo) throw new QuizError(409, "Quiz changed. Fetch the current revision before editing");
+      if (quiz.currentRevisionNo !== value.expectedRevisionNo) throw new QuizError(409, "This quiz has changed. Open the latest version before editing.");
 
       const current = await loadRevision(tx, quiz.id, quiz.currentRevisionNo);
       const draft = applyChangesToDraft(revisionDraft(current), value.operations);
@@ -235,7 +235,7 @@ export async function applyQuizChanges(db: QuizDb, userId: string, quizId: strin
         where: { id: quiz.id, currentRevisionNo: quiz.currentRevisionNo, archivedAt: null },
         data: { currentRevisionNo: nextNo },
       });
-      if (updated.count !== 1) throw new QuizError(409, "Quiz changed. Fetch the current revision before editing");
+      if (updated.count !== 1) throw new QuizError(409, "This quiz has changed. Open the latest version before editing.");
       await tx.quiz_revision.create({
         data: {
           quizId: quiz.id,
@@ -248,14 +248,14 @@ export async function applyQuizChanges(db: QuizDb, userId: string, quizId: strin
       return authorRevision(quiz.id, await loadRevision(tx, quiz.id, nextNo));
     });
   } catch (error) {
-    if (isWriteConflict(error)) throw new QuizError(409, "Quiz changed. Fetch the current revision before editing");
+    if (isWriteConflict(error)) throw new QuizError(409, "This quiz has changed. Open the latest version before editing.");
     throw error;
   }
 }
 
 /** Hides a quiz from new attempts; revisions and existing attempts remain intact. */
 export async function archiveQuiz(db: QuizDb, userId: string, quizId: string, expectedRevisionNo: number) {
-  if (!Number.isInteger(expectedRevisionNo) || expectedRevisionNo < 1) throw new QuizError(422, "Invalid revision number");
+  if (!Number.isInteger(expectedRevisionNo) || expectedRevisionNo < 1) throw new QuizError(422, "Choose a valid quiz version.");
   try {
     return await transact(db, async (tx) => {
       const quiz = await tx.quiz.findUnique({ where: { id: quizId } });
@@ -267,28 +267,28 @@ export async function archiveQuiz(db: QuizDb, userId: string, quizId: string, ex
         where: { id: quizId, currentRevisionNo: expectedRevisionNo, archivedAt: null },
         data: { archivedAt },
       });
-      if (result.count !== 1) throw new QuizError(409, "Quiz changed. Fetch the current revision before archiving");
+      if (result.count !== 1) throw new QuizError(409, "This quiz has changed. Refresh before archiving.");
       return { id: quizId, archivedAt, currentRevisionNo: expectedRevisionNo };
     });
   } catch (error) {
-    if (isWriteConflict(error)) throw new QuizError(409, "Quiz changed. Fetch the current revision before archiving");
+    if (isWriteConflict(error)) throw new QuizError(409, "This quiz has changed. Refresh before archiving.");
     throw error;
   }
 }
 
 /** Swaps two active quizzes on one owned page without changing either paper. */
 export async function swapQuizOrder(db: QuizDb, userId: string, firstId: string, secondId: string) {
-  if (firstId === secondId) throw new QuizError(422, "Choose two different quizzes");
+  if (firstId === secondId) throw new QuizError(422, "Choose two different quizzes.");
   return transact(db, async (tx) => {
     const rows = await tx.quiz.findMany({ where: { id: { in: [firstId, secondId] }, archivedAt: null } });
-    if (rows.length !== 2 || rows[0].pageId !== rows[1].pageId) throw new QuizError(404, "Quizzes not found on the same page");
+    if (rows.length !== 2 || rows[0].pageId !== rows[1].pageId) throw new QuizError(404, "Both quizzes must be on the same page.");
     await requirePageOwner(tx, rows[0].pageId, userId);
     const first = rows.find((row) => row.id === firstId)!;
     const second = rows.find((row) => row.id === secondId)!;
-    if (first.sortOrder === second.sortOrder) throw new QuizError(409, "Quiz order changed. Reload before reordering");
+    if (first.sortOrder === second.sortOrder) throw new QuizError(409, "The quiz order has changed. Refresh before reordering.");
     const firstUpdated = await tx.quiz.updateMany({ where: { id: first.id, sortOrder: first.sortOrder, archivedAt: null }, data: { sortOrder: second.sortOrder } });
     const secondUpdated = await tx.quiz.updateMany({ where: { id: second.id, sortOrder: second.sortOrder, archivedAt: null }, data: { sortOrder: first.sortOrder } });
-    if (firstUpdated.count !== 1 || secondUpdated.count !== 1) throw new QuizError(409, "Quiz order changed. Reload before reordering");
+    if (firstUpdated.count !== 1 || secondUpdated.count !== 1) throw new QuizError(409, "The quiz order has changed. Refresh before reordering.");
     return { firstId, secondId };
   });
 }

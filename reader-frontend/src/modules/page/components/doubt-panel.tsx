@@ -18,7 +18,7 @@ export const PageDoubtPanel = observer(function PageDoubtPanel() {
                         ? 'text-[var(--color-brand)] cursor-default'
                         : 'text-[var(--color-text-muted)] hover:text-[var(--color-brand)] disabled:opacity-40 disabled:cursor-not-allowed'
                 }`}
-                title={activeEntry.isSaved ? "Saved as sub-page" : "Save as sub-page"}
+                title={activeEntry.isSaved ? "Saved as a subpage" : "Save as a subpage"}
             >
                 {activeEntry.isSavingPage ? (
                     <span className="inline-block animate-spin text-xs">⏳</span>
@@ -33,14 +33,14 @@ export const PageDoubtPanel = observer(function PageDoubtPanel() {
 
     return (
         <PageAiLookupPanel
-            title="AI Doubt"
+            title="Questions"
             icon={<MessageSquare size={12} className="text-[var(--color-brand)]" />}
             storeInstance={store.doubtStore}
-            queryLabel="Doubt"
-            rephraseLabel="Re-ask or Rephrase Doubt"
-            rephrasePlaceholder="Rephrase your question or ask a follow-up..."
-            emptyStateLabel="Select text on the page, write a question in 'Ask Doubt', and click 'Ask AI' to explain."
-            loadingLabel="Querying AI for doubt..."
+            queryLabel="Question"
+            rephraseLabel="Edit your question"
+            rephrasePlaceholder="Edit your question or ask a follow-up…"
+            emptyStateLabel="Select text and choose “Ask a question”."
+            loadingLabel="Getting an answer…"
             extraHeaderActions={renderHeaderActions}
         />
     );

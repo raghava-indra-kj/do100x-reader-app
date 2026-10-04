@@ -67,7 +67,7 @@ export class PageColorSchema {
         errorColor: '#dd675e',
     });
 
-    public static readonly FOREST_DARK = new PageColorSchema('forest-dark', 'Forest Dark', {
+    public static readonly FOREST_DARK = new PageColorSchema('forest-dark', 'Forest dark', {
         h1: '#ebf7ee',
         h2: '#ebf7ee',
         h3: '#d3ebdb',

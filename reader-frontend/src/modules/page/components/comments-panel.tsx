@@ -10,7 +10,7 @@ import { Input } from '@modules/core/ui/primitives/input';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link as LinkIcon, Unlink, NotebookPen, ShieldCheck } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { pagesPageWithIdRouteValue, loginPageRoute } from '@boot/routes';
+import { readerPageWithIdRouteValue, loginPageRoute } from '@boot/routes';
 
 function formatRelativeTime(date: Date): string {
     const now = Date.now();
@@ -160,7 +160,7 @@ function CommentCard({
                     <LinkIcon size={11} className="shrink-0 text-[var(--color-brand)]" />
                 )}
                 {comment.isExplanation && (
-                    <Tooltip content="Marked as my explanation">
+                    <Tooltip content="Saved to your explanations">
                         <NotebookPen size={11} className="shrink-0 text-[var(--color-text-muted)]" />
                     </Tooltip>
                 )}
@@ -218,7 +218,7 @@ function CommentCard({
                                 value={linkPageId}
                                 onChange={(e) => setLinkPageId(e.target.value)}
                                 onKeyDown={handleLinkKeyDown}
-                                placeholder="Paste page ID…"
+                                placeholder="Page ID"
                                 autoComplete="off"
                                 autoFocus
                                 className="flex-1 text-xs"
@@ -243,7 +243,7 @@ function CommentCard({
                         <div className="flex items-center gap-1.5 mt-2">
                             <LinkIcon size={11} className="shrink-0 text-[var(--color-brand)]" />
                             <button
-                                onClick={() => navigate(pagesPageWithIdRouteValue(comment.linkedPageId!))}
+                                onClick={() => navigate(readerPageWithIdRouteValue(comment.linkedPageId!))}
                                 className="text-[10px] text-[var(--color-brand)] hover:underline cursor-pointer truncate"
                                 title={`Go to linked page: ${comment.linkedPageId}`}
                             >
@@ -366,7 +366,7 @@ export const PageComments = observer(function PageComments() {
 
     const handleDeleteAll = useCallback(async () => {
         if (comments.length === 0 || isDeletingAll) return;
-        if (!window.confirm('Are you sure you want to delete all comments on this page?')) return;
+        if (!window.confirm('Delete all comments on this page?')) return;
         setIsDeletingAll(true);
         const result = await deleteAllComments({ pageId: store.pageId });
         setIsDeletingAll(false);
@@ -390,7 +390,7 @@ export const PageComments = observer(function PageComments() {
                 <div className="mx-3 mt-3 p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] flex items-start gap-2 leading-relaxed">
                     <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                     <span>
-                        Comments are private to each user. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save personal notes on this page.
+                        Your comments are private. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to add private comments.
                     </span>
                 </div>
             )}
@@ -405,7 +405,7 @@ export const PageComments = observer(function PageComments() {
                 </span>
                 {comments.length > 0 && (
                     <div className="flex items-center gap-0.5">
-                        <Tooltip content={copyFeedback ? 'Copied!' : 'Copy all comments'}>
+                        <Tooltip content={copyFeedback ? 'Copied' : 'Copy all comments'}>
                             <button
                                 onClick={handleCopyAll}
                                 className={`p-1 rounded transition-colors cursor-pointer ${
@@ -473,7 +473,7 @@ export const PageComments = observer(function PageComments() {
                         );
                     },
                     error: () => (
-                        <div className="p-4 text-sm text-[var(--color-text-error)]">Failed to load comments</div>
+                        <div className="p-4 text-sm text-[var(--color-text-error)]">Couldn’t load comments.</div>
                     ),
                 })}
             </div>

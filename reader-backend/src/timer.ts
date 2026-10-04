@@ -80,7 +80,7 @@ router.post("/start", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const { taskId, notes } = req.body;
   if (!taskId || typeof taskId !== "string") {
-    res.status(400).json({ error: "taskId is required" });
+    res.status(400).json({ error: "Choose a task." });
     return;
   }
 
@@ -163,7 +163,7 @@ router.post("/pause", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const active = await prisma.active_timer.findUnique({ where: { userId } });
   if (!active || active.isPaused) {
-    res.status(400).json({ error: "No active unpaused timer to pause" });
+    res.status(400).json({ error: "No running timer to pause." });
     return;
   }
 
@@ -201,7 +201,7 @@ router.post("/resume", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const active = await prisma.active_timer.findUnique({ where: { userId } });
   if (!active || !active.isPaused) {
-    res.status(400).json({ error: "No paused timer to resume" });
+    res.status(400).json({ error: "No paused timer to resume." });
     return;
   }
 
@@ -238,7 +238,7 @@ router.post("/stop", async (req: Request, res: Response) => {
 
   const active = await prisma.active_timer.findUnique({ where: { userId } });
   if (!active) {
-    res.status(400).json({ error: "No active timer to stop" });
+    res.status(400).json({ error: "No active timer to stop." });
     return;
   }
 
@@ -380,7 +380,7 @@ router.patch("/sessions/:sessionId", async (req: Request, res: Response) => {
   });
 
   if (!existing) {
-    res.status(404).json({ error: "Session not found" });
+    res.status(404).json({ error: "Time entry not found." });
     return;
   }
 
@@ -423,7 +423,7 @@ router.delete("/sessions/:sessionId", async (req: Request, res: Response) => {
   });
 
   if (!existing) {
-    res.status(404).json({ error: "Session not found" });
+    res.status(404).json({ error: "Time entry not found." });
     return;
   }
 
@@ -485,7 +485,7 @@ router.get("/analytics", async (req: Request, res: Response) => {
     periodLabel = "Yesterday";
   } else if (preset === "all") {
     start = new Date(0);
-    periodLabel = "All Time";
+    periodLabel = "All time";
   } else {
     const dayCount = parseInt((days || preset) as string, 10) || 7;
     start = new Date(now.getTime() - dayCount * 24 * 60 * 60 * 1000);

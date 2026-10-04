@@ -81,7 +81,7 @@ export const PageToc = observer(function PageToc() {
                 </div>
                 <div className="flex flex-col items-center justify-center flex-1 gap-2 p-4 text-center">
                     <List size={24} className="text-[var(--color-text-subtle)]" />
-                    <p className="text-sm text-[var(--color-text-muted)]">{isEmpty ? 'This page is empty' : 'No headings in this page'}</p>
+                    <p className="text-sm text-[var(--color-text-muted)]">{isEmpty ? 'This page is empty' : 'This page has no headings'}</p>
                 </div>
                 {store.isOwner && (
                     <UpsertPageDialog

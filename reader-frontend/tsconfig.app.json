@@ -43,6 +43,9 @@
             "@reader/md-ast": [
                 "../packages/md-ast/src/index.ts"
             ],
+            "@reader/finance-core": [
+                "../packages/finance-core/src/index.ts"
+            ],
             "@reader/md-view": [
                 "../packages/md-view/src/index.ts"
             ],

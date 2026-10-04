@@ -18,6 +18,412 @@ model appuser {
   quizAttempts quiz_attempt[]
   identities auth_identity[]
   readerPreferences reader_preferences?
+  financeBooks finance_book[]
+}
+
+// Finance is independent of Reader pages and Tasks. All child references include
+// bookId, preventing cross-book links even if a caller supplies another UUID.
+enum finance_transaction_kind {
+  INCOME
+  EXPENSE
+  TRANSFER
+  REFUND
+  ADJUSTMENT
+}
+
+enum finance_category_kind {
+  INCOME
+  EXPENSE
+}
+
+enum finance_transaction_status {
+  PENDING
+  POSTED
+}
+
+enum finance_schedule_kind {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum finance_frequency {
+  ONCE
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum finance_occurrence_state {
+  OPEN
+  SKIPPED
+}
+
+enum finance_import_status {
+  DRAFT
+  COMMITTED
+  CANCELLED
+}
+
+enum finance_import_decision {
+  UNRESOLVED
+  NEW
+  MATCH
+  SKIP
+}
+
+model finance_book {
+  id String @id @default(uuid()) @db.VarChar(36)
+  userId String @db.VarChar(36)
+  name String @db.VarChar(255)
+  currency String @db.Char(3)
+  currencyScale Int @db.UnsignedTinyInt
+  timezone String @db.VarChar(100)
+  version Int @default(1)
+  requestKey String @db.VarChar(36)
+  requestHash String @db.Char(64)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  archivedAt DateTime? @db.DateTime(6)
+  user appuser @relation(fields: [userId], references: [id], onDelete: Restrict)
+  accounts finance_account[]
+  categories finance_category[]
+  transactions finance_transaction[]
+  schedules finance_schedule[]
+  changes finance_change[]
+  @@unique([userId, requestKey])
+  @@index([userId, archivedAt])
+}
+
+model finance_account {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  name String @db.VarChar(255)
+  tracksDebt Boolean @default(false)
+  isLiquid Boolean @default(true)
+  notes String? @db.Text
+  version Int @default(1)
+  requestKey String @db.VarChar(36)
+  requestHash String @db.Char(64)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  archivedAt DateTime? @db.DateTime(6)
+  book finance_book @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  movements finance_movement[]
+  scheduledSources finance_schedule[] @relation("FinanceScheduleSource")
+  scheduledDestinations finance_schedule[] @relation("FinanceScheduleDestination")
+  occurrenceSources finance_occurrence[] @relation("FinanceOccurrenceSource")
+  occurrenceDestinations finance_occurrence[] @relation("FinanceOccurrenceDestination")
+  imports finance_import_batch[]
+  reconciliation finance_reconciliation[]
+  sourceRecords finance_source_record[]
+  @@unique([bookId, id])
+  @@unique([bookId, requestKey])
+  @@index([bookId, archivedAt])
+}
+
+model finance_category {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  name String @db.VarChar(255)
+  kind finance_category_kind
+  parentId String? @db.VarChar(36)
+  version Int @default(1)
+  requestKey String @db.VarChar(36)
+  requestHash String @db.Char(64)
+  archivedAt DateTime? @db.DateTime(6)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  book finance_book @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  parent finance_category? @relation("FinanceCategoryTree", fields: [bookId, parentId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  children finance_category[] @relation("FinanceCategoryTree")
+  splits finance_split[]
+  schedules finance_schedule[]
+  occurrences finance_occurrence[]
+  budgets finance_budget[]
+  estimates finance_spending_estimate[]
+  rules finance_rule[]
+  @@unique([bookId, id])
+  @@unique([bookId, requestKey])
+  @@index([bookId, archivedAt])
+}
+
+model finance_transaction {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  kind finance_transaction_kind
+  status finance_transaction_status @default(POSTED)
+  date DateTime @db.Date
+  description String @db.VarChar(1000)
+  merchant String? @db.VarChar(255)
+  paymentMethod String? @db.VarChar(100)
+  bankReference String? @db.VarChar(255)
+  notesMarkdown String? @db.LongText
+  tags Json
+  refundOfId String? @db.VarChar(36)
+  version Int @default(1)
+  requestKey String @db.VarChar(36)
+  requestHash String @db.Char(64)
+  source String @db.VarChar(20)
+  deletedAt DateTime? @db.DateTime(6)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  book finance_book @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  refundOf finance_transaction? @relation("FinanceRefund", fields: [bookId, refundOfId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  refunds finance_transaction[] @relation("FinanceRefund")
+  movements finance_movement[]
+  splits finance_split[]
+  @@unique([bookId, id])
+  @@unique([bookId, requestKey])
+  @@index([bookId, date, deletedAt])
+}
+
+model finance_movement {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  transactionId String @db.VarChar(36)
+  accountId String @db.VarChar(36)
+  amountMinor BigInt
+  effectiveDate DateTime @db.Date
+  cleared Boolean @default(false)
+  reconciliationId String? @db.VarChar(36)
+  transaction finance_transaction @relation(fields: [bookId, transactionId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  account finance_account @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  reconciliation finance_reconciliation? @relation(fields: [bookId, reconciliationId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  payments finance_occurrence_payment[]
+  sourceRecords finance_source_record[]
+  @@unique([bookId, id])
+  @@unique([transactionId, accountId])
+  @@index([bookId, accountId, effectiveDate])
+}
+
+model finance_split {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  transactionId String @db.VarChar(36)
+  categoryId String @db.VarChar(36)
+  amountMinor BigInt
+  transaction finance_transaction @relation(fields: [bookId, transactionId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  category finance_category @relation(fields: [bookId, categoryId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([transactionId, categoryId])
+  @@index([bookId, categoryId])
+}
+
+model finance_schedule {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  title String @db.VarChar(255)
+  kind finance_schedule_kind
+  accountId String? @db.VarChar(36)
+  destinationAccountId String? @db.VarChar(36)
+  categoryId String? @db.VarChar(36)
+  frequency finance_frequency
+  interval Int @default(1)
+  monthEnd Boolean @default(false)
+  startDate DateTime @db.Date
+  endDate DateTime? @db.Date
+  lowMinor BigInt
+  expectedMinor BigInt
+  highMinor BigInt
+  notesMarkdown String? @db.LongText
+  paused Boolean @default(false)
+  archivedAt DateTime? @db.DateTime(6)
+  version Int @default(1)
+  requestKey String @db.VarChar(36)
+  requestHash String @db.Char(64)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  book finance_book @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  account finance_account? @relation("FinanceScheduleSource", fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  destination finance_account? @relation("FinanceScheduleDestination", fields: [bookId, destinationAccountId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  category finance_category? @relation(fields: [bookId, categoryId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  occurrences finance_occurrence[]
+  @@unique([bookId, id])
+  @@unique([bookId, requestKey])
+  @@index([bookId, archivedAt])
+}
+
+// Unchanged future occurrences are calculated, not written during reads. Persist
+// a snapshot only when a bill is confirmed, skipped, or matched to actual money.
+model finance_occurrence {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  scheduleId String @db.VarChar(36)
+  date DateTime @db.Date
+  title String @db.VarChar(255)
+  kind finance_schedule_kind
+  accountId String? @db.VarChar(36)
+  destinationAccountId String? @db.VarChar(36)
+  categoryId String? @db.VarChar(36)
+  lowMinor BigInt
+  expectedMinor BigInt
+  highMinor BigInt
+  state finance_occurrence_state @default(OPEN)
+  notesMarkdown String? @db.LongText
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  schedule finance_schedule @relation(fields: [bookId, scheduleId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  account finance_account? @relation("FinanceOccurrenceSource", fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  destination finance_account? @relation("FinanceOccurrenceDestination", fields: [bookId, destinationAccountId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  category finance_category? @relation(fields: [bookId, categoryId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  payments finance_occurrence_payment[]
+  @@unique([bookId, id])
+  @@unique([scheduleId, date])
+  @@index([bookId, date])
+}
+
+model finance_occurrence_payment {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  occurrenceId String @db.VarChar(36)
+  movementId String @db.VarChar(36)
+  appliedMinor BigInt
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  occurrence finance_occurrence @relation(fields: [bookId, occurrenceId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  movement finance_movement @relation(fields: [bookId, movementId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([occurrenceId, movementId])
+}
+
+model finance_budget {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  categoryId String @db.VarChar(36)
+  month DateTime @db.Date
+  amountMinor BigInt
+  version Int @default(1)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  category finance_category @relation(fields: [bookId, categoryId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([bookId, categoryId, month])
+}
+
+// Discretionary estimates exclude scheduled payments. Budgets are targets and
+// are deliberately not inputs to forecasting.
+model finance_spending_estimate {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  categoryId String @db.VarChar(36)
+  lowMinor BigInt
+  expectedMinor BigInt
+  highMinor BigInt
+  version Int @default(1)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  category finance_category @relation(fields: [bookId, categoryId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([bookId, categoryId])
+}
+
+model finance_import_batch {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  accountId String @db.VarChar(36)
+  sourceName String @db.VarChar(255)
+  fileHash String? @db.Char(64)
+  status finance_import_status @default(DRAFT)
+  periodStart DateTime? @db.Date
+  periodEnd DateTime? @db.Date
+  openingMinor BigInt?
+  closingMinor BigInt?
+  totalCreditMinor BigInt?
+  totalDebitMinor BigInt?
+  expectedRowCount Int?
+  balanceVerified Boolean @default(false)
+  summary Json?
+  version Int @default(1)
+  requestKey String @db.VarChar(36)
+  requestHash String @db.Char(64)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  committedAt DateTime? @db.DateTime(6)
+  account finance_account @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  rows finance_import_row[]
+  @@unique([bookId, id])
+  @@unique([bookId, requestKey])
+  @@index([bookId, accountId, fileHash])
+  @@index([bookId, createdAt])
+}
+
+model finance_import_row {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  batchId String @db.VarChar(36)
+  position Int
+  date DateTime @db.Date
+  amountMinor BigInt
+  description String @db.VarChar(1000)
+  externalId String? @db.VarChar(255)
+  payload Json
+  decision finance_import_decision @default(UNRESOLVED)
+  resolution Json?
+  candidateIds Json
+  fingerprint String @db.Char(64)
+  committedMovementId String? @db.VarChar(36)
+  batch finance_import_batch @relation(fields: [bookId, batchId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  sourceRecord finance_source_record?
+  @@unique([bookId, id])
+  @@unique([batchId, position])
+  @@index([bookId, fingerprint])
+}
+
+model finance_source_record {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  accountId String @db.VarChar(36)
+  movementId String @db.VarChar(36)
+  importRowId String @db.VarChar(36)
+  externalKey String? @db.Char(64)
+  sourceDescription String @db.VarChar(1000)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  account finance_account @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  movement finance_movement @relation(fields: [bookId, movementId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  importRow finance_import_row @relation(fields: [bookId, importRowId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@unique([bookId, importRowId])
+  @@unique([bookId, accountId, externalKey])
+}
+
+model finance_reconciliation {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  accountId String @db.VarChar(36)
+  date DateTime @db.Date
+  statementMinor BigInt
+  ledgerMinor BigInt
+  notes String? @db.Text
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  reopenedAt DateTime? @db.DateTime(6)
+  account finance_account @relation(fields: [bookId, accountId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  movements finance_movement[]
+  @@unique([bookId, id])
+  @@index([bookId, accountId, date])
+}
+
+model finance_rule {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  categoryId String @db.VarChar(36)
+  matchText String @db.VarChar(255)
+  merchantName String? @db.VarChar(255)
+  enabled Boolean @default(true)
+  version Int @default(1)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  category finance_category @relation(fields: [bookId, categoryId], references: [bookId, id], onDelete: Restrict, onUpdate: Restrict)
+  @@index([bookId])
+}
+
+model finance_change {
+  id String @id @default(uuid()) @db.VarChar(36)
+  bookId String @db.VarChar(36)
+  actorId String @db.VarChar(36)
+  source String @db.VarChar(20)
+  entityType String @db.VarChar(40)
+  entityId String @db.VarChar(36)
+  action String @db.VarChar(40)
+  before Json?
+  after Json?
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  book finance_book @relation(fields: [bookId], references: [id], onDelete: Restrict)
+  @@index([bookId, createdAt])
+  @@index([bookId, entityType, entityId])
 }
 
 enum auth_provider {

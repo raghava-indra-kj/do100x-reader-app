@@ -12,5 +12,5 @@ build({
   format: "cjs",
   target: "node22",
   sourcemap: true,
-  external: Object.keys(dependencies).filter((name) => name !== "@reader/md-ast"),
+  external: Object.keys(dependencies).filter((name) => !["@reader/md-ast", "@reader/finance-core"].includes(name)),
 }).then(() => console.log("Backend build complete")).catch(() => process.exit(1));

@@ -56,7 +56,7 @@ export function readSession(req: Request): string | undefined { return authentic
 export const requireTrustedOrigin: RequestHandler = (req, res, next) => {
   const origin = req.headers.origin;
   if (typeof origin !== "string" || !authConfig().origins.includes(origin)) {
-    res.status(403).json({ message: "Request origin is not allowed" });
+    res.status(403).json({ message: "This request came from an address that isn’t allowed." });
     return;
   }
   next();
@@ -64,7 +64,7 @@ export const requireTrustedOrigin: RequestHandler = (req, res, next) => {
 
 export const requireSession: RequestHandler = (req, res, next) => {
   const userId = readSession(req);
-  if (!userId) { res.status(401).json({ message: "Please sign in with Google" }); return; }
+  if (!userId) { res.status(401).json({ message: "Sign in with Google to continue." }); return; }
   res.locals.userId = userId;
   if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) return requireTrustedOrigin(req, res, next);
   next();

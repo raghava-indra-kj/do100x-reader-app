@@ -23,8 +23,8 @@ export interface BreathingPattern {
 const BREATHING_PATTERNS: BreathingPattern[] = [
     {
         id: 'box',
-        name: 'Box Breathing (4-4-4-4)',
-        purpose: 'Reset focus, steady nerves, and eliminate brain fog',
+        name: 'Box breathing (4–4–4–4)',
+        purpose: 'A breathing pattern with equal counts.',
         inhale: 4,
         hold1: 4,
         exhale: 4,
@@ -34,8 +34,8 @@ const BREATHING_PATTERNS: BreathingPattern[] = [
     },
     {
         id: 'relax-478',
-        name: '4-7-8 Calm Breath',
-        purpose: 'Soothe the nervous system and release reading tension',
+        name: '4–7–8 breathing',
+        purpose: 'A breathing pattern with a longer exhale.',
         inhale: 4,
         hold1: 7,
         exhale: 8,
@@ -45,8 +45,8 @@ const BREATHING_PATTERNS: BreathingPattern[] = [
     },
     {
         id: 'quick',
-        name: 'Quick Refresh (3-3-3)',
-        purpose: 'Fast 1-minute mental reset between study sections',
+        name: 'Short breathing break (3–3–3)',
+        purpose: 'A short pause between reading sessions.',
         inhale: 3,
         hold1: 3,
         exhale: 3,
@@ -144,8 +144,8 @@ export function DeepBreathPanel({ onClose, onBackToQuotes }: DeepBreathPanelProp
         switch (phase) {
             case 'inhale':
                 return {
-                    label: 'Inhale Slowly',
-                    subtext: 'Breathe in through your nose, filling your lungs',
+                    label: 'Breathe in',
+                    subtext: 'Breathe in gently.',
                     orbScale: 'scale-125',
                     glowOpacity: 'opacity-90',
                     ringColor: 'border-sky-400',
@@ -153,8 +153,8 @@ export function DeepBreathPanel({ onClose, onBackToQuotes }: DeepBreathPanelProp
                 };
             case 'hold1':
                 return {
-                    label: 'Hold Gently',
-                    subtext: 'Keep your chest open and muscles relaxed',
+                    label: 'Hold',
+                    subtext: 'Hold gently, without straining.',
                     orbScale: 'scale-125',
                     glowOpacity: 'opacity-100',
                     ringColor: 'border-violet-400',
@@ -162,8 +162,8 @@ export function DeepBreathPanel({ onClose, onBackToQuotes }: DeepBreathPanelProp
                 };
             case 'exhale':
                 return {
-                    label: 'Exhale Completely',
-                    subtext: 'Release all tension out through your mouth',
+                    label: 'Breathe out',
+                    subtext: 'Breathe out gently.',
                     orbScale: 'scale-75',
                     glowOpacity: 'opacity-40',
                     ringColor: 'border-teal-400',
@@ -171,8 +171,8 @@ export function DeepBreathPanel({ onClose, onBackToQuotes }: DeepBreathPanelProp
                 };
             case 'hold2':
                 return {
-                    label: 'Pause & Rest',
-                    subtext: 'Feel the stillness before your next breath',
+                    label: 'Pause',
+                    subtext: 'Rest before the next breath.',
                     orbScale: 'scale-75',
                     glowOpacity: 'opacity-30',
                     ringColor: 'border-emerald-400',
@@ -190,7 +190,7 @@ export function DeepBreathPanel({ onClose, onBackToQuotes }: DeepBreathPanelProp
                         <Wind size={18} className="animate-pulse" />
                     </div>
                     <h2 className="text-lg sm:text-xl font-bold text-[var(--color-text-strong)] font-[family-name:var(--font-sans)] tracking-tight">
-                        Deep Breathing Exercise
+                        Breathing break
                     </h2>
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)] max-w-sm mx-auto">
@@ -260,7 +260,7 @@ export function DeepBreathPanel({ onClose, onBackToQuotes }: DeepBreathPanelProp
                     <button
                         onClick={handleReset}
                         className="p-2 rounded-xl bg-[var(--color-surface-card)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] border border-[var(--color-border-default)] transition-all cursor-pointer shadow-xs"
-                        title="Restart Breathing Exercise"
+                        title="Restart breathing"
                     >
                         <RotateCcw size={14} />
                     </button>
@@ -273,14 +273,14 @@ export function DeepBreathPanel({ onClose, onBackToQuotes }: DeepBreathPanelProp
                         className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-soft)] transition-all cursor-pointer"
                     >
                         <ArrowLeft size={13} />
-                        <span>Inspirations &amp; Quotes</span>
+                        <span>Quotes</span>
                     </button>
                     <button
                         onClick={onClose}
                         className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border-default)] transition-all cursor-pointer shadow-xs"
                     >
                         <BookOpen size={13} />
-                        <span>Resume Reading</span>
+                        <span>Back to reading</span>
                     </button>
                 </div>
             </div>

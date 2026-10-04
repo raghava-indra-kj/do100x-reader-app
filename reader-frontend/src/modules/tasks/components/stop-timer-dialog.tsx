@@ -23,7 +23,7 @@ export const StopTimerDialog = observer(({ store }: Props) => {
               <Clock className="w-3.5 h-3.5" />
             </div>
             <div>
-              <h2 className="text-xs font-bold text-[var(--color-text-strong)]">Record Focus Session</h2>
+              <h2 className="text-xs font-bold text-[var(--color-text-strong)]">Save tracked time</h2>
               <p className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[240px]">
                 {store.activeTimer?.taskTitle}
               </p>
@@ -44,7 +44,7 @@ export const StopTimerDialog = observer(({ store }: Props) => {
           <div className="p-3.5 rounded-lg bg-[var(--color-surface-soft)]/50 border border-[var(--color-border-subtle)] space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-bold text-[var(--color-text-subtle)] tracking-wider">
-                Recorded Duration
+                Duration
               </span>
               {deltaMinutes !== 0 && (
                 <button
@@ -53,7 +53,7 @@ export const StopTimerDialog = observer(({ store }: Props) => {
                   className="flex items-center space-x-1 text-[10px] text-[var(--color-brand)] hover:underline font-semibold cursor-pointer"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
-                  <span>Reset to {actualMinutes}m</span>
+                  <span>Reset to {actualMinutes} min</span>
                 </button>
               )}
             </div>
@@ -94,7 +94,7 @@ export const StopTimerDialog = observer(({ store }: Props) => {
             <div className="space-y-1.5 pt-1 border-t border-[var(--color-border-subtle)]">
               {/* Quick Reduction Chips (Highlighted for stepping away / trimming time) */}
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-[var(--color-text-muted)]">Trim away time:</span>
+                <span className="text-[10px] font-semibold text-[var(--color-text-muted)]">Subtract time</span>
                 <div className="flex items-center space-x-1">
                   {[-20, -15, -10, -5, -1].map((amt) => (
                     <button
@@ -111,7 +111,7 @@ export const StopTimerDialog = observer(({ store }: Props) => {
 
               {/* Quick Add Chips */}
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-semibold text-[var(--color-text-muted)]">Add time:</span>
+                <span className="text-[10px] font-semibold text-[var(--color-text-muted)]">Add time</span>
                 <div className="flex items-center space-x-1">
                   {[1, 5, 10, 15, 30].map((amt) => (
                     <button
@@ -130,7 +130,7 @@ export const StopTimerDialog = observer(({ store }: Props) => {
             {/* Summary Delta Banner */}
             {deltaMinutes !== 0 && (
               <div className="flex items-center justify-center space-x-1.5 py-1 px-2 rounded-md bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] text-[11px]">
-                <span className="text-[var(--color-text-muted)]">Timer: {actualMinutes}m</span>
+                <span className="text-[var(--color-text-muted)]">Timer: {actualMinutes} min</span>
                 <ArrowRight className="w-3 h-3 text-[var(--color-text-muted)]" />
                 <strong className={deltaMinutes < 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}>
                   {recordedMinutes}m ({deltaMinutes > 0 ? `+${deltaMinutes}m` : `${deltaMinutes}m`})
@@ -142,13 +142,13 @@ export const StopTimerDialog = observer(({ store }: Props) => {
           {/* Session Notes */}
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-[var(--color-text-strong)]">
-              What did you accomplish? (Optional)
+              Notes (optional)
             </label>
             <textarea
               rows={2}
               value={store.stopTimerNotes}
               onChange={(e) => store.setStopTimerNotes(e.target.value)}
-              placeholder="e.g. Completed section review and drafted summary..."
+              placeholder="What did you work on?"
               className="w-full p-2 text-xs rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] transition"
               autoFocus
             />
@@ -161,9 +161,9 @@ export const StopTimerDialog = observer(({ store }: Props) => {
             type="button"
             onClick={() => {
               store.requestConfirmation({
-                title: 'Discard Timer',
-                message: 'Are you sure you want to discard this timer without recording any time?',
-                confirmLabel: 'Discard Session',
+                title: 'Discard timer',
+                message: 'Discard this timer? Its time won’t be saved.',
+                confirmLabel: 'Discard timer',
                 confirmVariant: 'danger',
                 onConfirm: () => store.discardActiveTimer(),
               });
@@ -188,7 +188,7 @@ export const StopTimerDialog = observer(({ store }: Props) => {
               className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-md shadow-xs flex items-center space-x-1.5 transition cursor-pointer"
             >
               <Check className="w-3.5 h-3.5 stroke-[3]" />
-              <span>Save & Record ({recordedMinutes}m)</span>
+              <span>Save {recordedMinutes} min</span>
             </button>
           </div>
         </div>

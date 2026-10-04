@@ -17,7 +17,7 @@ router.patch("/", async (req, res) => {
   const userId = res.locals.userId as string;
   const { motivationsEnabled } = req.body as { motivationsEnabled?: unknown };
   if (typeof motivationsEnabled !== "boolean") {
-    res.status(400).json({ message: "motivationsEnabled must be a boolean" });
+    res.status(400).json({ message: "Choose whether to show quotes and breaks." });
     return;
   }
 

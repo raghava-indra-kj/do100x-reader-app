@@ -29,21 +29,21 @@ export interface PageContentStorage {
 
 export async function editSectionBody(storage: PageContentStorage, userId: string, pageId: string, edit: SectionEditRequest) {
   const page = await storage.page.findFirst({ where: { id: pageId, userId, deletedAt: null } });
-  if (!page) throw new PageContentError(404, "Page not found or you do not own it");
-  if (page.contentVersion !== edit.contentVersion) throw new PageContentError(409, "This page changed while you were editing. Your draft is preserved; reload before applying it.");
+  if (!page) throw new PageContentError(404, "This page is unavailable or you don’t have permission to edit it.");
+  if (page.contentVersion !== edit.contentVersion) throw new PageContentError(409, "This page has changed. Your draft is kept here. Copy it before reloading.");
   const source = page.content ?? "";
   const range = locateSections(source).find((section) => section.kind === edit.target.kind && section.headingStart === edit.target.headingStart && section.bodyStart === edit.target.bodyStart);
   if (!range || contentHash(source.slice(range.bodyStart, range.bodyEnd)) !== edit.expectedBodyHash) {
-    throw new PageContentError(409, "The selected section no longer matches your edit");
+    throw new PageContentError(409, "This section has changed. Reload before editing.");
   }
   let content: string;
   try { content = replaceSectionBody({ source, target: edit.target, newBody: edit.newBody }); }
-  catch (error) { throw new PageContentError(422, error instanceof Error ? error.message : "Invalid section edit"); }
+  catch (error) { throw new PageContentError(422, error instanceof Error ? error.message : "Check the section changes and try again."); }
   if (content === source) return { content, contentVersion: page.contentVersion };
   const updated = await storage.page.updateMany({
     where: { id: pageId, userId, deletedAt: null, contentVersion: edit.contentVersion },
     data: { content, contentVersion: { increment: 1 }, updatedAt: new Date() },
   });
-  if (updated.count !== 1) throw new PageContentError(409, "This page changed before your save finished. Your draft is preserved.");
+  if (updated.count !== 1) throw new PageContentError(409, "This page changed before the save finished. Your draft is kept here.");
   return { content, contentVersion: edit.contentVersion + 1 };
 }

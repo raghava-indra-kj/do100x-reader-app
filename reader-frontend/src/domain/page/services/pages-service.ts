@@ -42,7 +42,7 @@ export async function createPage(
     }
 ): AsyncResult<string, AppError> {
     if (!params.title.trim()) {
-        return err(new AppError({ message: 'Title is required', errorCode: PAGE_TITLE_REQUIRED }));
+        return err(new AppError({ message: 'Enter a title.', errorCode: PAGE_TITLE_REQUIRED }));
     }
     const repo = container.get<IPagesRepo>(TYPES.IPagesRepo);
     const result = await repo.createPage(params);
@@ -63,7 +63,7 @@ export async function editPage(
     }
 ): AsyncResult<void, AppError> {
     if (!params.title.trim()) {
-        return err(new AppError({ message: 'Title is required', errorCode: PAGE_TITLE_REQUIRED }));
+        return err(new AppError({ message: 'Enter a title.', errorCode: PAGE_TITLE_REQUIRED }));
     }
     const repo = container.get<IPagesRepo>(TYPES.IPagesRepo);
     const result = await repo.editPage(params);

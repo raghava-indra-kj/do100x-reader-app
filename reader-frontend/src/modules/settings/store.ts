@@ -152,7 +152,7 @@ export class SettingsStore {
 
     async saveConfig() {
         if (!this.baseUrlInput.trim() || !this.apiKeyInput.trim()) {
-            toast.error('Base URL and API Key are required');
+            toast.error('Enter a provider URL and API key.');
             return;
         }
         this.isSavingConfig = true;
@@ -169,7 +169,7 @@ export class SettingsStore {
         runInAction(() => {
             this.isSavingConfig = false;
             if (res.ok) {
-                toast.success('AI configuration saved successfully');
+                toast.success('Settings saved');
             } else {
                 toast.error(res.error.message);
             }
@@ -178,7 +178,7 @@ export class SettingsStore {
 
     async addModel() {
         if (!this.newModelNameInput.trim() || !this.newModelIdInput.trim()) {
-            toast.error('Model Name and Model ID are required');
+            toast.error('Enter a display name and model ID.');
             return;
         }
         this.isAddingModel = true;
@@ -201,7 +201,7 @@ export class SettingsStore {
                 if (modelsRes.ok) {
                     this.userModels = modelsRes.data;
                 }
-                toast.success('Model added successfully');
+                toast.success('Model added');
             });
         } else {
             runInAction(() => { this.isAddingModel = false; });
@@ -212,7 +212,7 @@ export class SettingsStore {
     async updateModel() {
         if (!this.editingModelId) return;
         if (!this.editModelNameInput.trim() || !this.editModelIdInput.trim()) {
-            toast.error('Model Name and Model ID are required');
+            toast.error('Enter a display name and model ID.');
             return;
         }
         this.isUpdatingModel = true;
@@ -232,7 +232,7 @@ export class SettingsStore {
                 if (modelsRes.ok) {
                     this.userModels = modelsRes.data;
                 }
-                toast.success('Model updated successfully');
+                toast.success('Model updated');
             });
         } else {
             runInAction(() => { this.isUpdatingModel = false; });
@@ -250,7 +250,7 @@ export class SettingsStore {
                 if (modelsRes.ok) {
                     this.userModels = modelsRes.data;
                 }
-                toast.success('Model deleted successfully');
+                toast.success('Model deleted');
             });
         } else {
             runInAction(() => { this.deletingModelIds.delete(id); });

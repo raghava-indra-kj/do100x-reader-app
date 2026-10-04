@@ -38,7 +38,7 @@ export function DeletePageDialog({ open, onOpenChange, pageId, pageTitle, onDele
                     </BaseDialog.Close>
                 </div>
                 <p className="text-sm text-[var(--color-text-body)]">
-                    Are you sure you want to delete <span className="font-medium text-[var(--color-text-strong)]">{pageTitle}</span>? This action cannot be undone.
+                    Delete “<span className="font-medium text-[var(--color-text-strong)]">{pageTitle}</span>”? You can’t undo this.
                 </p>
                 {submitState.isError && (
                     <p className="text-sm text-[var(--color-error)]">{submitState.error.message}</p>

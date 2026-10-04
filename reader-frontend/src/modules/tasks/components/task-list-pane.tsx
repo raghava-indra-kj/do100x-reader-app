@@ -48,7 +48,7 @@ export const TaskListPane = observer(({ store }: Props) => {
               {store.activeListName}
             </h1>
             <p className="text-xs text-[var(--color-text-muted)]">
-              {store.filteredTasks.filter((t) => !t.isDone).length} pending • {store.filteredTasks.filter((t) => t.isDone).length} completed
+              {store.filteredTasks.filter((t) => !t.isDone).length} pending · {store.filteredTasks.filter((t) => t.isDone).length} completed
             </p>
           </div>
 
@@ -57,7 +57,7 @@ export const TaskListPane = observer(({ store }: Props) => {
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search tasks…"
               value={store.searchQuery}
               onChange={(e) => store.setSearchQuery(e.target.value)}
               className="w-full pl-7 pr-2.5 py-1 text-xs rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] transition"
@@ -73,7 +73,7 @@ export const TaskListPane = observer(({ store }: Props) => {
 
           <input
             type="text"
-            placeholder={`Add task to ${store.activeListName}...`}
+            placeholder={`Add a task…`}
             value={store.quickTaskTitle}
             onChange={(e) => store.setQuickTaskTitle(e.target.value)}
             onKeyDown={(e) => {
@@ -159,9 +159,6 @@ export const TaskListPane = observer(({ store }: Props) => {
                 className="absolute right-0 top-full mt-1 z-40 w-44 bg-[var(--color-surface-raised)] rounded-lg border border-[var(--color-border-default)] shadow-xl p-2 text-xs space-y-1 animate-in fade-in duration-100"
                 onMouseLeave={() => setIsDateMenuOpen(false)}
               >
-                <div className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase px-1 pb-1 border-b border-[var(--color-border-subtle)]">
-                  Quick Select
-                </div>
                 <button
                   type="button"
                   onClick={() => {
@@ -198,7 +195,7 @@ export const TaskListPane = observer(({ store }: Props) => {
                   }}
                   className="w-full text-left px-2 py-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)] flex items-center justify-between cursor-pointer"
                 >
-                  <span>Next Week</span>
+                  <span>Next week</span>
                   <span className="text-[10px] text-[var(--color-text-muted)]">
                     {new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                   </span>
@@ -225,7 +222,7 @@ export const TaskListPane = observer(({ store }: Props) => {
                     }}
                     className="w-full py-1 text-center text-[11px] text-[var(--color-error)] hover:underline font-medium cursor-pointer"
                   >
-                    Clear Date
+                    Clear date
                   </button>
                 )}
               </div>
@@ -249,16 +246,16 @@ export const TaskListPane = observer(({ store }: Props) => {
         {store.isLoadingTasks ? (
           <div className="py-16 flex flex-col items-center justify-center space-y-2 text-[var(--color-text-muted)] select-none">
             <Loader size={22} className="text-[var(--color-brand)]" />
-            <span className="text-xs font-medium">Loading tasks...</span>
+            <span className="text-xs font-medium">Loading tasks…</span>
           </div>
         ) : store.filteredTasks.length === 0 ? (
           <div className="py-20 text-center text-[var(--color-text-muted)]">
             <div className="w-10 h-10 rounded-lg bg-[var(--color-surface-soft)] flex items-center justify-center mx-auto mb-2 text-[var(--color-text-muted)]">
               <Check className="w-5 h-5 stroke-[2.5]" />
             </div>
-            <p className="text-xs font-bold text-[var(--color-text-strong)]">No tasks in this view</p>
+            <p className="text-xs font-bold text-[var(--color-text-strong)]">No tasks here.</p>
             <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-              Add your first task above to get started.
+              Add a task above.
             </p>
           </div>
         ) : (
@@ -353,7 +350,7 @@ export const TaskListPane = observer(({ store }: Props) => {
                         store.startTimerForTask(task.id);
                       }
                     }}
-                    title={isTimerActiveForThis ? 'Toggle live timer' : 'Start stopwatch on task'}
+                    title={isTimerActiveForThis ? 'Pause or resume timer' : 'Start timer'}
                     className={`px-2 py-0.5 rounded text-xs font-bold flex items-center space-x-1 transition cursor-pointer ${
                       isTimerActiveForThis
                         ? 'bg-rose-500 text-white animate-pulse'
@@ -382,9 +379,9 @@ export const TaskListPane = observer(({ store }: Props) => {
                     onClick={(e) => {
                       e.stopPropagation();
                       store.requestConfirmation({
-                        title: 'Delete Task',
-                        message: `Are you sure you want to delete "${task.title}"?`,
-                        confirmLabel: 'Delete Task',
+                        title: 'Delete task',
+                        message: `Delete “${task.title}”?`,
+                        confirmLabel: 'Delete task',
                         confirmVariant: 'danger',
                         onConfirm: () => store.deleteTask(task.id),
                       });

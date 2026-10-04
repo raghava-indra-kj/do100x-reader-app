@@ -68,7 +68,7 @@ router.post("/", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const { name, color, icon } = req.body;
   if (!name || typeof name !== "string") {
-    res.status(400).json({ error: "List name is required" });
+    res.status(400).json({ error: "Enter a list name." });
     return;
   }
 

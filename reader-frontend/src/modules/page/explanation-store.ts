@@ -76,11 +76,11 @@ export class ExplanationStore {
         const entry = this.history.find(e => e.id === entryId);
         if (entry && entry.isLoading) {
             entry.isLoading = false;
-            entry.error = 'Request was cancelled';
+            entry.error = 'Request cancelled';
             entry.errorDetails = {
                 errorType: 'CANCELLED',
-                message: 'Request Cancelled',
-                description: 'The AI explanation request was cancelled.',
+                message: 'Request cancelled',
+                description: 'The request was cancelled.',
             };
         }
     }
@@ -185,11 +185,11 @@ export class ExplanationStore {
             this.abortControllers.delete(entryId);
             runInAction(() => {
                 entry.isLoading = false;
-                entry.error = 'AI configuration not found. Please verify your settings.';
+                entry.error = 'Set up your AI connection in settings.';
                 entry.errorDetails = {
                     errorType: 'CONFIG_ERROR',
-                    message: 'AI Configuration Missing',
-                    description: 'No AI configuration found. Please go to Settings to configure your Base URL and API key.',
+                    message: 'AI connection needed',
+                    description: 'Add a provider URL and API key in settings.',
                 };
             });
             return;
@@ -200,11 +200,11 @@ export class ExplanationStore {
             this.abortControllers.delete(entryId);
             runInAction(() => {
                 entry.isLoading = false;
-                entry.error = 'Default Model for Explanation is not configured. Please go to Settings to select one.';
+                entry.error = 'Choose an explanation model in settings.';
                 entry.errorDetails = {
                     errorType: 'CONFIG_ERROR',
-                    message: 'Explanation Model Not Selected',
-                    description: 'Please go to Settings -> Model Selection and select a default model for Explanations.',
+                    message: 'Choose an explanation model',
+                    description: 'Choose an explanation model in Settings → AI models.',
                 };
             });
             return;
@@ -245,10 +245,10 @@ ${entry.selectedText}
                     entry.error = chatRes.error.details.message;
                     entry.errorDetails = chatRes.error.details;
                 } else {
-                    entry.error = chatRes.error.message || 'Failed to fetch AI explanation.';
+                    entry.error = chatRes.error.message || 'Couldn’t get an explanation. Try again.';
                     entry.errorDetails = {
                         errorType: 'UNKNOWN',
-                        message: chatRes.error.message || 'AI request failed',
+                        message: chatRes.error.message || 'Couldn’t get a response. Try again.',
                         rawError: chatRes.error,
                     };
                 }

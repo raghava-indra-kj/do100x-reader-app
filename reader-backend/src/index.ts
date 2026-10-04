@@ -17,6 +17,7 @@ import taskListsRouter from "./task-lists";
 import timerRouter from "./timer";
 import userPreferencesRouter from "./user-preferences";
 import { createQuizRouter } from "./quiz/quiz-router";
+import { createFinanceRouter } from "./finance/finance-router";
 import { prisma } from "./prisma";
 import { createMcpSseRouter } from "./mcp/sse-router";
 
@@ -53,6 +54,7 @@ app.use("/backend-api/auth", createAuthRouter());
 app.use("/backend-api/reader", createReaderPreferencesRouter());
 app.use("/backend-api/pages", pagesRouter);
 app.use("/backend-api/quizzes", createQuizRouter(prisma));
+app.use("/backend-api/finance", createFinanceRouter(prisma));
 app.use("/backend-api/comments", commentsRouter);
 app.use("/backend-api/vocabulary", vocabularyRouter);
 app.use("/backend-api/model-config", modelConfigRouter);

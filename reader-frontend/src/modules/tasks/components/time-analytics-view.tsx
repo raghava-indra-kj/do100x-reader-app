@@ -11,11 +11,11 @@ interface Props {
 const PRESET_OPTIONS = [
   { id: 'today', label: 'Today' },
   { id: 'yesterday', label: 'Yesterday' },
-  { id: '7', label: '7 Days' },
-  { id: '14', label: '14 Days' },
-  { id: '30', label: '30 Days' },
-  { id: 'all', label: 'All Time' },
-  { id: 'custom', label: 'Custom Range' },
+  { id: '7', label: '7 days' },
+  { id: '14', label: '14 days' },
+  { id: '30', label: '30 days' },
+  { id: 'all', label: 'All time' },
+  { id: 'custom', label: 'Custom range' },
 ];
 
 export const TimeAnalyticsView = observer(({ store }: Props) => {
@@ -32,9 +32,9 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
       {/* Analytics Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-strong)]">Time & Focus Analytics</h1>
+          <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-strong)]">Time tracked</h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-            Detailed breakdown of how your focus time is allocated across projects and tasks.
+            See how much time you’ve tracked by task and list.
           </p>
         </div>
 
@@ -95,8 +95,8 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
             onChange={(e) => store.setAnalyticsListFilter(e.target.value)}
             className="bg-[var(--color-surface-soft)] border border-[var(--color-border-default)] rounded-xl px-2.5 py-1 text-xs text-[var(--color-text-strong)] focus:outline-none cursor-pointer font-medium"
           >
-            <option value="all">All Projects & Lists</option>
-            <option value="inbox">📥 Inbox Only</option>
+            <option value="all">All lists</option>
+            <option value="inbox">Inbox</option>
             {store.lists.map((l) => (
               <option key={l.id} value={l.id}>
                 📁 {l.name}
@@ -116,7 +116,7 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
       {store.isLoadingAnalytics || !data ? (
         <div className="py-24 flex flex-col items-center justify-center space-y-2 text-[var(--color-text-muted)] select-none">
           <Loader size={24} className="text-[var(--color-brand)]" />
-          <span className="text-xs font-medium">Calculating productivity insights...</span>
+          <span className="text-xs font-medium">Loading tracked time…</span>
         </div>
       ) : (
         <>
@@ -125,7 +125,7 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
             {/* Total Time */}
             <div className="p-5 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] shadow-xs space-y-2">
               <div className="flex items-center justify-between text-[var(--color-text-muted)]">
-                <span className="text-[10px] font-bold uppercase tracking-wider">Total Focus Time</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Tracked time</span>
                 <Clock className="w-4 h-4 text-[var(--color-brand)]" />
               </div>
               <div className="text-3xl font-bold tracking-tight font-mono text-[var(--color-text-strong)]">
@@ -137,26 +137,26 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
             {/* Sessions Count */}
             <div className="p-5 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] shadow-xs space-y-2">
               <div className="flex items-center justify-between text-[var(--color-text-muted)]">
-                <span className="text-[10px] font-bold uppercase tracking-wider">Sessions Logged</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Time entries</span>
                 <Flame className="w-4 h-4 text-amber-500" />
               </div>
               <div className="text-3xl font-bold tracking-tight text-[var(--color-text-strong)]">
                 {data.sessionsCount}
               </div>
-              <p className="text-[11px] text-[var(--color-text-muted)]">Recorded stopwatch sessions</p>
+              <p className="text-[11px] text-[var(--color-text-muted)]">Saved time entries</p>
             </div>
 
             {/* Top Project */}
             <div className="p-5 rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] shadow-xs space-y-2">
               <div className="flex items-center justify-between text-[var(--color-text-muted)]">
-                <span className="text-[10px] font-bold uppercase tracking-wider">Top Project</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider">Most tracked list</span>
                 <Award className="w-4 h-4 text-emerald-500" />
               </div>
               <div className="text-3xl font-bold tracking-tight text-[var(--color-text-strong)] truncate">
                 {data.byList[0]?.name || 'None'}
               </div>
               <p className="text-[11px] text-[var(--color-text-muted)]">
-                {data.byList[0] ? `${Math.round(data.byList[0].seconds / 3600)}h focused` : 'No data in this window'}
+                {data.byList[0] ? `${Math.round(data.byList[0].seconds / 3600)}h tracked` : 'No time recorded for these dates.'}
               </p>
             </div>
           </div>
@@ -166,13 +166,13 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-sm text-[var(--color-text-strong)] flex items-center space-x-2">
                 <Layers className="w-4 h-4 text-[var(--color-brand)]" />
-                <span>Time by Project / List</span>
+                <span>Time by list</span>
               </h2>
             </div>
 
             {data.byList.length === 0 ? (
               <div className="py-8 text-center text-xs text-[var(--color-text-muted)] italic">
-                No time sessions recorded in this time range.
+                No time recorded for these dates.
               </div>
             ) : (
               <div className="space-y-3">
@@ -212,13 +212,13 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
             <div className="flex items-center justify-between">
               <h2 className="font-bold text-sm text-[var(--color-text-strong)] flex items-center space-x-2">
                 <BarChart2 className="w-4 h-4 text-[var(--color-brand)]" />
-                <span>Top Tasks by Time Spent</span>
+                <span>Tasks by tracked time</span>
               </h2>
             </div>
 
             {data.byTask.length === 0 ? (
               <div className="py-8 text-center text-xs text-[var(--color-text-muted)] italic">
-                No tasks with recorded time in this window.
+                No tasks with tracked time for these dates.
               </div>
             ) : (
               <div className="divide-y divide-[var(--color-border-subtle)]">

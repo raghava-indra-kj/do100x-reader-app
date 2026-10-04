@@ -1,7 +1,7 @@
 export class Theme {
     static readonly LIGHT = new Theme('Light', 'light');
     static readonly DARK = new Theme('Dark', 'dark');
-    static readonly FOREST_DARK = new Theme('Forest Dark', 'forest-dark');
+    static readonly FOREST_DARK = new Theme('Forest dark', 'forest-dark');
 
     static readonly values = [
         Theme.LIGHT,

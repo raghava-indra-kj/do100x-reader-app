@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { readerPageWithIdRouteValue } from '@boot/routes';
 import { Observer } from 'mobx-react-lite';
 import { usePageStore } from '../store';
 import { Dialog, BaseDialog } from '@modules/core/ui/primitives/dialog';
@@ -26,17 +27,17 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     const [isUpdating, setIsUpdating] = useState(false);
 
     const shareUrl = typeof window !== 'undefined' 
-        ? `${window.location.origin}/pages/${store.pageId}`
+        ? `${window.location.origin}${readerPageWithIdRouteValue(store.pageId)}`
         : '';
 
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(shareUrl);
             setCopied(true);
-            toast.success('Public link copied to clipboard');
+            toast.success('Link copied');
             setTimeout(() => setCopied(false), 2000);
         } catch {
-            toast.error('Failed to copy link');
+            toast.error('Couldn’t copy the link. Try again.');
         }
     };
 
@@ -45,9 +46,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         try {
             const res = await store.setPagePublic(newPublicState);
             if (res.ok) {
-                toast.success(newPublicState ? 'Page & subpages are now public' : 'Page is now private');
+                toast.success(newPublicState ? 'Page and subpages are public' : 'Page is private');
             } else {
-                toast.error('Failed to update share settings');
+                toast.error('Couldn’t save sharing settings. Try again.');
             }
         } finally {
             setIsUpdating(false);
@@ -73,10 +74,10 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                                     </div>
                                     <div>
                                         <h2 className="text-base font-semibold text-[var(--color-text-strong)] font-[family-name:var(--font-sans)]">
-                                            Share Page &amp; Subpages
+                                            Share page
                                         </h2>
                                         <p className="text-xs text-[var(--color-text-muted)]">
-                                            {isPublic ? 'Publicly accessible with link' : 'Only accessible by you'}
+                                            {isPublic ? 'Anyone with the link can read' : 'Only you can read'}
                                         </p>
                                     </div>
                                 </div>
@@ -90,7 +91,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                                 <div className="space-y-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                         <span className="text-sm font-medium text-[var(--color-text-strong)]">
-                                            Public Access
+                                            Public access
                                         </span>
                                         {isPublic && (
                                             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
@@ -99,7 +100,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                                         )}
                                     </div>
                                     <p className="text-xs text-[var(--color-text-muted)] leading-normal">
-                                        Allow anyone with the link to read this page and all its nested subpages.
+                                        Anyone with the link can read this page and its subpages.
                                     </p>
                                 </div>
 
@@ -125,7 +126,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                             {isPublic && (
                                 <div className="space-y-2 animate-fade-in">
                                     <label className="text-xs font-medium text-[var(--color-text-strong)]">
-                                        Shareable Link
+                                        Link
                                     </label>
                                     <div className="flex items-center gap-2">
                                         <input
@@ -152,19 +153,19 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                                 <div className="flex items-start gap-2">
                                     <Layers size={14} className="text-[var(--color-brand)] shrink-0 mt-0.5" />
                                     <span>
-                                        <strong className="text-[var(--color-text-strong)]">Hierarchical Sharing:</strong> All current and future subpages under this page are automatically shared.
+                                        Sharing includes existing subpages and any added later.
                                     </span>
                                 </div>
                                 <div className="flex items-start gap-2">
                                     <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                                     <span>
-                                        <strong className="text-[var(--color-text-strong)]">Strict Privacy:</strong> Your personal comments, highlights, and vocabulary terms remain private and are never shared.
+                                        Your comments, highlights and vocabulary stay private.
                                     </span>
                                 </div>
                                 <div className="flex items-start gap-2">
                                     <Sparkles size={14} className="text-amber-500 shrink-0 mt-0.5" />
                                     <span>
-                                        <strong className="text-[var(--color-text-strong)]">AI Key Security:</strong> Your OpenAI/LLM credentials are never used by guests. Guests use their own keys.
+                                        Visitors can’t use your AI keys. They need their own.
                                     </span>
                                 </div>
                             </div>

@@ -220,7 +220,7 @@ router.post("/", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const { title, description, listId, parentId, priority, dueDate, dueTime, status } = req.body;
   if (!title || typeof title !== "string" || !title.trim()) {
-    res.status(400).json({ error: "Task title is required" });
+    res.status(400).json({ error: "Enter a task title." });
     return;
   }
 
@@ -361,7 +361,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
   if (parentId !== undefined) {
     const targetParentId = parentId === null || parentId === "null" ? null : parentId;
     if (targetParentId === id) {
-      res.status(400).json({ error: "Cannot make task a subtask of itself" });
+      res.status(400).json({ error: "A task can’t be its own subtask." });
       return;
     }
     if (targetParentId) {
@@ -381,7 +381,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
         curr = parentTask ? parentTask.parentId : null;
       }
       if (isCycle) {
-        res.status(400).json({ error: "Cannot move task into its own descendant subtask" });
+        res.status(400).json({ error: "A task can’t move inside one of its own subtasks." });
         return;
       }
     }
@@ -471,7 +471,7 @@ router.post("/reorder", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const { orderedIds } = req.body;
   if (!Array.isArray(orderedIds)) {
-    res.status(400).json({ error: "orderedIds array is required" });
+    res.status(400).json({ error: "Choose the tasks to reorder." });
     return;
   }
 

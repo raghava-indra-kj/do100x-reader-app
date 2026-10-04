@@ -1,112 +1,27 @@
-import { readerPageRoute } from '@boot/routes';
-import { useAuthStore } from '@modules/auth/provider/store';
+import { Link } from 'react-router-dom';
+import { ArrowUpRight } from 'lucide-react';
 import { AppBar } from '@modules/core/ui/components/appbar';
-import { Button } from '@modules/core/ui/primitives/button';
-import { BookMarked, BookOpen, Brain, Eye, Lightbulb } from 'lucide-react';
-import { Observer } from 'mobx-react-lite';
-import { useNavigate } from 'react-router-dom';
-
-const features = [
-    {
-        icon: BookOpen,
-        title: 'Small, gentle parts',
-        description: 'Long text broken into bite-sized pieces.',
-    },
-    {
-        icon: Eye,
-        title: 'Easy on your eyes',
-        description: 'Clean, soft layout that keeps eyes fresh.',
-    },
-    {
-        icon: BookMarked,
-        title: 'Instant word meanings',
-        description: 'Tap any word — see its meaning instantly.',
-    },
-    {
-        icon: Lightbulb,
-        title: 'Help when stuck',
-        description: 'AI explains with real-world examples.',
-    },
-    {
-        icon: Brain,
-        title: 'Remember what you read',
-        description: 'Quizzes lock learning in after each part.',
-    },
-];
-
-function HeroSection() {
-    const navigate = useNavigate();
-    const authStore = useAuthStore();
-
-    return (
-        <section className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 sm:py-12">
-            <div className="flex max-w-xl flex-col items-center gap-6 text-center">
-                <img src="/logo.png" alt="Reader" className="h-14 w-14 sm:h-16 sm:w-16" />
-                <div className="flex flex-col items-center gap-1.5">
-                    <h1 className="font-[family-name:var(--font-serif)] text-4xl font-bold tracking-tight text-[var(--color-text-strong)] sm:text-5xl">
-                        Reader
-                    </h1>
-                    <p className="font-[family-name:var(--font-serif)] text-base italic text-[var(--color-text-muted)] sm:text-lg">
-                        Read, Organize, Revisit.
-                    </p>
-                </div>
-                <p className="max-w-md text-sm leading-relaxed text-[var(--color-text-body)] sm:text-base">
-                    Reading long things is hard — eyes tire, words confuse, meaning slips away.
-                    Reader breaks text into gentle parts, calms your eyes, explains the hard bits,
-                    and helps you remember what matters.
-                </p>
-                <Observer>
-                    {() => {
-                        if (authStore.isAuthenticated) {
-                            return <Button size="lg" onClick={() => navigate(readerPageRoute)}>Open Reader</Button>;
-                        }
-                        return <Button size="lg" disabled={authStore.status === 'loading'} onClick={() => navigate(readerPageRoute)}>Open Reader</Button>;
-                    }}
-                </Observer>
-            </div>
-        </section>
-    );
-}
-
-function FeatureCard({ icon: Icon, title, description }: { icon: React.ComponentType<{ size: number; className: string }>; title: string; description: string }) {
-    return (
-        <div className="flex items-start gap-3 rounded-[var(--radius-md)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] p-4 transition-colors hover:border-[var(--color-border-default)]">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-brand-soft)]">
-                <Icon size={16} className="text-[var(--color-brand-on-soft)]" />
-            </div>
-            <div className="flex flex-col gap-0.5">
-                <h3 className="text-xs font-semibold text-[var(--color-text-strong)] sm:text-sm">{title}</h3>
-                <p className="text-xs leading-relaxed text-[var(--color-text-muted)] sm:text-sm">{description}</p>
-            </div>
-        </div>
-    );
-}
-
-function FeaturesSection() {
-    return (
-        <section className="border-t border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-4 py-6 sm:px-6 sm:py-8">
-            <div className="mx-auto max-w-4xl">
-                <h2 className="mb-4 text-center font-[family-name:var(--font-serif)] text-lg font-semibold text-[var(--color-text-strong)] sm:mb-6 sm:text-xl">
-                    Why Reader?
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
-                    {features.map((feature) => (
-                        <FeatureCard key={feature.title} {...feature} />
-                    ))}
-                </div>
-            </div>
-        </section>
-    );
-}
+import { suiteApps } from '@modules/core/apps/app-catalog';
+import './home.css';
 
 export default function HomePage() {
-    return (
-        <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
-            <AppBar />
-            <div className="flex flex-1 flex-col overflow-y-auto">
-                <HeroSection />
-                <FeaturesSection />
+    return <div className="suite-home">
+        <AppBar />
+        <main className="suite-home-main">
+            <div className="suite-home-content">
+                <section className="suite-home-intro" aria-labelledby="suite-home-title">
+                    <h1 id="suite-home-title">Your apps</h1>
+                </section>
+                <nav className="suite-home-apps" aria-label="Choose an app">
+                    {suiteApps.map(({ id, name, route, icon: Icon, description }) =>
+                        <Link key={id} to={route} className={`suite-home-card suite-home-card-${id}`} aria-label={`Open ${name}`}>
+                            <div className="suite-home-card-top"><span className="suite-home-icon"><Icon size={24} aria-hidden="true" /></span><ArrowUpRight size={19} className="suite-home-arrow" aria-hidden="true" /></div>
+                            <h2>{name}</h2>
+                            <p className="suite-home-card-description">{description}</p>
+                            <div className="suite-home-card-footer"><span className="suite-home-open">Open {name} <ArrowUpRight size={14} aria-hidden="true" /></span></div>
+                        </Link>)}
+                </nav>
             </div>
-        </div>
-    );
+        </main>
+    </div>;
 }

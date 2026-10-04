@@ -148,13 +148,13 @@ export const PageVocabulary = observer(function PageVocabulary() {
                 <div className="mx-3 mt-3 p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] flex items-start gap-2 leading-relaxed">
                     <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
                     <span>
-                        Vocabulary is private to your account. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save vocabulary terms on this page.
+                        Your vocabulary is private. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save words.
                     </span>
                 </div>
             )}
             <div className="flex flex-col gap-1.5 shrink-0 px-3 pt-3 pb-2 border-b border-[var(--color-border-subtle)]">
                 <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
-                    Vocabulary
+                    Saved words
                     {(vocab.length + explanations.length) > 0 && (
                         <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[var(--color-surface-card)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)] font-bold">
                             {vocab.length + explanations.length}
@@ -170,7 +170,7 @@ export const PageVocabulary = observer(function PageVocabulary() {
                                 ? 'bg-[var(--color-surface-card)] text-[var(--color-brand)]'
                                 : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)]'
                         }`}
-                        title="Vocabulary for this page"
+                        title="Saved words"
                     >
                         <FileText size={11} />
                         <span>This page</span>
@@ -182,7 +182,7 @@ export const PageVocabulary = observer(function PageVocabulary() {
                                 ? 'bg-[var(--color-surface-card)] text-[var(--color-brand)]'
                                 : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)]'
                         }`}
-                        title="Vocabulary across all pages for a day"
+                        title="Words saved on a selected date"
                     >
                         <Calendar size={11} />
                         <span>Day</span>
@@ -217,11 +217,11 @@ export const PageVocabulary = observer(function PageVocabulary() {
                             <section className="flex flex-col gap-1.5">
                                 <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)]">
                                     <NotebookPen size={12} />
-                                    <span>Words you looked up</span>
+                                    <span>Saved words</span>
                                 </div>
                                 {vocab.length === 0 ? (
                                     <p className="text-xs text-[var(--color-text-subtle)] pl-0.5">
-                                        Select a word on the page and pick “Add to Vocabulary”.
+                                        Select a word and choose “Save word”.
                                     </p>
                                 ) : (
                                     <div className="flex flex-col gap-1">
@@ -247,7 +247,7 @@ export const PageVocabulary = observer(function PageVocabulary() {
                                                 <button
                                                     onClick={() => handleDeleteVocab(v.id)}
                                                     className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                                                    title="Remove from vocabulary"
+                                                    title="Remove word"
                                                 >
                                                     <Trash2 size={11} />
                                                 </button>
@@ -265,7 +265,7 @@ export const PageVocabulary = observer(function PageVocabulary() {
                                 </div>
                                 {explanations.length === 0 ? (
                                     <p className="text-xs text-[var(--color-text-subtle)] pl-0.5">
-                                        When adding a comment, tick “Mark as my explanation” to collect them here.
+                                        Choose “Save to my explanations” when adding a comment.
                                     </p>
                                 ) : (
                                     <div className="flex flex-col gap-1.5">
@@ -307,7 +307,7 @@ export const PageVocabulary = observer(function PageVocabulary() {
                     ),
                     error: () => (
                         <div className="p-4 text-sm text-[var(--color-text-error)]">
-                            Failed to load vocabulary
+                            Couldn’t load vocabulary.
                         </div>
                     ),
                 })}

@@ -1,0 +1,72 @@
+import { randomUUID } from 'node:crypto';
+import { PrismaClient } from '@prisma/client';
+import { expect, it } from 'vitest';
+import { createAccount, createBook, createCategory } from './catalog-service';
+import { accountBalances, createTransaction, deleteTransaction, updateTransaction } from './ledger-service';
+import { cancelImport, commitImport, getImport, resolveImport, stageImport } from './import-service';
+
+it.skipIf(process.env.RUN_DATABASE_TESTS !== '1')('Finance imports handle retries, overlapping statements, explicit repeats, manual/paired transfers and deleted provenance', async () => {
+  const db = new PrismaClient(), rollback = new Error('Finance imports rollback');
+  try {
+    await db.$transaction(async tx => {
+      const user = await tx.appuser.create({ data: { email: `imports-${randomUUID()}@example.com` } });
+      const actor = { userId: user.id, source: 'MCP' as const };
+      const book = await createBook(tx, actor, { requestKey: randomUUID(), name: 'Imports', timezone: 'Asia/Kolkata', starterCategories: false });
+      const bank = await createAccount(tx, actor, book.id, { requestKey: randomUUID(), name: 'Bank A', openingDate: '2026-10-01', openingAmount: '1000.00' });
+      const other = await createAccount(tx, actor, book.id, { requestKey: randomUUID(), name: 'Bank B', openingDate: '2026-10-01' });
+      const food = await createCategory(tx, actor, book.id, { requestKey: randomUUID(), name: 'Food', kind: 'EXPENSE' });
+      const firstInput = { requestKey: randomUUID(), accountId: bank.id, sourceName: 'Statement', openingBalance: '1000.00', closingBalance: '990.00', expectedRowCount: 1, totalDebits: '10.00', totalCredits: '0.00', fileHash: 'a'.repeat(64), rows: [{ date: '2026-10-02', amount: '-10.00', description: 'Original UPI Tea', externalId: 'bank-001', merchant: 'Tea shop', categoryId: food.id }] };
+      const first = await stageImport(tx, actor, book.id, firstInput);
+      expect(first.balanceVerified).toBe(true);
+      expect((await stageImport(tx, actor, book.id, firstInput)).id).toBe(first.id);
+      const committed = await commitImport(tx, actor, book.id, first.id, { expectedVersion: 1 });
+      expect(committed.status).toBe('COMMITTED');
+      expect((await commitImport(tx, actor, book.id, first.id, { expectedVersion: 1 })).id).toBe(first.id);
+      expect((await accountBalances(tx, user.id, book.id)).find(item => item.id === bank.id)?.postedMinor).toBe('99000');
+      const overlap = await stageImport(tx, actor, book.id, { ...firstInput, requestKey: randomUUID(), fileHash: 'b'.repeat(64), sourceName: 'Overlapping statement' });
+      expect(overlap.rows[0].decision).toBe('MATCH');
+      await commitImport(tx, actor, book.id, overlap.id, { expectedVersion: 1 });
+      expect(await tx.finance_transaction.count({ where: { bookId: book.id, kind: 'EXPENSE' } })).toBe(1);
+      expect(await tx.finance_source_record.count({ where: { bookId: book.id } })).toBe(2);
+      const originalMovement = await tx.finance_movement.findUniqueOrThrow({ where: { id: committed.rows[0].committedMovementId! } });
+      await deleteTransaction(tx, actor, book.id, originalMovement.transactionId, { expectedVersion: 1, deleted: true });
+      const deletedImport = await stageImport(tx, actor, book.id, { ...firstInput, requestKey: randomUUID(), fileHash: 'c'.repeat(64) });
+      await commitImport(tx, actor, book.id, deletedImport.id, { expectedVersion: 1 });
+      expect((await accountBalances(tx, user.id, book.id)).find(item => item.id === bank.id)?.postedMinor).toBe('100000');
+      expect((await getImport(tx, user.id, book.id, deletedImport.id)).candidates[0].transaction.deletedAt).toBeTruthy();
+      const manual = await createTransaction(tx, actor, book.id, { requestKey: randomUUID(), kind: 'EXPENSE', date: '2026-10-03', description: 'Cash withdrawal fee', movements: [{ accountId: bank.id, amount: '-5.00' }] });
+      const manualBatch = await stageImport(tx, actor, book.id, { requestKey: randomUUID(), accountId: bank.id, sourceName: 'No reliable ID', rows: [{ date: '2026-10-03', amount: '-5.00', description: 'Different bank description' }] });
+      expect(manualBatch.rows[0].decision).toBe('UNRESOLVED');
+      await expect(commitImport(tx, actor, book.id, manualBatch.id, { expectedVersion: 1, acceptUnverified: true })).rejects.toMatchObject({ status: 422 });
+      const resolved = await resolveImport(tx, actor, book.id, manualBatch.id, { expectedVersion: 1, rows: [{ rowId: manualBatch.rows[0].id, decision: 'MATCH', matchMovementId: manual.movements[0].id }] });
+      await commitImport(tx, actor, book.id, manualBatch.id, { expectedVersion: resolved.version, acceptUnverified: true });
+      const clearedManual = await updateTransaction(tx, actor, book.id, manual.id, { expectedVersion: manual.version, kind: 'EXPENSE', date: '2026-10-03', description: manual.description, movements: [{ accountId: bank.id, amount: '-5.00', cleared: true }] });
+      expect(clearedManual.movements[0].id).toBe(manual.movements[0].id);
+      expect(clearedManual.movements[0].cleared).toBe(true);
+      expect(clearedManual.movements[0].sourceRecords).toHaveLength(1);
+      await expect(updateTransaction(tx, actor, book.id, manual.id, { expectedVersion: clearedManual.version, kind: 'EXPENSE', date: '2026-10-03', description: manual.description, movements: [{ accountId: bank.id, amount: '-6.00', cleared: true }] })).rejects.toMatchObject({ status: 409 });
+      expect(await tx.finance_transaction.count({ where: { bookId: book.id, deletedAt: null, kind: 'EXPENSE' } })).toBe(1);
+      const repeats = await stageImport(tx, actor, book.id, { requestKey: randomUUID(), accountId: bank.id, sourceName: 'Legitimate repeats', rows: [1, 2].map(() => ({ date: '2026-10-04', amount: '-2.00', description: 'Two equal fares' })) });
+      expect(repeats.rows.every(row => row.decision === 'UNRESOLVED')).toBe(true);
+      await expect(resolveImport(tx, actor, book.id, repeats.id, { expectedVersion: 1, rows: [{ rowId: repeats.rows[0].id, decision: 'NEW' }] })).rejects.toMatchObject({ status: 409 });
+      const confirmed = await resolveImport(tx, actor, book.id, repeats.id, { expectedVersion: 1, rows: repeats.rows.map(row => ({ rowId: row.id, decision: 'NEW', forceNew: true })) });
+      await commitImport(tx, actor, book.id, repeats.id, { expectedVersion: confirmed.version, acceptUnverified: true });
+      expect(await tx.finance_transaction.count({ where: { bookId: book.id, description: 'Two equal fares' } })).toBe(2);
+      const transferBatch = await stageImport(tx, actor, book.id, { requestKey: randomUUID(), accountId: bank.id, sourceName: 'Bank A transfer', rows: [{ date: '2026-10-05', amount: '-100.00', description: 'To Bank B', kind: 'TRANSFER', destinationAccountId: other.id, externalId: 'transfer-a' }] });
+      await commitImport(tx, actor, book.id, transferBatch.id, { expectedVersion: 1, acceptUnverified: true });
+      const paired = await stageImport(tx, actor, book.id, { requestKey: randomUUID(), accountId: other.id, sourceName: 'Bank B transfer', rows: [{ date: '2026-10-05', amount: '100.00', description: 'From Bank A', externalId: 'transfer-b' }] });
+      expect(paired.rows[0].decision).toBe('UNRESOLVED');
+      const pairedResolved = await resolveImport(tx, actor, book.id, paired.id, { expectedVersion: 1, rows: [{ rowId: paired.rows[0].id, decision: 'MATCH', matchMovementId: paired.rows[0].candidateIds[0] }] });
+      await commitImport(tx, actor, book.id, paired.id, { expectedVersion: pairedResolved.version, acceptUnverified: true });
+      expect(await tx.finance_transaction.count({ where: { bookId: book.id, kind: 'TRANSFER' } })).toBe(1);
+      const cancelledInput = { requestKey: randomUUID(), accountId: bank.id, sourceName: 'Correct mapping retry', fileHash: 'd'.repeat(64), rows: [{ date: '2026-10-06', amount: '-1.00', description: 'Retry' }] };
+      const cancelled = await stageImport(tx, actor, book.id, cancelledInput);
+      await cancelImport(tx, actor, book.id, cancelled.id, { expectedVersion: 1 });
+      const restaged = await stageImport(tx, actor, book.id, { ...cancelledInput, requestKey: randomUUID() });
+      expect(restaged.id).not.toBe(cancelled.id);
+      expect((await tx.finance_import_batch.findUniqueOrThrow({ where: { id: cancelled.id } })).fileHash).toBe(cancelledInput.fileHash);
+      throw rollback;
+    }, { timeout: 60000 });
+  } catch (error) { if (error !== rollback) throw error; }
+  finally { await db.$disconnect(); }
+}, 70000);

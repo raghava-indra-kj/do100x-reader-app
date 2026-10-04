@@ -1,4 +1,4 @@
-import { pagesPageWithIdRouteValue } from '@boot/routes';
+import { readerPageWithIdRouteValue } from '@boot/routes';
 import type { PageListItem } from '@domain/page/models/page-list-item';
 import { Trash2, GripVertical, Pencil, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -57,7 +57,7 @@ export const SubpageItem = observer(function SubpageItem({ page, onDeleted, pare
                     </button>
                 )}
                 <button
-                    onClick={() => navigate(pagesPageWithIdRouteValue(page.id))}
+                    onClick={() => navigate(readerPageWithIdRouteValue(page.id))}
                     className="flex flex-col flex-1 text-left cursor-pointer min-w-0"
                 >
                     <div className="flex items-center gap-1.5">

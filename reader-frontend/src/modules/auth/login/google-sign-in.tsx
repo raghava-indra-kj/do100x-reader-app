@@ -47,7 +47,7 @@ export function GoogleSignIn() {
                 google.renderButton(element, { type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular', width: Math.min(320, element.clientWidth || 280) });
                 setStatus('ready');
             } catch (cause) {
-                if (!disposed) { setError(getApiErrorMessage(cause, cause instanceof Error ? cause.message : 'Google sign-in is unavailable')); setStatus('error'); }
+                if (!disposed) { setError(getApiErrorMessage(cause, cause instanceof Error ? cause.message : 'Google sign-in unavailable')); setStatus('error'); }
             }
         };
         void initialize();

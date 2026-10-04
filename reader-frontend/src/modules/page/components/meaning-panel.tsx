@@ -7,14 +7,14 @@ export const PageMeaningPanel = observer(function PageMeaningPanel() {
     const store = usePageStore();
     return (
         <PageAiLookupPanel
-            title="AI Meaning"
+            title="Word meanings"
             icon={<Sparkles size={12} className="text-[var(--color-brand)]" />}
             storeInstance={store.meaningStore}
             queryLabel="Term"
-            rephraseLabel="Rephrase Term / Context"
-            rephrasePlaceholder="Modify term or add instructions..."
-            emptyStateLabel="Select text on the page and click 'AI Meaning' to look up details."
-            loadingLabel={`Consulting AI for "${store.meaningStore.activeEntry?.searchTerm}"...`}
+            rephraseLabel="Edit word or context"
+            rephrasePlaceholder="Edit the word or add context…"
+            emptyStateLabel="Select a word and choose “Meaning with AI”."
+            loadingLabel={`Looking up “${store.meaningStore.activeEntry?.searchTerm}”…`}
         />
     );
 });

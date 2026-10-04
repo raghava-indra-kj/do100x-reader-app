@@ -31,7 +31,7 @@ export function parseMarkdown(source: string): MdDocument {
     try {
         tree = parseSourceTree(source);
     } catch (error) {
-        throw new MdParseError("Failed to parse markdown", { cause: error });
+        throw new MdParseError("Couldn’t read this Markdown. Check its formatting.", { cause: error });
     }
 
     return {

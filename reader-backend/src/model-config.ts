@@ -13,7 +13,7 @@ router.get("/", async (req, res) => {
   const config = await prisma.model_config.findUnique({ where: { userId } });
 
   if (!config) {
-    res.status(404).json({ message: "Model configuration not found" });
+    res.status(404).json({ message: "AI settings not found." });
     return;
   }
 
@@ -46,7 +46,7 @@ router.post("/", async (req, res) => {
   if (!baseUrl || !apiKey) {
     res
       .status(400)
-      .json({ message: "baseUrl and apiKey are required" });
+      .json({ message: "Enter a provider URL and API key." });
     return;
   }
 

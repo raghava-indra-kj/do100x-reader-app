@@ -80,8 +80,8 @@ router.post("/", async (req, res) => {
     res.status(400).json({
       error: {
         type: "CONFIG_ERROR",
-        message: "Missing required fields",
-        description: "modelId, systemPrompt, and userPrompt are all required.",
+        message: "Complete the required fields.",
+        description: "Choose a model and provide the instructions and question.",
         rawError: { body: req.body },
       },
     });
@@ -111,8 +111,8 @@ router.post("/", async (req, res) => {
     res.status(404).json({
       error: {
         type: "CONFIG_ERROR",
-        message: "Base URL not configured",
-        description: "No AI Base URL exists for this model or in your account Settings. Please configure a Base URL.",
+        message: "Provider URL missing",
+        description: "Add a provider URL for this model or in the default AI settings.",
         rawError: { userId, modelId },
       },
     });
@@ -123,8 +123,8 @@ router.post("/", async (req, res) => {
     res.status(400).json({
       error: {
         type: "INVALID_API_KEY",
-        message: "API Key is missing",
-        description: "No AI API Key is configured for this model or in your account Settings. Please configure a valid API Key.",
+        message: "API key missing",
+        description: "Add an API key for this model or in the default AI settings.",
         rawError: { baseUrl: effectiveBaseUrl, modelId: effectiveModelId },
       },
     });
@@ -166,28 +166,28 @@ router.post("/", async (req, res) => {
     if (err instanceof OpenAI.APIError || err?.status) {
       const status = err.status || 500;
       let errorType = "PROVIDER_ERROR";
-      let message = "AI Provider Error";
-      let description = err.message || "An error occurred while contacting the AI provider.";
+      let message = "AI provider error";
+      let description = err.message || "Couldn’t contact the AI provider. Try again.";
 
       const msgLower = (err.message || "").toLowerCase();
       const codeLower = String(err.code || "").toLowerCase();
 
       if (status === 401 || codeLower.includes("invalid_api_key") || msgLower.includes("api key") || msgLower.includes("unauthorized") || msgLower.includes("authentication")) {
         errorType = "INVALID_API_KEY";
-        message = "Invalid or expired API Key";
-        description = "The AI provider rejected your API key. Please check and re-enter your API key in Settings.";
+        message = "API key rejected";
+        description = "The provider rejected your API key. Check it in settings.";
       } else if (status === 404 || codeLower.includes("model_not_found") || msgLower.includes("model") && msgLower.includes("not found")) {
         errorType = "MODEL_NOT_FOUND";
-        message = "Model Not Found";
-        description = `The requested model "${effectiveModelId}" was not found or is not supported by your AI provider endpoint.`;
+        message = "Model unavailable";
+        description = `“${effectiveModelId}” isn’t available from this provider. Check the model ID and provider URL.`;
       } else if (status === 429 || codeLower.includes("rate_limit") || codeLower.includes("quota") || msgLower.includes("quota") || msgLower.includes("rate limit")) {
         errorType = "RATE_LIMIT";
-        message = "Rate Limit or Quota Exceeded";
-        description = "You have exceeded your provider request rate limit or credit quota.";
+        message = "Provider limit reached";
+        description = "Your provider’s request or credit limit has been reached. Check your provider account.";
       } else if (status >= 500) {
         errorType = "PROVIDER_ERROR";
-        message = "AI Provider Internal Error";
-        description = `The AI provider returned an internal server error (HTTP ${status}): ${err.message}`;
+        message = "AI provider error";
+        description = `The provider returned an error (HTTP ${status}): ${err.message}`;
       }
 
       res.status(status >= 400 && status < 600 ? status : 502).json({
@@ -212,9 +212,9 @@ router.post("/", async (req, res) => {
       res.status(500).json({
         error: {
           type: isNetwork ? "NETWORK_ERROR" : "UNEXPECTED_ERROR",
-          message: isNetwork ? "Cannot connect to AI Base URL" : "Unexpected AI Error",
+          message: isNetwork ? "Can’t reach the AI provider" : "AI request failed",
           description: isNetwork
-            ? `Unable to reach Base URL "${effectiveBaseUrl}". Please verify the URL is running and accessible.`
+            ? `Couldn’t reach “${effectiveBaseUrl}”. Check the provider URL and your connection.`
             : errorMsg,
           rawError: {
             message: errorMsg,

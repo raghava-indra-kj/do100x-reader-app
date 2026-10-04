@@ -11,7 +11,7 @@ export class SettingsRepoApi implements ISettingsRepo {
             const { data } = await apiClient.get('/model-config');
             return ok(ModelConfigSchema.parse(data));
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch model configuration'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load AI settings. Try again.'), cause: error }));
         }
     }
 
@@ -29,7 +29,7 @@ export class SettingsRepoApi implements ISettingsRepo {
             const { data } = await apiClient.post('/model-config', params);
             return ok(ModelConfigSchema.parse(data));
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to save model configuration'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save AI settings. Try again.'), cause: error }));
         }
     }
 
@@ -38,7 +38,7 @@ export class SettingsRepoApi implements ISettingsRepo {
             const { data } = await apiClient.get('/user-models');
             return ok((data as unknown[]).map(item => UserModelSchema.parse(item)));
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch user models'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load models. Try again.'), cause: error }));
         }
     }
 
@@ -47,7 +47,7 @@ export class SettingsRepoApi implements ISettingsRepo {
             const { data } = await apiClient.post('/user-models', params);
             return ok(data as string);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to add model'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t add the model. Try again.'), cause: error }));
         }
     }
 
@@ -57,7 +57,7 @@ export class SettingsRepoApi implements ISettingsRepo {
             await apiClient.put(`/user-models/${id}`, body);
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to update model'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save the model. Try again.'), cause: error }));
         }
     }
 
@@ -66,7 +66,7 @@ export class SettingsRepoApi implements ISettingsRepo {
             await apiClient.delete(`/user-models/${id}`);
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete model'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete the model. Try again.'), cause: error }));
         }
     }
 }

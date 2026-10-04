@@ -1,4 +1,6 @@
-import { pagesPageWithIdRouteValue, homePageRoute } from '@boot/routes';
+import { readerPageWithIdRouteValue } from '@boot/routes';
+import { AppBarLayout } from '@modules/core/ui/components/appbar/appbar-layout';
+import { AppBarTools } from '@modules/core/ui/components/appbar/appbar-tools';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
@@ -71,8 +73,10 @@ export const PageAppbar = observer(function PageAppbar() {
     }, { preventDefault: true, enabled: motivationsAvailable }, [motivationsAvailable]);
 
     return (
-        <header className="shrink-0 flex items-center justify-between border-b border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-4 py-2.5 sm:px-6">
-            <div className="flex items-center gap-1.5 min-w-0 text-xs leading-tight">
+        <>
+            <AppBarLayout app="reader" showApps={Boolean(authStore.isAuthenticated && page && !page.isPubliclyAccessible)}
+                breadcrumbs={<div className="flex items-center gap-1.5 min-w-0 text-xs leading-tight">
+
                 <Observer>
                     {() => {
                         const page = store.optCurrentPage;
@@ -92,33 +96,20 @@ export const PageAppbar = observer(function PageAppbar() {
                             <div className="flex items-center gap-1 min-w-0">
                                 {parentPageId ? (
                                     <>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            iconOnly
-                                            onClick={() => navigate(pagesPageWithIdRouteValue(parentPageId))}
-                                            tooltip="Back to parent page"
-                                        >
-                                            <ArrowLeft size={14} />
-                                        </Button>
                                         <span
                                             className="truncate max-w-[100px] cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors"
-                                            onClick={() => navigate(pagesPageWithIdRouteValue(parentPageId))}
+                                            onClick={() => navigate(readerPageWithIdRouteValue(parentPageId))}
                                             title={parentTitle ?? undefined}
                                         >
                                             {parentTitle || '\u2026'}
                                         </span>
                                         <ChevronRight size={10} className="shrink-0 text-[var(--color-text-muted)]" />
                                     </>
-                                ) : (
-                                    <div className="flex cursor-pointer items-center gap-1.5 shrink-0" onClick={() => navigate(homePageRoute)}>
-                                        <img src="/logo.png" alt="" className="h-4 w-4 shrink-0" />
-                                    </div>
-                                )}
+                                ) : null}
                                 <span className="truncate font-semibold text-[var(--color-text-strong)] max-w-[160px]" title={page.title}>
                                     {page.title}
                                 </span>
-                                {page.isPublic && (
+                                {page.isPublic && !page.isPubliclyAccessible && (
                                     <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
                                         <Globe size={10} />
                                         <span>Public</span>
@@ -136,8 +127,13 @@ export const PageAppbar = observer(function PageAppbar() {
                         );
                     }}
                 </Observer>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
+            </div>}
+                tools={<AppBarTools label="Reading tools" primary={<>
+                {page?.parentPageId && <Button variant="outlined" size="sm" iconOnly
+                    aria-label="Back to parent page" tooltip="Back to parent page"
+                    onClick={() => navigate(readerPageWithIdRouteValue(page.parentPageId!))}>
+                    <ArrowLeft size={16} />
+                </Button>}
                 <Observer>
                     {() => {
                         const section = store.currentSection;
@@ -158,13 +154,26 @@ export const PageAppbar = observer(function PageAppbar() {
                                 <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToNextSection()} disabled={!store.hasNextSection} tooltip="Next section (→)">
                                     <ChevronRight size={16} />
                                 </Button>
+                            </>
+                        );
+                    }}
+                </Observer>
+                <Button variant="outlined" size="sm" iconOnly aria-label="Reading settings" onClick={() => setSettingsOpen(true)} tooltip="Reading settings">
+                    <Settings size={16} />
+                </Button>
+                </>}>
+                <Observer>
+                    {() => {
+                        const section = store.currentSection;
+                        const page = store.optCurrentPage;
+                        return (<>
                                 {section && (
-                                    <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(section.fullMarkdown); toast.success('Copied to clipboard'); }} tooltip="Copy section">
+                                    <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(section.fullMarkdown); toast.success('Section copied'); }} tooltip="Copy section">
                                         <Copy size={16} />
                                     </Button>
                                 )}
                                 {page && (
-                                    <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(page.content); toast.success('Full page copied to clipboard'); }} tooltip="Copy whole page">
+                                    <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(page.content); toast.success('Page copied'); }} tooltip="Copy page">
                                         <ClipboardList size={16} />
                                     </Button>
                                 )}
@@ -232,7 +241,7 @@ export const PageAppbar = observer(function PageAppbar() {
                                         store.dictionaryStore.open();
                                     }
                                 }}
-                                tooltip={isOpen ? 'Close Dictionary' : 'Open Dictionary'}
+                                tooltip={isOpen ? 'Close dictionary' : 'Open dictionary'}
                             >
                                 <BookOpen size={16} />
                             </Button>
@@ -248,7 +257,7 @@ export const PageAppbar = observer(function PageAppbar() {
                                 variant={store.isPublic ? 'secondary' : 'outlined'}
                                 size="sm" 
                                 onClick={() => setShareOpen(true)} 
-                                tooltip="Share page & subpages publicly"
+                                tooltip="Share page and subpages"
                                 className="flex items-center gap-1.5 px-2.5 text-xs"
                             >
                                 <Share2 size={14} className={store.isPublic ? 'text-emerald-500' : ''} />
@@ -263,19 +272,18 @@ export const PageAppbar = observer(function PageAppbar() {
                     variant="outlined" 
                     size="sm" 
                     onClick={() => setReelsOpen(true)} 
-                    tooltip="Feeling bored? Swipe inspirations (Alt+B)"
+                    tooltip="Take a break (Alt+B)"
                     className="flex items-center gap-1.5 px-2.5 text-xs text-[var(--color-brand)] border-[var(--color-brand)]/40 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-soft)]/50"
                 >
                     <Sparkles size={14} className="text-[var(--color-brand)] animate-pulse shrink-0" />
-                    <span className="hidden sm:inline font-medium">Bored?</span>
+                    <span className="hidden sm:inline font-medium">Take a break</span>
                 </Button>}
-                <Button variant="outlined" size="sm" iconOnly onClick={() => setSettingsOpen(true)} tooltip="Settings">
-                    <Settings size={16} />
-                </Button>
+
+                </AppBarTools>}
+            />
                 <PageSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
                 <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />
                 {motivationsAvailable && <MotivationReelsDialog open={reelsOpen} onOpenChange={setReelsOpen} />}
-            </div>
-        </header>
+        </>
     );
 });

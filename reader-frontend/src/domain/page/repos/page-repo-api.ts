@@ -12,7 +12,7 @@ export class PageRepoApi implements IPagesRepo {
         try {
             const { data } = await apiClient.get(`/pages/${pageId}/edit-targets`);
             return ok(SectionEditSnapshotSchema.parse(data));
-        } catch (error) { return err(new AppError({ message: getApiErrorMessage(error, 'Failed to load section for editing'), cause: error })); }
+        } catch (error) { return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load the section. Try again.'), cause: error })); }
     }
 
     async editSectionBody(params: SectionEditParams): AsyncResult<{ content: string; contentVersion: number }, AppError> {
@@ -20,14 +20,14 @@ export class PageRepoApi implements IPagesRepo {
             const { pageId, ...body } = params;
             const { data } = await apiClient.patch(`/pages/${pageId}/section-body`, body);
             return ok(z.object({ content: z.string(), contentVersion: z.number().int() }).parse(data));
-        } catch (error) { return err(new AppError({ message: getApiErrorMessage(error, 'Failed to save section'), cause: error })); }
+        } catch (error) { return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save the section. Try again.'), cause: error })); }
     }
     async getPage({ pageId }: { pageId: string }): AsyncResult<DbPage, AppError> {
         try {
             const { data } = await apiClient.get(`/pages/${pageId}`);
             return ok(DbPageSchema.parse(data));
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to get page'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load the page. Try again.'), cause: error }));
         }
     }
 
@@ -44,7 +44,7 @@ export class PageRepoApi implements IPagesRepo {
             const { data } = await apiClient.post('/pages', params);
             return ok(data as string);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to create page'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t create the page. Try again.'), cause: error }));
         }
     }
 
@@ -62,7 +62,7 @@ export class PageRepoApi implements IPagesRepo {
             await apiClient.put(`/pages/${params.pageId}`, params);
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to edit page'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save the page. Try again.'), cause: error }));
         }
     }
 
@@ -76,7 +76,7 @@ export class PageRepoApi implements IPagesRepo {
             });
             return ok(data as { isPublic: boolean; isPubliclyAccessible: boolean });
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to update share status'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t update sharing. Try again.'), cause: error }));
         }
     }
 
@@ -85,7 +85,7 @@ export class PageRepoApi implements IPagesRepo {
             await apiClient.delete(`/pages/${pageId}`);
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete page'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete the page. Try again.'), cause: error }));
         }
     }
 
@@ -104,7 +104,7 @@ export class PageRepoApi implements IPagesRepo {
             const { data } = await apiClient.get('/pages', { params: query });
             return ok((data as unknown[]).map((item) => DbPageListItemSchema.parse(item)));
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to query pages'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load pages. Try again.'), cause: error }));
         }
     }
 
@@ -116,7 +116,7 @@ export class PageRepoApi implements IPagesRepo {
             await apiClient.post('/pages/swap', { pageId1, pageId2 });
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to swap sort order'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t reorder the pages. Try again.'), cause: error }));
         }
     }
 }

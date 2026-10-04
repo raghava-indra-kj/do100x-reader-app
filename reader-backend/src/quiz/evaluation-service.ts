@@ -13,7 +13,7 @@ export const evaluationBatchSchema = z.object({
     questionId: uuid,
     verdict: z.enum(["CORRECT", "PARTIAL", "INCORRECT", "UNANSWERED", "NEEDS_REVIEW"]),
     scorePercent: z.number().int().min(0).max(100).nullable().optional(),
-    feedbackMarkdown: z.string().refine((value) => value.trim().length > 0, "Feedback Markdown must not be empty"),
+    feedbackMarkdown: z.string().refine((value) => value.trim().length > 0, "Enter feedback."),
   }).strict()).min(1),
 }).strict();
 export type EvaluationBatchInput = z.input<typeof evaluationBatchSchema>;
@@ -25,23 +25,23 @@ async function transact<T>(db: QuizDb, run: (tx: Prisma.TransactionClient) => Pr
 /** The agent sees only a submitted, respondent-owned, pinned paper. */
 export async function getEvaluationContext(db: QuizDb, userId: string, attemptId: string) {
   const attempt = await getAttempt(db, userId, attemptId);
-  if (attempt.status !== "SUBMITTED") throw new QuizError(409, "Submit the attempt before evaluating it");
+  if (attempt.status !== "SUBMITTED") throw new QuizError(409, "Submit the attempt before adding feedback.");
   return attempt;
 }
 
 /** Append a valid batch, or replay the exact same request without new rows. */
 export async function recordEvaluations(db: QuizDb, userId: string, attemptId: string, input: EvaluationBatchInput) {
   const parsed = evaluationBatchSchema.safeParse(input);
-  if (!parsed.success) throw new QuizError(422, parsed.error.issues[0]?.message ?? "Invalid evaluation batch");
+  if (!parsed.success) throw new QuizError(422, parsed.error.issues[0]?.message ?? "Check the feedback entries and try again.");
   const value = parsed.data;
-  if (new Set(value.evaluations.map((item) => item.questionId)).size !== value.evaluations.length) throw new QuizError(422, "A question appears more than once in this batch");
+  if (new Set(value.evaluations.map((item) => item.questionId)).size !== value.evaluations.length) throw new QuizError(422, "Each question can appear only once in this feedback batch.");
   try {
     return await transact(db, async (tx) => {
       const locked = await tx.quiz_attempt.updateMany({ where: { id: attemptId, userId, status: "SUBMITTED" }, data: { status: "SUBMITTED" } });
       if (locked.count !== 1) {
         const found = await tx.quiz_attempt.findFirst({ where: { id: attemptId, userId }, select: { status: true } });
         if (!found) throw new QuizError(404, "Attempt not found");
-        throw new QuizError(409, "Submit the attempt before evaluating it");
+        throw new QuizError(409, "Submit the attempt before adding feedback.");
       }
       const attempt = await tx.quiz_attempt.findUniqueOrThrow({
         where: { id: attemptId },
@@ -53,19 +53,19 @@ export async function recordEvaluations(db: QuizDb, userId: string, attemptId: s
       for (const item of value.evaluations) {
         const question = questionById.get(item.questionId);
         const answer = answerByQuestion.get(item.questionId);
-        if (!question || !answer) throw new QuizError(422, "Question is not in this submitted attempt");
+        if (!question || !answer) throw new QuizError(422, "This question isn’t part of this submission.");
         let scorePercent = item.scorePercent ?? null;
         if (question.kind === "OBJECTIVE") {
           const fixed = answer.evaluations.find((entry) => entry.source === "OBJECTIVE");
-          if (!fixed) throw new Error(`Objective result missing for answer ${answer.id}`);
+          if (!fixed) throw new Error(`The result for answer ${answer.id} is unavailable.`);
           if (item.verdict !== fixed.verdict || (item.scorePercent !== undefined && item.scorePercent !== fixed.scorePercent)) {
-            throw new QuizError(422, "AI feedback cannot change deterministic objective grading");
+            throw new QuizError(422, "AI feedback can’t change an objective question’s result.");
           }
           scorePercent = fixed.scorePercent;
         } else {
           const blank = !answer.responseMarkdown?.trim();
-          if (blank && item.verdict !== "UNANSWERED" || !blank && item.verdict === "UNANSWERED") throw new QuizError(422, "Subjective verdict does not match whether an answer was submitted");
-          if (item.verdict === "NEEDS_REVIEW" && scorePercent !== null) throw new QuizError(422, "An uncertain answer cannot have a numeric score");
+          if (blank && item.verdict !== "UNANSWERED" || !blank && item.verdict === "UNANSWERED") throw new QuizError(422, "The feedback result must reflect whether an answer was submitted.");
+          if (item.verdict === "NEEDS_REVIEW" && scorePercent !== null) throw new QuizError(422, "An uncertain result can’t have a numeric score.");
         }
         rows.push({ answerId: answer.id, requestKey: value.requestKey, source: "AI" as const, verdict: item.verdict, scorePercent, feedbackMarkdown: item.feedbackMarkdown, modelId: value.modelId ?? null, promptVersion: value.promptVersion ?? null });
       }
@@ -77,7 +77,7 @@ export async function recordEvaluations(db: QuizDb, userId: string, attemptId: s
           return row && row.source === "AI" && row.verdict === item.verdict && row.feedbackMarkdown === item.feedbackMarkdown && row.modelId === (value.modelId ?? null) && row.promptVersion === (value.promptVersion ?? null)
             && row.scorePercent === prepared?.scorePercent;
         });
-        if (!replay) throw new QuizError(409, "Evaluation request key was already used with different feedback");
+        if (!replay) throw new QuizError(409, "This feedback request conflicts with an earlier submission.");
         return { attemptId, requestKey: value.requestKey, replayed: true, evaluations: existing.map((row) => ({ questionId: row.answer.questionId, verdict: row.verdict, scorePercent: row.scorePercent, feedbackMarkdown: row.feedbackMarkdown, id: row.id })) };
       }
       await tx.quiz_answer_evaluation.createMany({ data: rows });
@@ -85,7 +85,7 @@ export async function recordEvaluations(db: QuizDb, userId: string, attemptId: s
       return { attemptId, requestKey: value.requestKey, replayed: false, evaluations: saved.map((row) => ({ questionId: row.answer.questionId, verdict: row.verdict, scorePercent: row.scorePercent, feedbackMarkdown: row.feedbackMarkdown, id: row.id })) };
     });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) throw new QuizError(409, "Evaluation was saved concurrently. Fetch the latest feedback before retrying");
+    if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) throw new QuizError(409, "Feedback has changed. Load the latest feedback before trying again.");
     throw error;
   }
 }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Observer } from 'mobx-react-lite';
 import { useAuthStore } from '@modules/auth/provider/store';
-import { AppBar } from '@modules/core/ui/components/appbar';
+import { AppBar, LogoutButton } from '@modules/core/ui/components/appbar';
 import { Input } from '@modules/core/ui/primitives/input';
 import { FormLabel } from '@modules/core/ui/primitives/form-label';
 import { Button } from '@modules/core/ui/primitives/button';
@@ -43,26 +43,26 @@ interface TabItem {
 const TABS: TabItem[] = [
   {
     id: 'account',
-    label: 'Account & Preferences',
-    subtitle: 'Profile & lifespan settings',
+    label: 'Account & preferences',
+    subtitle: 'Your account and preferences',
     icon: User,
   },
   {
     id: 'ai',
-    label: 'AI Models',
-    subtitle: 'Providers & model keys',
+    label: 'AI models',
+    subtitle: 'Providers, models and API keys',
     icon: Bot,
   },
   {
     id: 'mcp',
-    label: 'MCP Server',
-    subtitle: 'Agent connections & config',
+    label: 'MCP server',
+    subtitle: 'Connect an AI client',
     icon: Server,
   },
   {
     id: 'guide',
-    label: 'Format Guide',
-    subtitle: 'format.llm.md specification',
+    label: 'Format guide',
+    subtitle: 'Page formatting reference',
     icon: FileCode,
   },
 ];
@@ -207,10 +207,10 @@ export default function SettingsPage() {
                     {activeTab === 'account' && (
                       <div className="space-y-6 animate-fade-in">
                         <div>
-                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Account & Preferences</h2>
-                          <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Your Google account and personal settings
-                          </p>
+                          <div className="flex items-center justify-between gap-3">
+                            <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Account &amp; preferences</h2>
+                            <LogoutButton showLabel />
+                          </div>
                         </div>
 
                         {/* Profile Card */}
@@ -233,7 +233,7 @@ export default function SettingsPage() {
                             <div>
                               <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Google account</span>
                               <p className="text-sm font-medium text-[var(--color-text-strong)] mt-1.5 break-all">{authStore.currentUser.email}</p>
-                              <p className="text-xs text-[var(--color-text-muted)] mt-1">Google is the only sign-in method.</p>
+                              <p className="text-xs text-[var(--color-text-muted)] mt-1">Signed in with Google.</p>
                             </div>
                           </div>
                         </section>
@@ -245,16 +245,16 @@ export default function SettingsPage() {
                                 <Sparkles size={15} />
                               </div>
                               <div>
-                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Motivations</h3>
+                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Quotes and breaks</h3>
                                 <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                                  Show inspirations and a quote when you finish reading a private page. Always off on public pages.
+                                  Show quotes and break reminders on private pages. Never shown on public pages.
                                 </p>
                               </div>
                             </div>
                             <button
                               type="button"
                               role="switch"
-                              aria-label="Enable motivations"
+                              aria-label="Show quotes and breaks"
                               aria-checked={motivationPreferences.motivationsEnabled}
                               disabled={motivationPreferences.isLoading || motivationPreferences.isSaving}
                               onClick={async () => {
@@ -267,7 +267,7 @@ export default function SettingsPage() {
                               <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${motivationPreferences.motivationsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
                             </button>
                           </div>
-                          {motivationError && <p className="mt-3 text-xs text-red-500" role="alert">Could not save this preference. Please try again.</p>}
+                          {motivationError && <p className="mt-3 text-xs text-red-500" role="alert">Couldn’t save this preference. Try again.</p>}
                         </section>
 
                         {/* Life Perspective Card */}
@@ -278,8 +278,8 @@ export default function SettingsPage() {
                                 <Hourglass size={15} />
                               </div>
                               <div>
-                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Life Perspective</h3>
-                                <p className="text-xs text-[var(--color-text-muted)]">Remaining time counter on the Inspirations screen</p>
+                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Time perspective</h3>
+                                <p className="text-xs text-[var(--color-text-muted)]">Shows a time estimate on the break screen.</p>
                               </div>
                             </div>
                             {lifeSaved && (
@@ -291,7 +291,7 @@ export default function SettingsPage() {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                             <div className="space-y-2">
-                              <FormLabel>Date of Birth</FormLabel>
+                              <FormLabel>Date of birth</FormLabel>
                               <Input
                                 type="date"
                                 value={dob}
@@ -302,7 +302,7 @@ export default function SettingsPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <FormLabel>Expected Lifespan (Years)</FormLabel>
+                              <FormLabel>Estimated lifespan (years)</FormLabel>
                               <Input
                                 type="number"
                                 min={1}
@@ -324,9 +324,9 @@ export default function SettingsPage() {
                     {activeTab === 'ai' && (
                       <div className="space-y-6 animate-fade-in">
                         <div>
-                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">AI Models</h2>
+                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">AI models</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Configure provider credentials and custom models
+                            Choose the models used for explanations, meanings and questions.
                           </p>
                         </div>
 
@@ -336,12 +336,12 @@ export default function SettingsPage() {
                             <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)]">
                               <Bot size={15} />
                             </div>
-                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Default Credentials</h3>
+                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Default connection</h3>
                           </div>
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <FormLabel>Provider Base URL</FormLabel>
+                              <FormLabel>Provider URL</FormLabel>
                               <Input
                                 value={store.baseUrlInput}
                                 onValueChange={(v) => store.setBaseUrlInput(v)}
@@ -351,7 +351,7 @@ export default function SettingsPage() {
 
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <FormLabel>API Key</FormLabel>
+                                <FormLabel>API key</FormLabel>
                                 {store.apiKeyInput && (
                                   <div className="flex items-center gap-1">
                                     <button
@@ -400,11 +400,11 @@ export default function SettingsPage() {
                           {/* Task-Specific Model Assignments */}
                           <div className="border-t border-[var(--color-border-subtle)] pt-4">
                             <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider mb-3">
-                              Model Assignments
+                              Models by feature
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-2">
-                                <FormLabel>Passage Explanation</FormLabel>
+                                <FormLabel>Explanations</FormLabel>
                                 <Select
                                   value={store.explanationModelIdInput}
                                   onValueChange={(v) => store.setExplanationModelIdInput(v || '')}
@@ -416,7 +416,7 @@ export default function SettingsPage() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <FormLabel>Word Meanings</FormLabel>
+                                <FormLabel>Word meanings</FormLabel>
                                 <Select
                                   value={store.meaningModelIdInput}
                                   onValueChange={(v) => store.setMeaningModelIdInput(v || '')}
@@ -428,7 +428,7 @@ export default function SettingsPage() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <FormLabel>Asking Doubts</FormLabel>
+                                <FormLabel>Questions</FormLabel>
                                 <Select
                                   value={store.doubtModelIdInput}
                                   onValueChange={(v) => store.setDoubtModelIdInput(v || '')}
@@ -445,33 +445,33 @@ export default function SettingsPage() {
                           {/* Global Custom System Prompts */}
                           <div className="border-t border-[var(--color-border-subtle)] pt-4 space-y-4">
                             <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">
-                              System Prompts (Optional)
+                              Custom instructions (optional)
                             </h4>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                               <div className="space-y-2">
-                                <FormLabel>Explanation Prompt</FormLabel>
+                                <FormLabel>Explanation instructions</FormLabel>
                                 <textarea
                                   value={store.explanationSystemPromptInput}
                                   onChange={(e) => store.setExplanationSystemPromptInput(e.target.value)}
-                                  placeholder="Custom instructions for passage explanation..."
+                                  placeholder="How should passages be explained?"
                                   className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-xl transition-colors outline-none h-20"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <FormLabel>Meanings Prompt</FormLabel>
+                                <FormLabel>Word-meaning instructions</FormLabel>
                                 <textarea
                                   value={store.meaningSystemPromptInput}
                                   onChange={(e) => store.setMeaningSystemPromptInput(e.target.value)}
-                                  placeholder="Custom instructions for word meanings..."
+                                  placeholder="How should words be explained?"
                                   className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-xl transition-colors outline-none h-20"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <FormLabel>Doubts Prompt</FormLabel>
+                                <FormLabel>Question instructions</FormLabel>
                                 <textarea
                                   value={store.doubtSystemPromptInput}
                                   onChange={(e) => store.setDoubtSystemPromptInput(e.target.value)}
-                                  placeholder="Custom instructions for answering reading doubts..."
+                                  placeholder="How should questions be answered?"
                                   className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-xl transition-colors outline-none h-20"
                                 />
                               </div>
@@ -480,7 +480,7 @@ export default function SettingsPage() {
 
                           <div className="pt-2">
                             <Button onClick={() => store.saveConfig()} loading={store.isSavingConfig}>
-                              Save Settings
+                              Save
                             </Button>
                           </div>
                         </section>
@@ -493,9 +493,9 @@ export default function SettingsPage() {
                                 <Layers size={15} />
                               </div>
                               <div>
-                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Custom Models</h3>
+                                <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Custom models</h3>
                                 <p className="text-xs text-[var(--color-text-muted)]">
-                                  Add models with custom endpoints or API keys
+                                  Add a model. Set its connection details only if they differ from the defaults.
                                 </p>
                               </div>
                             </div>
@@ -509,7 +509,7 @@ export default function SettingsPage() {
                             {store.userModels.length === 0 ? (
                               <div className="text-center py-6 border border-dashed border-[var(--color-border-subtle)] rounded-xl bg-[var(--color-surface-canvas)]">
                                 <Bot size={24} className="mx-auto text-[var(--color-text-subtle)] mb-1.5" />
-                                <p className="text-xs text-[var(--color-text-muted)]">No custom models added yet.</p>
+                                <p className="text-xs text-[var(--color-text-muted)]">No models added.</p>
                               </div>
                             ) : (
                               <div className="grid grid-cols-1 gap-3">
@@ -523,7 +523,7 @@ export default function SettingsPage() {
                                         <div className="flex items-center justify-between">
                                           <span className="text-xs font-semibold text-[var(--color-text-strong)] flex items-center gap-1.5">
                                             <Pencil size={13} className="text-[var(--color-brand)]" />
-                                            Edit Model
+                                            Edit model
                                           </span>
                                           <button
                                             type="button"
@@ -536,7 +536,7 @@ export default function SettingsPage() {
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                           <div className="space-y-1.5">
-                                            <FormLabel>Display Name</FormLabel>
+                                            <FormLabel>Display name</FormLabel>
                                             <Input
                                               value={store.editModelNameInput}
                                               onValueChange={(v) => store.setEditModelNameInput(v)}
@@ -555,21 +555,21 @@ export default function SettingsPage() {
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                           <div className="space-y-1.5">
-                                            <FormLabel>Base URL (Optional)</FormLabel>
+                                            <FormLabel>Provider URL (optional)</FormLabel>
                                             <Input
                                               value={store.editModelBaseUrlInput}
                                               onValueChange={(v) => store.setEditModelBaseUrlInput(v)}
-                                              placeholder="Inherits default Base URL if empty"
+                                              placeholder="Leave blank to use the default provider URL"
                                             />
                                           </div>
                                           <div className="space-y-1.5">
-                                            <FormLabel>API Key (Optional)</FormLabel>
+                                            <FormLabel>API key (optional)</FormLabel>
                                             <div className="relative flex items-center">
                                               <Input
                                                 type={showEditModelApiKey ? 'text' : 'password'}
                                                 value={store.editModelApiKeyInput}
                                                 onValueChange={(v) => store.setEditModelApiKeyInput(v)}
-                                                placeholder="Inherits default API Key if empty"
+                                                placeholder="Leave blank to use the default API key"
                                                 className="pr-9"
                                               />
                                               <button
@@ -590,7 +590,7 @@ export default function SettingsPage() {
                                             onClick={() => store.updateModel()}
                                             loading={store.isUpdatingModel}
                                           >
-                                            Save Changes
+                                            Save
                                           </Button>
                                           <Button
                                             size="sm"
@@ -622,13 +622,13 @@ export default function SettingsPage() {
                                             {m.apiKey ? (
                                               <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-medium">
                                                 <Key size={11} className="shrink-0" />
-                                                Custom Key
+                                                Custom API key
                                               </span>
                                             ) : null}
 
                                             {!m.baseUrl && !m.apiKey ? (
                                               <span className="text-[var(--color-text-subtle)] text-[11px]">
-                                                Uses default credentials
+                                                Uses the default connection
                                               </span>
                                             ) : null}
                                           </div>
@@ -668,12 +668,12 @@ export default function SettingsPage() {
                             <div className="flex items-center gap-2">
                               <Plus size={14} className="text-[var(--color-brand)]" />
                               <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">
-                                Add Model
+                                Add model
                               </h4>
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <FormLabel>Display Name</FormLabel>
+                                <FormLabel>Display name</FormLabel>
                                 <Input
                                   value={store.newModelNameInput}
                                   onValueChange={(v) => store.setNewModelNameInput(v)}
@@ -692,7 +692,7 @@ export default function SettingsPage() {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <FormLabel>Base URL (Optional)</FormLabel>
+                                <FormLabel>Provider URL (optional)</FormLabel>
                                 <Input
                                   value={store.newModelBaseUrlInput}
                                   onValueChange={(v) => store.setNewModelBaseUrlInput(v)}
@@ -700,7 +700,7 @@ export default function SettingsPage() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <FormLabel>API Key (Optional)</FormLabel>
+                                <FormLabel>API key (optional)</FormLabel>
                                 <div className="relative flex items-center">
                                   <Input
                                     type={showNewModelApiKey ? 'text' : 'password'}
@@ -728,7 +728,7 @@ export default function SettingsPage() {
                               className="flex items-center gap-1.5"
                             >
                               <Plus size={14} />
-                              <span>Add Model</span>
+                              <span>Add model</span>
                             </Button>
                           </div>
                         </section>
@@ -739,9 +739,9 @@ export default function SettingsPage() {
                     {activeTab === 'mcp' && (
                       <div className="space-y-6 animate-fade-in">
                         <div>
-                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">MCP Server</h2>
+                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">MCP server</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Connect external AI agents directly to your Reader app
+                            Use this connection for Reader, Tasks and Finance.
                           </p>
                         </div>
 
@@ -752,12 +752,12 @@ export default function SettingsPage() {
                                 <Server size={15} />
                               </div>
                               <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">
-                                Connection Details
+                                Connection
                               </h3>
                             </div>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              Live SSE
+                              SSE connection
                             </span>
                           </div>
 
@@ -793,7 +793,7 @@ export default function SettingsPage() {
                                 className="flex items-center gap-1.5 shrink-0 text-xs"
                               >
                                 {copiedMcpJson ? <Check size={14} /> : <Copy size={14} />}
-                                <span>{copiedMcpJson ? 'Copied Config' : 'Copy JSON Config'}</span>
+                                <span>{copiedMcpJson ? 'Copied' : 'Copy configuration'}</span>
                               </Button>
                             </div>
                           </div>
@@ -802,7 +802,7 @@ export default function SettingsPage() {
                           <div className="rounded-2xl bg-[var(--color-surface-canvas)] p-4 border border-[var(--color-border-subtle)] space-y-2">
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-semibold text-[var(--color-text-strong)]">
-                                Configuration Snippet
+                                Configuration
                               </p>
                               <button
                                 type="button"
@@ -828,9 +828,9 @@ export default function SettingsPage() {
                     {activeTab === 'guide' && (
                       <div className="space-y-6 animate-fade-in">
                         <div>
-                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Format Guide</h2>
+                          <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Format guide</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Markdown format rules for AI-generated pages
+                            Formatting reference for pages created by an AI client.
                           </p>
                         </div>
 
@@ -855,7 +855,7 @@ export default function SettingsPage() {
                               className="flex items-center gap-1.5"
                             >
                               {copiedGuide ? <Check size={14} className="text-[var(--color-brand)]" /> : <Copy size={14} />}
-                              <span>{copiedGuide ? 'Copied' : 'Copy Guide'}</span>
+                              <span>{copiedGuide ? 'Copied' : 'Copy guide'}</span>
                             </Button>
                           </div>
                           <div className="relative">

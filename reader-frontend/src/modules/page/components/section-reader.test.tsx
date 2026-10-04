@@ -34,22 +34,22 @@ function renderReader({ source = '## Parent\n\nbody\n\n### Child\n\nchild\n\n###
 describe('single section-edit action', () => {
     it('renders one icon-only edit control, even with nested headings', () => {
         const html = renderReader();
-        expect(html.match(/aria-label="Edit only:/g)).toHaveLength(1);
+        expect(html.match(/aria-label="Edit section:/g)).toHaveLength(1);
         expect(html.match(/<button/g)).toHaveLength(1);
         expect(html).not.toContain('Edit section</');
-        expect(html).toContain('aria-label="Edit only: Parent"');
+        expect(html).toContain('aria-label="Edit section: Parent"');
         expect(html).toMatch(/<h3[^>]*>Child<\/h3>/);
         expect(html).toMatch(/<h4[^>]*>Grandchild<\/h4>/);
         expect(html).not.toMatch(/<h[1-6][^>]*>[^<]*<button/);
     });
     it('renders no editing controls for a public visitor/nonowner', () => {
         const html = renderReader({ isOwner: false });
-        expect(html).not.toContain('Edit only:');
+        expect(html).not.toContain('Edit section:');
         expect(html).not.toContain('<button');
     });
     it('keeps the same single entry point for a heading-free introduction', () => {
         const html = renderReader({ source: 'Introduction without headings.' });
         expect(html.match(/<button/g)).toHaveLength(1);
-        expect(html).toContain('aria-label="Edit only: Introduction / page body"');
+        expect(html).toContain('aria-label="Edit section: Introduction"');
     });
 });

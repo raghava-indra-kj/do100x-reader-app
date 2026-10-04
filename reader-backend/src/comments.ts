@@ -27,7 +27,7 @@ router.get("/", async (req, res) => {
   if (!pageId && !date) {
     res
       .status(400)
-      .json({ message: "pageId or date query parameter is required" });
+      .json({ message: "Choose a page or date." });
     return;
   }
 
@@ -44,7 +44,7 @@ router.get("/", async (req, res) => {
   if (date) {
     const parsed = new Date(`${date}T00:00:00.000Z`);
     if (Number.isNaN(parsed.getTime())) {
-      res.status(400).json({ message: "Invalid date (expected YYYY-MM-DD)" });
+      res.status(400).json({ message: "Enter a valid date in YYYY-MM-DD format." });
       return;
     }
     const next = new Date(parsed.getTime() + 24 * 60 * 60 * 1000);
@@ -95,7 +95,7 @@ router.post("/", async (req, res) => {
 
   const finalUserId = reqUserId;
   if (!finalUserId) {
-    res.status(401).json({ message: "Sign in required to create comments" });
+    res.status(401).json({ message: "Sign in to add a comment." });
     return;
   }
 
@@ -163,7 +163,7 @@ router.delete("/", async (req, res) => {
   const reqUserId = readSession(req);
 
   if (!pageId) {
-    res.status(400).json({ message: "pageId query parameter is required" });
+    res.status(400).json({ message: "Choose a page." });
     return;
   }
 

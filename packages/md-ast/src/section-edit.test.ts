@@ -53,29 +53,29 @@ describe('source-scoped section editing', () => {
     it('rejects stale positions and exact-body mismatches without trimming', () => {
         const source = '## A\n\nbody\n\n## B\n';
         const target = sectionBodyTarget(source, locateSections(source)[0]);
-        expect(() => replaceSectionBody({ source: source.replace('body', 'BODY'), target, newBody: 'changed' })).toThrow('Section changed');
-        expect(() => replaceSectionBody({ source, target: { ...target, bodyStart: target.bodyStart + 1 }, newBody: 'changed' })).toThrow('Section changed');
+        expect(() => replaceSectionBody({ source: source.replace('body', 'BODY'), target, newBody: 'changed' })).toThrow('This section has changed');
+        expect(() => replaceSectionBody({ source, target: { ...target, bodyStart: target.bodyStart + 1 }, newBody: 'changed' })).toThrow('This section has changed');
     });
     it.each(['## New heading', 'New heading\n-----------', '```\nunclosed'])('rejects structural boundary escape: %s', (body) => {
-        expect(() => edit('## A\n\nold\n\n## B\n\nkeep', 0, body)).toThrow('heading structure');
+        expect(() => edit('## A\n\nold\n\n## B\n\nkeep', 0, body)).toThrow('page’s headings');
     });
     it('rejects unclosed HTML containers but allows complete details/callouts', () => {
         const source = '## A\n\nold\n\n## B\n\nkeep';
-        expect(() => edit(source, 0, '<div>\n\nunclosed')).toThrow('Unclosed HTML');
+        expect(() => edit(source, 0, '<div>\n\nunclosed')).toThrow('An unclosed <div> tag');
         expect(edit(source, 0, '<details>\n<summary>Open</summary>\n\ntext\n\n</details>')).toContain('<details>');
         expect(edit(source, 0, '<callout>\n\ntext\n\n</callout>')).toContain('<callout>');
     });
     it('rejects replacing the actual next heading with a fake heading and swallowing the original', () => {
-        expect(() => edit('## A\n\nold\n\n## B\n\nkeep', 0, '## B\n\n```')).toThrow('heading structure');
+        expect(() => edit('## A\n\nold\n\n## B\n\nkeep', 0, '## B\n\n```')).toThrow('page’s headings');
     });
     it('allows headings safely contained in a complete diagram/code fence', () => {
         expect(edit('## A\n\nold\n\n## B\n\nkeep', 0, '```d2\n# comment\na -> b\n```')).toContain('# comment');
     });
     it('rejects global reference-definition edits that could affect other sections', () => {
-        expect(() => edit('## A\n\n[doc]: https://a.test\n\n## B\n\n[link][doc]', 0, '[doc]: https://b.test')).toThrow('definitions');
+        expect(() => edit('## A\n\n[doc]: https://a.test\n\n## B\n\n[link][doc]', 0, '[doc]: https://b.test')).toThrow('link references');
     });
     it('rejects adding frontmatter through the introduction editor', () => {
-        expect(() => edit('intro\n\n## A\n\nbody', 0, '---\ntitle: changed\n---')).toThrow('Frontmatter');
+        expect(() => edit('intro\n\n## A\n\nbody', 0, '---\ntitle: changed\n---')).toThrow('Front matter');
     });
     it('preserves arbitrary prefixes and suffixes across many edits', () => {
         for (let index = 0; index < 80; index++) {

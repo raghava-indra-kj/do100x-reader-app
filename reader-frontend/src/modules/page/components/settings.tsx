@@ -49,13 +49,13 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
         <Dialog open={open} onOpenChange={onOpenChange}>
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">Settings</h2>
+                    <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">Reading settings</h2>
                     <BaseDialog.Close className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
                         <X size={20} />
                     </BaseDialog.Close>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <FormLabel>Font Size</FormLabel>
+                    <FormLabel>Text size</FormLabel>
                     <Observer>
                         {() => (
                             <Select
@@ -65,13 +65,13 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                                     if (size) uiSettings.setFontSize(size);
                                 }}
                                 items={fontSizeItems}
-                                placeholder="Font Size"
+                                placeholder="Text size"
                             />
                         )}
                     </Observer>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <FormLabel>Font Family</FormLabel>
+                    <FormLabel>Font</FormLabel>
                     <Observer>
                         {() => (
                             <Select
@@ -87,7 +87,7 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     </Observer>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <FormLabel>Default Heading Level</FormLabel>
+                    <FormLabel>Default heading level</FormLabel>
                     <Observer>
                         {() => (
                             <Select
@@ -113,12 +113,12 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                             size="sm"
                             onClick={() => {
                                 navigator.clipboard.writeText(mcpConfigJson);
-                                toast.success('MCP Server configuration copied to clipboard');
+                                toast.success('MCP configuration copied');
                             }}
                             className="flex items-center justify-center gap-1.5 text-xs w-full"
                         >
                             <Server size={13} className="text-[var(--color-brand)]" />
-                            <span>Copy MCP Server Config (JSON)</span>
+                            <span>Copy MCP configuration</span>
                         </Button>
                     )}
                     <Button
@@ -126,16 +126,16 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                         size="sm"
                         onClick={() => {
                             navigator.clipboard.writeText(FORMAT_LLM_MD_CONTENT);
-                            toast.success('format.llm.md copied to clipboard');
+                            toast.success('Format guide copied');
                         }}
                         className="flex items-center justify-center gap-1.5 text-xs w-full"
                     >
                         <Copy size={13} />
-                        <span>Copy Markdown Format Guide (format.llm.md)</span>
+                        <span>Copy format guide</span>
                     </Button>
                     <div className="flex justify-center">
                         <Link to={settingsPageRoute} onClick={() => onOpenChange(false)} className="text-xs text-[var(--color-brand)] font-medium hover:underline">
-                            Account preferences, AI models &amp; MCP &rarr;
+                            Account settings
                         </Link>
                     </div>
                 </div>

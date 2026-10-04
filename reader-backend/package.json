@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --watch src --watch ../packages/md-ast/src --exec \"node scripts/build.js && node dist/index.js\"",
+    "dev": "nodemon --watch src --watch ../packages/md-ast/src --watch ../packages/finance-core/src --exec \"node scripts/build.js && node dist/index.js\"",
     "postinstall": "prisma generate",
     "build": "node scripts/build.js",
     "start": "node dist/index.js",
@@ -18,6 +18,7 @@
     "@modelcontextprotocol/sdk": "^1.6.1",
     "@prisma/client": "^5.22.0",
     "@reader/md-ast": "*",
+    "@reader/finance-core": "*",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "google-auth-library": "11.1.0",

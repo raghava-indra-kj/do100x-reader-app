@@ -248,10 +248,10 @@ export class TasksStore {
   get activeListName(): string {
     if (this.currentView === 'inbox') return 'Inbox';
     if (this.currentView === 'today') return 'Today';
-    if (this.currentView === 'next7') return 'Next 7 Days';
-    if (this.currentView === 'matrix') return 'Eisenhower Matrix';
-    if (this.currentView === 'analytics') return 'Time Analytics';
-    if (this.currentView === 'completed') return 'Completed Tasks';
+    if (this.currentView === 'next7') return 'Next 7 days';
+    if (this.currentView === 'matrix') return 'Priority matrix';
+    if (this.currentView === 'analytics') return 'Time reports';
+    if (this.currentView === 'completed') return 'Completed tasks';
     if (this.currentView.startsWith('list:')) {
       const listId = this.currentView.replace('list:', '');
       const list = this.lists.find((l) => l.id === listId);
@@ -441,7 +441,7 @@ export class TasksStore {
 
   async saveList() {
     if (!this.listNameInput.trim()) {
-      toast.error('List name cannot be empty');
+      toast.error('Enter a list name.');
       return;
     }
 
@@ -889,7 +889,7 @@ export class TasksStore {
         this.isStopTimerDialogOpen = false;
         this.stopTimerNotes = '';
       });
-      toast.success(`Recorded session (${res.data.session.durationFormatted})`);
+      toast.success(`Time saved (${res.data.session.durationFormatted})`);
       await Promise.all([this.loadTasks(), this.loadLists()]);
       if (this.selectedTaskId) {
         await this.selectTask(this.selectedTaskId);
@@ -950,7 +950,7 @@ export class TasksStore {
         notes: this.sessionNotesInput.trim() || undefined,
       });
       if (res.ok) {
-        toast.success('Session updated');
+        toast.success('Time entry updated');
         this.setIsSessionDialogOpen(false);
         await Promise.all([this.selectTask(this.selectedTaskId), this.loadTasks(), this.loadLists()]);
       } else {
@@ -963,7 +963,7 @@ export class TasksStore {
         notes: this.sessionNotesInput.trim() || undefined,
       });
       if (res.ok) {
-        toast.success('Session added');
+        toast.success('Time entry added');
         this.setIsSessionDialogOpen(false);
         await Promise.all([this.selectTask(this.selectedTaskId), this.loadTasks(), this.loadLists()]);
       } else {
@@ -976,7 +976,7 @@ export class TasksStore {
     if (!this.selectedTaskId) return;
     const res = await deleteSession(sessionId);
     if (res.ok) {
-      toast.success('Session deleted');
+      toast.success('Time entry deleted');
       await Promise.all([this.selectTask(this.selectedTaskId), this.loadTasks(), this.loadLists()]);
     } else {
       toast.error(res.error.message);
@@ -986,7 +986,7 @@ export class TasksStore {
   async deleteAllSessionsForTask(taskId: string) {
     const res = await deleteAllTaskSessions(taskId);
     if (res.ok) {
-      toast.success('All sessions deleted');
+      toast.success('All time entries deleted');
       await Promise.all([this.selectTask(taskId), this.loadTasks(), this.loadLists()]);
     } else {
       toast.error(res.error.message);

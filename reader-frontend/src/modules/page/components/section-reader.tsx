@@ -50,7 +50,7 @@ export function SectionReader({ page, section, maxLevel, onEdit, ...theme }: {
 
     return <>
         {canEdit && selected && <div className="sticky top-0 z-10 mb-2 ml-auto w-fit rounded-md bg-[var(--color-surface-canvas)]">
-            <button type="button" title={`Edit only: ${selected.title ?? 'Introduction / page body'}`} aria-label={`Edit only: ${selected.title ?? 'Introduction / page body'}`} onClick={() => onEdit(selected)}
+            <button type="button" title={`Edit section: ${selected.title ?? 'Introduction'}`} aria-label={`Edit section: ${selected.title ?? 'Introduction'}`} onClick={() => onEdit(selected)}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)]">
                 <Pencil size={14} aria-hidden="true" />
             </button>

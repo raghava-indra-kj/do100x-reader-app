@@ -48,16 +48,16 @@ export const TaskDetailPane = observer(({ store }: Props) => {
         <div className="w-14 h-14 rounded-2xl bg-[var(--color-surface-soft)] flex items-center justify-center mb-3 shadow-xs text-[var(--color-brand)]">
           <Clock className="w-7 h-7 stroke-[1.8]" />
         </div>
-        <h2 className="text-base font-bold text-[var(--color-text-strong)]">Task Details & Drill-Down Workspace</h2>
+        <h2 className="text-base font-bold text-[var(--color-text-strong)]">Task details</h2>
         <p className="text-xs text-[var(--color-text-muted)] mt-1 max-w-sm">
-          Select any task from the list to view its full details, track focus time, and manage subtasks in a dedicated 50/50 split canvas.
+          Select a task to view its notes, subtasks and tracked time.
         </p>
 
         {store.activeTimer && (
           <div className="mt-6 p-4 rounded-xl bg-[var(--color-surface-raised)] border border-rose-500/30 shadow-xs max-w-md w-full text-left space-y-2">
             <div className="flex items-center space-x-2 text-rose-500 text-xs font-bold">
               <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-              <span>Timer Running</span>
+              <span>Timer running</span>
             </div>
             <p className="text-sm font-semibold text-[var(--color-text-strong)] truncate">
               {store.activeTimer.taskTitle}
@@ -71,7 +71,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                 onClick={() => store.selectTask(store.activeTimer!.taskId)}
                 className="text-xs text-[var(--color-brand)] hover:underline font-semibold cursor-pointer"
               >
-                Open Task →
+                Open task
               </button>
             </div>
           </div>
@@ -84,7 +84,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-2 text-[var(--color-text-muted)] bg-[var(--color-surface-canvas)] select-none">
         <Loader size={24} className="text-[var(--color-brand)]" />
-        <span className="text-xs font-medium">Loading task workspace...</span>
+        <span className="text-xs font-medium">Loading Tasks…</span>
       </div>
     );
   }
@@ -183,7 +183,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                     e.stopPropagation();
                     store.promptStopTimer();
                   }}
-                  title="Finish session"
+                  title="Save tracked time"
                   className="pl-1 hover:text-white"
                 >
                   <Square className="w-3 h-3 fill-current" />
@@ -192,7 +192,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
             ) : (
               <>
                 <Play className="w-3.5 h-3.5" />
-                <span>Start Focus</span>
+                <span>Start timer</span>
               </>
             )}
           </button>
@@ -221,16 +221,16 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                   className="w-full px-3 py-1.5 text-left flex items-center space-x-2 hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)] cursor-pointer"
                 >
                   <Clock className="w-3.5 h-3.5 text-[var(--color-brand)]" />
-                  <span>Log Past Time</span>
+                  <span>Add time</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setIsMenuOpen(false);
                     store.requestConfirmation({
-                      title: 'Delete Task',
-                      message: `Are you sure you want to delete "${detail.title}" and all its subtasks?`,
-                      confirmLabel: 'Delete Task',
+                      title: 'Delete task',
+                      message: `Delete “${detail.title}” and all its subtasks?`,
+                      confirmLabel: 'Delete task',
                       confirmVariant: 'danger',
                       onConfirm: () => store.deleteTask(detail.id),
                     });
@@ -238,7 +238,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                   className="w-full px-3 py-1.5 text-left flex items-center space-x-2 hover:bg-[var(--color-error-soft)] text-[var(--color-error)] cursor-pointer"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Task</span>
+                  <span>Delete task</span>
                 </button>
               </div>
             )}
@@ -269,7 +269,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                 <Clock className="w-4 h-4" />
               </div>
               <div>
-                <span className="block text-[11px] text-[var(--color-text-subtle)]">Total Time Focused</span>
+                <span className="block text-[11px] text-[var(--color-text-subtle)]">Tracked time</span>
                 <strong className="text-sm font-bold text-[var(--color-text-strong)]">
                   {detail.totalTimeFormatted || '0m'}
                 </strong>
@@ -282,7 +282,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                 onClick={() => store.openAddSessionDialog()}
                 className="text-xs text-[var(--color-brand)] hover:underline font-semibold cursor-pointer"
               >
-                {detail.timeSessions.length} session{detail.timeSessions.length === 1 ? '' : 's'}
+                {detail.timeSessions.length} {detail.timeSessions.length === 1 ? 'time entry' : 'time entries'}
               </button>
             )}
           </div>
@@ -383,7 +383,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
               >
                 <Calendar className="w-3.5 h-3.5" />
                 <span>
-                  {detail.dueDate ? (isToday ? `${formattedDueDate}, Today` : formattedDueDate) : 'Set Due Date'}
+                  {detail.dueDate ? (isToday ? `${formattedDueDate}, Today` : formattedDueDate) : 'Set due date'}
                 </span>
               </button>
 
@@ -417,7 +417,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">Custom Date</span>
+                    <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase">Custom date</span>
                     <input
                       type="date"
                       value={detail.dueDate ? new Date(detail.dueDate).toISOString().slice(0, 10) : ''}
@@ -438,7 +438,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                       }}
                       className="w-full py-1 text-center text-[11px] text-[var(--color-error)] hover:underline font-medium cursor-pointer"
                     >
-                      Clear Date
+                      Clear date
                     </button>
                   )}
                 </div>
@@ -475,7 +475,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                       !detail.listId ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-bold' : 'hover:bg-[var(--color-surface-soft)]'
                     }`}
                   >
-                    <span>📥 Inbox</span>
+                    <span>Inbox</span>
                   </button>
                   {store.lists.map((l) => (
                     <button
@@ -508,7 +508,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                   store.updateTaskProperties(detail.id, { description: e.target.value });
                 }
               }}
-              placeholder="Write notes, thoughts, or task details here..."
+              placeholder="Add notes…"
               className="w-full flex-1 bg-transparent border-none ring-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none text-xs sm:text-[13px] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] resize-none leading-relaxed cursor-text min-h-[140px]"
             />
           </div>
@@ -518,14 +518,14 @@ export const TaskDetailPane = observer(({ store }: Props) => {
             <div className="space-y-2 pt-2 border-t border-[var(--color-border-subtle)]">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-bold text-[11px] text-[var(--color-text-subtle)] uppercase tracking-wider">
-                  Logged Focus Sessions
+                  Time entries
                 </span>
                 <button
                   type="button"
                   onClick={() => store.openAddSessionDialog()}
                   className="text-xs text-[var(--color-brand)] hover:underline font-semibold cursor-pointer"
                 >
-                  + Add Session
+                  Add time
                 </button>
               </div>
 
@@ -554,9 +554,9 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                       type="button"
                       onClick={() =>
                         store.requestConfirmation({
-                          title: 'Delete Session',
-                          message: 'Are you sure you want to delete this recorded session?',
-                          confirmLabel: 'Delete Session',
+                          title: 'Delete time entry',
+                          message: 'Delete this time entry?',
+                          confirmLabel: 'Delete time entry',
                           confirmVariant: 'danger',
                           onConfirm: () => store.deleteSession(session.id),
                         })
@@ -609,7 +609,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
               <Plus className="w-4 h-4 text-[var(--color-brand)] shrink-0" />
               <input
                 type="text"
-                placeholder={`Add a subtask to "${detail.title}"... (Press Enter)`}
+                placeholder={`Add a subtask…`}
                 value={subtaskInput}
                 onChange={(e) => setSubtaskInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -639,7 +639,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                 </div>
                 <h4 className="text-xs font-bold text-[var(--color-text-strong)]">No subtasks yet</h4>
                 <p className="text-[11px] text-[var(--color-text-muted)] max-w-xs mx-auto">
-                  Break down "{detail.title}" into smaller actionable subtasks above. You can drill down into any subtask to add its own nested steps.
+                  Add a subtask to break this task into smaller steps.
                 </p>
               </div>
             ) : (
@@ -691,7 +691,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                         e.stopPropagation();
                         store.startTimerForTask(subtask.id);
                       }}
-                      title="Start focus timer on subtask"
+                      title="Start timer for subtask"
                       className="p-1 rounded-md opacity-0 group-hover:opacity-100 hover:bg-[var(--color-brand-soft)] hover:text-[var(--color-brand)] text-[var(--color-text-muted)] transition cursor-pointer"
                     >
                       <Play className="w-3.5 h-3.5" />
@@ -702,9 +702,9 @@ export const TaskDetailPane = observer(({ store }: Props) => {
                       onClick={(e) => {
                         e.stopPropagation();
                         store.requestConfirmation({
-                          title: 'Delete Subtask',
-                          message: `Are you sure you want to delete "${subtask.title}"?`,
-                          confirmLabel: 'Delete Subtask',
+                          title: 'Delete subtask',
+                          message: `Delete “${subtask.title}”?`,
+                          confirmLabel: 'Delete subtask',
                           confirmVariant: 'danger',
                           onConfirm: () => store.deleteTask(subtask.id),
                         });

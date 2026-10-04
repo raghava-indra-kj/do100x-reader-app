@@ -103,7 +103,7 @@ function assertContainedHtml(body: string): void {
     const voidTags = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
     const walk = (node: DefaultTreeAdapterMap['node']) => {
         if ('tagName' in node && node.sourceCodeLocation?.startTag && !node.sourceCodeLocation.endTag && !voidTags.has(node.tagName)) {
-            throw new MdAstError({ message: `Unclosed HTML <${node.tagName}> could affect other sections. Close it inside this section or use full-page editing.` });
+            throw new MdAstError({ message: `An unclosed <${node.tagName}> tag could affect other sections. Close it within this section or use page editing.` });
         }
         if ('childNodes' in node) node.childNodes.forEach(walk);
     };
@@ -123,7 +123,7 @@ export function replaceSectionBody({ source, target, newBody }: {
         section.bodyStart === target.bodyStart
     );
     if (!range || range.rawHeading !== target.expectedHeading || source.slice(range.bodyStart, range.bodyEnd) !== target.expectedBody) {
-        throw new MdAstError({ message: "Section changed before this edit could be applied" });
+        throw new MdAstError({ message: "This section has changed. Reload before saving." });
     }
     if (newBody === editableSectionBody(source, range)) return source;
     assertContainedHtml(newBody);
@@ -148,7 +148,7 @@ export function replaceSectionBody({ source, target, newBody }: {
         heading.level !== updatedHeadings[index].level || heading.rawHeading !== updatedHeadings[index].rawHeading ||
         updatedHeadings[index].headingStart !== heading.headingStart! + (heading.headingStart! >= range.bodyEnd ? delta : 0)
     )) {
-        throw new MdAstError({ message: "This edit changes the page's heading structure; use full-page editing for structural changes" });
+        throw new MdAstError({ message: "This changes the page’s headings. Use page editing instead." });
     }
 
     // Reference/footnote definitions have document-wide effects. Body-only editing
@@ -157,7 +157,7 @@ export function replaceSectionBody({ source, target, newBody }: {
         .filter((node) => node.type === "definition" || node.type === "footnoteDefinition" || node.type === "yaml")
         .map((node) => { const span = offsets(node as RootContent); return value.slice(span.start, span.end); });
     if (JSON.stringify(definitions(source)) !== JSON.stringify(definitions(updated))) {
-        throw new MdAstError({ message: "Frontmatter, reference and footnote definitions affect other sections; use full-page editing to change them" });
+        throw new MdAstError({ message: "Front matter, link references and footnotes can affect other sections. Change them in page editing." });
     }
 
     return updated;

@@ -245,7 +245,7 @@ export function MermaidFullscreenModal({ svg, colors, onClose }: MermaidFullscre
       <header className="md-mermaid-fullscreen-header">
         <div className="md-mermaid-fullscreen-title">
           <Network className="md-mermaid-icon" size={18} />
-          <span>Mind Map Fullscreen</span>
+          <span>Mermaid diagram</span>
         </div>
 
         <div className="md-mermaid-fullscreen-controls">
@@ -253,20 +253,20 @@ export function MermaidFullscreenModal({ svg, colors, onClose }: MermaidFullscre
             type="button"
             className="md-mermaid-control-btn"
             onClick={() => zoomByFactor(0.8)}
-            title="Zoom Out (-)"
-            aria-label="Zoom Out"
+            title="Zoom out (-)"
+            aria-label="Zoom out"
           >
             <ZoomOut size={16} />
           </button>
 
-          <span className="md-mermaid-zoom-badge" title="Current Zoom">{zoomPercent}%</span>
+          <span className="md-mermaid-zoom-badge" title="Zoom">{zoomPercent}%</span>
 
           <button
             type="button"
             className="md-mermaid-control-btn"
             onClick={() => zoomByFactor(1.25)}
-            title="Zoom In (+)"
-            aria-label="Zoom In"
+            title="Zoom in (+)"
+            aria-label="Zoom in"
           >
             <ZoomIn size={16} />
           </button>
@@ -275,8 +275,8 @@ export function MermaidFullscreenModal({ svg, colors, onClose }: MermaidFullscre
             type="button"
             className="md-mermaid-control-btn"
             onClick={fitToScreen}
-            title="Fit to Screen (0)"
-            aria-label="Fit to Screen"
+            title="Fit to screen (0)"
+            aria-label="Fit to screen"
           >
             <Maximize size={16} />
             <span className="md-mermaid-control-label">Fit</span>
@@ -288,8 +288,8 @@ export function MermaidFullscreenModal({ svg, colors, onClose }: MermaidFullscre
             type="button"
             className="md-mermaid-control-btn md-mermaid-close-btn"
             onClick={onClose}
-            title="Close Fullscreen (Esc)"
-            aria-label="Close Fullscreen"
+            title="Close fullscreen (Esc)"
+            aria-label="Close fullscreen"
           >
             <X size={16} />
           </button>
@@ -320,7 +320,7 @@ export function MermaidFullscreenModal({ svg, colors, onClose }: MermaidFullscre
 
       {/* Floating Info Chip */}
       <div className="md-mermaid-fullscreen-chip">
-        <span>Drag canvas to move • Scroll to zoom • Double-click to fit • Press <b>Esc</b> to close</span>
+        <span>Drag to move · Scroll to zoom · Double-click to fit · <b>Esc</b> to close</span>
       </div>
     </div>,
     document.body

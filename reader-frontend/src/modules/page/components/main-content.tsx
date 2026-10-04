@@ -32,9 +32,9 @@ export const PageMain = observer(function PageMain() {
                         <AlertTriangle size={20} />
                     </div>
                     <div className="flex flex-col gap-1">
-                        <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Failed to load page</h3>
+                        <h3 className="text-sm font-semibold text-[var(--color-text-strong)]">Couldn’t load this page</h3>
                         <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-                            {store.initDataState.error?.message || 'An unexpected error occurred while fetching the page content.'}
+                            {store.initDataState.error?.message || 'Couldn’t load the page. Try again.'}
                         </p>
                     </div>
                     <Button

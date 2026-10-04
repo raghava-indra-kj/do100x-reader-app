@@ -248,7 +248,7 @@ export const PageSubpages = observer(function PageSubpages() {
                         );
                     },
                     error: () => (
-                        <div className="p-4 text-sm text-[var(--color-text-error)]">Failed to load subpages</div>
+                        <div className="p-4 text-sm text-[var(--color-text-error)]">Couldn’t load subpages.</div>
                     ),
                 })}
             </div>

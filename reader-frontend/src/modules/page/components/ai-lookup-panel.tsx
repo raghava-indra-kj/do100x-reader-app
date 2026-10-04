@@ -110,7 +110,7 @@ function ErrorCard({
         if (!rawJsonStr) return;
         navigator.clipboard.writeText(rawJsonStr);
         setCopied(true);
-        toast.success('Raw error copied');
+        toast.success('Error details copied');
         setTimeout(() => setCopied(false), 1500);
     };
 
@@ -137,7 +137,7 @@ function ErrorCard({
             <div className="flex items-center gap-2 pt-2 border-t border-[var(--color-border-subtle)] flex-wrap">
                 <Button size="sm" variant="secondary" onClick={onRetry} className="flex items-center gap-1.5 text-xs">
                     <RotateCcw size={13} />
-                    <span>Retry Request</span>
+                    <span>Try again</span>
                 </Button>
 
                 {isConfigIssue && (
@@ -148,7 +148,7 @@ function ErrorCard({
                         className="flex items-center gap-1.5 text-xs"
                     >
                         <Settings size={13} />
-                        <span>Open Settings</span>
+                        <span>Open settings</span>
                     </Button>
                 )}
 
@@ -158,7 +158,7 @@ function ErrorCard({
                         className="ml-auto flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer py-1"
                     >
                         <Code2 size={12} />
-                        <span>{showRawJson ? 'Hide Raw Error' : 'View Raw Response'}</span>
+                        <span>{showRawJson ? 'Hide error details' : 'View error details'}</span>
                         {showRawJson ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                     </button>
                 )}
@@ -168,7 +168,7 @@ function ErrorCard({
             {showRawJson && rawJsonStr && (
                 <div className="rounded-lg bg-[var(--color-surface-canvas)] border border-[var(--color-border-subtle)] p-2.5 space-y-2">
                     <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-mono text-[var(--color-text-subtle)] uppercase">Raw Error Payload</span>
+                        <span className="text-[10px] font-mono text-[var(--color-text-subtle)] uppercase">Error details</span>
                         <button
                             onClick={handleCopyJson}
                             className="flex items-center gap-1 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-brand)] transition-colors cursor-pointer"
@@ -199,7 +199,7 @@ function RawResponseViewer({ rawResponse }: { rawResponse: any }) {
     const handleCopy = () => {
         navigator.clipboard.writeText(rawJsonStr);
         setCopied(true);
-        toast.success('Raw JSON copied to clipboard');
+        toast.success('Response JSON copied');
         setTimeout(() => setCopied(false), 1500);
     };
 
@@ -211,7 +211,7 @@ function RawResponseViewer({ rawResponse }: { rawResponse: any }) {
             >
                 <div className="flex items-center gap-2">
                     <Code2 size={13} className="text-[var(--color-brand)]" />
-                    <span className="font-medium">Raw Model Response</span>
+                    <span className="font-medium">Model response details</span>
                     {model && (
                         <span className="font-mono text-[10px] text-[var(--color-text-subtle)]">({model})</span>
                     )}
@@ -379,7 +379,7 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                                 className="flex items-center gap-1.5 text-xs text-[var(--color-error)] border-[var(--color-error)]/40 hover:bg-[var(--color-error-soft)]/30 hover:border-[var(--color-error)] transition-colors"
                             >
                                 <Square size={11} className="fill-current" />
-                                <span>Cancel Request</span>
+                                <span>Cancel request</span>
                             </Button>
                         </div>
                     ) : activeEntry.error ? (
@@ -406,7 +406,7 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                             </div>
                             <div className="border-t border-[var(--color-border-subtle)] pt-4">
                                 <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] text-[var(--color-text-subtle)] font-semibold uppercase tracking-wider">AI Response:</span>
+                                    <span className="text-[10px] text-[var(--color-text-subtle)] font-semibold uppercase tracking-wider">AI response</span>
                                     <div className="flex items-center gap-1">
                                         <button
                                             onClick={() => storeInstance.retry?.(activeEntry.id)}
@@ -422,7 +422,7 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                                                 toast.success('Response copied');
                                             }}
                                             className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] p-1 rounded transition-colors cursor-pointer"
-                                            title="Copy response markdown"
+                                            title="Copy response"
                                         >
                                             <Copy size={12} />
                                             <span>Copy</span>
@@ -457,7 +457,7 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                                             storeInstance.reask(activeEntry.id, rephraseText);
                                         }}
                                     >
-                                        Re-ask
+                                        Ask again
                                     </Button>
                                 </div>
                             </div>

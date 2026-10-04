@@ -20,6 +20,7 @@ export default defineConfig({
             { find: '@modules', replacement: resolve(__dirname, 'src/modules') },
             { find: '@styles',  replacement: resolve(__dirname, 'src/styles') },
             { find: '@reader/md-ast', replacement: resolve(__dirname, '../packages/md-ast/src/index.ts') },
+            { find: '@reader/finance-core', replacement: resolve(__dirname, '../packages/finance-core/src/index.ts') },
             { find: '@reader/md-view/md-view.css',      replacement: resolve(__dirname, '../packages/md-view/src/md-view.css') },
             { find: '@reader/md-view/md-view-hljs.css', replacement: resolve(__dirname, '../packages/md-view/src/md-view-hljs.css') },
             { find: /^@reader\/md-view$/, replacement: resolve(__dirname, '../packages/md-view/src/index.ts') },

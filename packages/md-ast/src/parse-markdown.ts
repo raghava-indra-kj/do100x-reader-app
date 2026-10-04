@@ -11,7 +11,7 @@ export function parseMarkdown({ source, options }: { source: string; options?: P
     try {
         tree = processor.parse(source);
     } catch (error) {
-        throw new MdAstError({ message: "Failed to parse markdown", options: { cause: error } });
+        throw new MdAstError({ message: "Couldn’t read this Markdown. Check its formatting.", options: { cause: error } });
     }
 
     return {

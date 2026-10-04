@@ -1,15 +1,9 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { homePageRoute } from '@boot/routes';
+import '@modules/core/apps/suite.css';
 
-export function AppBarLogo() {
-    const navigate = useNavigate();
-    return (
-        <div
-            className="flex cursor-pointer items-center gap-2.5"
-            onClick={() => navigate(homePageRoute)}
-        >
-            <img src="/logo.png" alt="" className="h-6 w-6" />
-            <span className="font-[family-name:var(--font-serif)] text-base font-semibold text-[var(--color-text-strong)]">Reader</span>
-        </div>
-    );
+export function AppBarLogo({ compact = false }: { compact?: boolean }) {
+    return <Link to={homePageRoute} aria-label="do100x home" className={`suite-logo${compact ? ' suite-logo-compact' : ''}`}>
+        <img src="/branding/do100x-wordmark.png" alt="do100x" width="960" height="326" />
+    </Link>;
 }

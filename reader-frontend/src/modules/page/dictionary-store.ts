@@ -50,7 +50,7 @@ export class DictionaryStore {
         const word = this.searchWord.trim();
         if (!word) {
             this.lookupState = DataState.error(
-                new AppError({ message: 'Please enter a word to look up' }),
+                new AppError({ message: 'Enter a word.' }),
             );
             return;
         }

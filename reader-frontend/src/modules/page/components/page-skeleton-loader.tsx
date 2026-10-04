@@ -6,7 +6,7 @@ export function PageSkeletonLoader() {
             {/* Top Loading Status Indicator */}
             <div className="flex items-center gap-2 mb-8 px-3 py-1.5 rounded-full bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] w-fit text-xs text-[var(--color-text-muted)] shadow-xs">
                 <Loader2 size={13} className="animate-spin text-[var(--color-brand)]" />
-                <span>Loading page content&hellip;</span>
+                <span>Loading page…</span>
             </div>
 
             {/* Title Skeleton */}

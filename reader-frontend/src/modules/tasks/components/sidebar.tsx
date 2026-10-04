@@ -43,21 +43,21 @@ export const TasksSidebar = observer(({ store }: Props) => {
     },
     {
       id: 'next7',
-      label: 'Next 7 Days',
+      label: 'Next 7 days',
       icon: CalendarDays,
       count: null,
       color: '#8b5cf6',
     },
     {
       id: 'matrix',
-      label: 'Eisenhower Matrix',
+      label: 'Priority matrix',
       icon: Grid,
       count: null,
       color: '#f59e0b',
     },
     {
       id: 'analytics',
-      label: 'Time Analytics',
+      label: 'Time reports',
       icon: BarChart2,
       count: null,
       color: '#ec4899',
@@ -138,14 +138,14 @@ export const TasksSidebar = observer(({ store }: Props) => {
             </div>
           ) : store.lists.length === 0 ? (
             <div className="px-2 py-3 text-xs text-[var(--color-text-muted)] text-center border border-dashed border-[var(--color-border-subtle)] rounded-md bg-[var(--color-surface-soft)]/20">
-              <p className="text-[11px]">No custom lists.</p>
+              <p className="text-[11px]">No lists yet.</p>
               <button
                 type="button"
                 onClick={() => store.openCreateListDialog()}
                 className="mt-1 inline-flex items-center space-x-1 text-[11px] text-[var(--color-brand)] hover:underline font-semibold cursor-pointer"
               >
                 <Plus className="w-3 h-3" />
-                <span>Add List</span>
+                <span>Add list</span>
               </button>
             </div>
           ) : (
@@ -215,16 +215,16 @@ export const TasksSidebar = observer(({ store }: Props) => {
                           className="w-full px-3 py-1.5 text-left flex items-center space-x-2 hover:bg-[var(--color-surface-soft)] transition cursor-pointer"
                         >
                           <Edit2 className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                          <span>Edit List</span>
+                          <span>Edit list</span>
                         </button>
                         <button
                           type="button"
                           onClick={() => {
                             setMenuOpenListId(null);
                             store.requestConfirmation({
-                              title: 'Delete List',
-                              message: `Are you sure you want to delete "${list.name}"? Existing tasks will be moved to your Inbox.`,
-                              confirmLabel: 'Delete List',
+                              title: 'Delete list',
+                              message: `Delete “${list.name}”? Its tasks will move to Inbox.`,
+                              confirmLabel: 'Delete list',
                               confirmVariant: 'danger',
                               onConfirm: () => store.deleteList(list.id),
                             });
@@ -232,7 +232,7 @@ export const TasksSidebar = observer(({ store }: Props) => {
                           className="w-full px-3 py-1.5 text-left flex items-center space-x-2 hover:bg-[var(--color-error-soft)] text-[var(--color-error)] transition cursor-pointer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete List</span>
+                          <span>Delete list</span>
                         </button>
                       </div>
                     )}

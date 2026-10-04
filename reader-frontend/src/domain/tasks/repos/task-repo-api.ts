@@ -16,7 +16,7 @@ export class TaskRepoApi implements ITaskRepo {
       const lists = (data.lists as unknown[]).map((item) => TaskListSchema.parse(item));
       return ok({ lists, inbox: data.inbox });
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch task lists'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load lists. Try again.'), cause: error }));
     }
   }
 
@@ -25,7 +25,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.post('/task-lists', params);
       return ok(TaskListSchema.parse(data));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to create task list'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t create the list. Try again.'), cause: error }));
     }
   }
 
@@ -34,7 +34,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.patch(`/task-lists/${id}`, params);
       return ok(TaskListSchema.parse(data));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to update task list'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save the list. Try again.'), cause: error }));
     }
   }
 
@@ -43,7 +43,7 @@ export class TaskRepoApi implements ITaskRepo {
       await apiClient.delete(`/task-lists/${id}`, { params: { deleteTasks } });
       return ok(undefined);
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete task list'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete the list. Try again.'), cause: error }));
     }
   }
 
@@ -61,7 +61,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.get('/tasks', { params });
       return ok((data.tasks as unknown[]).map((item) => TaskSchema.parse(item)));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch tasks'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load tasks. Try again.'), cause: error }));
     }
   }
 
@@ -78,7 +78,7 @@ export class TaskRepoApi implements ITaskRepo {
         isActiveTimerRunning: Boolean(data.isActiveTimerRunning),
       });
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch task details'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load task details. Try again.'), cause: error }));
     }
   }
 
@@ -95,7 +95,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.post('/tasks', params);
       return ok(TaskSchema.parse(data));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to create task'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t add the task. Try again.'), cause: error }));
     }
   }
 
@@ -114,7 +114,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.patch(`/tasks/${id}`, params);
       return ok(TaskSchema.parse(data));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to update task'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save the task. Try again.'), cause: error }));
     }
   }
 
@@ -123,7 +123,7 @@ export class TaskRepoApi implements ITaskRepo {
       await apiClient.delete(`/tasks/${id}`);
       return ok(undefined);
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete task'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete the task. Try again.'), cause: error }));
     }
   }
 
@@ -132,7 +132,7 @@ export class TaskRepoApi implements ITaskRepo {
       await apiClient.post('/tasks/reorder', { orderedIds });
       return ok(undefined);
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to reorder tasks'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t reorder tasks. Try again.'), cause: error }));
     }
   }
 
@@ -145,7 +145,7 @@ export class TaskRepoApi implements ITaskRepo {
         timer: data.timer ? ActiveTimerSchema.parse(data.timer) : null,
       });
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to get active timer'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load the timer. Try again.'), cause: error }));
     }
   }
 
@@ -154,7 +154,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.post('/timer/start', { taskId, notes });
       return ok(ActiveTimerSchema.parse(data.timer));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to start timer'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t start the timer. Try again.'), cause: error }));
     }
   }
 
@@ -163,7 +163,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.post('/timer/pause');
       return ok(ActiveTimerSchema.parse(data.timer));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to pause timer'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t pause the timer. Try again.'), cause: error }));
     }
   }
 
@@ -172,7 +172,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.post('/timer/resume');
       return ok(ActiveTimerSchema.parse(data.timer));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to resume timer'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t resume the timer. Try again.'), cause: error }));
     }
   }
 
@@ -184,7 +184,7 @@ export class TaskRepoApi implements ITaskRepo {
         taskTotalTimeSeconds: data.taskTotalTimeSeconds,
       });
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to stop timer'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t stop the timer. Try again.'), cause: error }));
     }
   }
 
@@ -193,7 +193,7 @@ export class TaskRepoApi implements ITaskRepo {
       await apiClient.post('/timer/discard');
       return ok(undefined);
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to discard timer'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t discard the timer. Try again.'), cause: error }));
     }
   }
 
@@ -203,7 +203,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.get(`/timer/tasks/${taskId}/sessions`);
       return ok((data.sessions as unknown[]).map((s) => TimeSessionSchema.parse(s)));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch task sessions'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load time entries. Try again.'), cause: error }));
     }
   }
 
@@ -215,7 +215,7 @@ export class TaskRepoApi implements ITaskRepo {
         taskTotalTimeSeconds: data.taskTotalTimeSeconds,
       });
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to add time session'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t add the time entry. Try again.'), cause: error }));
     }
   }
 
@@ -227,7 +227,7 @@ export class TaskRepoApi implements ITaskRepo {
         taskTotalTimeSeconds: data.taskTotalTimeSeconds,
       });
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to update session'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save the time entry. Try again.'), cause: error }));
     }
   }
 
@@ -236,7 +236,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.delete(`/timer/sessions/${sessionId}`);
       return ok({ taskTotalTimeSeconds: data.taskTotalTimeSeconds });
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete session'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete the time entry. Try again.'), cause: error }));
     }
   }
 
@@ -245,7 +245,7 @@ export class TaskRepoApi implements ITaskRepo {
       await apiClient.delete(`/timer/tasks/${taskId}/sessions`);
       return ok(undefined);
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete all sessions'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete time entries. Try again.'), cause: error }));
     }
   }
 
@@ -262,7 +262,7 @@ export class TaskRepoApi implements ITaskRepo {
       const { data } = await apiClient.get('/timer/analytics', { params });
       return ok(TimeAnalyticsSchema.parse(data));
     } catch (error) {
-      return err(new AppError({ message: getApiErrorMessage(error, 'Failed to fetch time analytics'), cause: error }));
+      return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load time reports. Try again.'), cause: error }));
     }
   }
 }

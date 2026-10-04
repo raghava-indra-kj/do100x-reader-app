@@ -52,7 +52,7 @@ export function CodeBlock({ language, codeClassName, children }: CodeBlockProps)
   const copyLabel = copyState === "copied"
     ? "Code copied"
     : copyState === "failed"
-      ? "Could not copy code. Try again."
+      ? "Couldn’t copy the code. Try again."
       : "Copy code";
 
   return (

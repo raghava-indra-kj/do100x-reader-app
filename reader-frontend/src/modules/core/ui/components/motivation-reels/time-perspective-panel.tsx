@@ -8,7 +8,6 @@ import {
     Heart, 
     Edit3, 
     Check, 
-    Info 
 } from 'lucide-react';
 import { 
     calculateTimePerspective, 
@@ -48,9 +47,9 @@ export function TimePerspectivePanel() {
 
     const counterCards = useMemo(() => [
         {
-            title: 'This Hour',
+            title: 'This hour',
             minutes: stats.minutesThisHour,
-            subtitle: `${stats.secondsThisMinute}s remaining`,
+            subtitle: `${stats.secondsThisMinute}s left in this minute`,
             progress: stats.hourProgressPercent,
             icon: Clock,
             accent: 'text-amber-500',
@@ -68,7 +67,7 @@ export function TimePerspectivePanel() {
             span: 'sm:col-span-1',
         },
         {
-            title: 'This Week',
+            title: 'This week',
             minutes: stats.minutesThisWeek,
             subtitle: `~${(stats.minutesThisWeek / (60 * 24)).toFixed(1)} days remaining`,
             progress: stats.weekProgressPercent,
@@ -78,7 +77,7 @@ export function TimePerspectivePanel() {
             span: 'sm:col-span-1',
         },
         {
-            title: 'This Month',
+            title: 'This month',
             minutes: stats.minutesThisMonth,
             subtitle: `~${Math.floor(stats.minutesThisMonth / (60 * 24))} days remaining`,
             progress: stats.monthProgressPercent,
@@ -88,7 +87,7 @@ export function TimePerspectivePanel() {
             span: 'sm:col-span-1',
         },
         {
-            title: 'This Year',
+            title: 'This year',
             minutes: stats.minutesThisYear,
             subtitle: `~${Math.floor(stats.minutesThisYear / (60 * 24))} days remaining in ${new Date().getFullYear()}`,
             progress: stats.yearProgressPercent,
@@ -110,9 +109,8 @@ export function TimePerspectivePanel() {
                         </div>
                         <div>
                             <h2 className="text-base sm:text-lg font-bold text-[var(--color-text-strong)] font-[family-name:var(--font-sans)] tracking-tight">
-                                Time Perspective
+                                Time perspective
                             </h2>
-                            <p className="text-xs text-[var(--color-text-muted)]">Real-time awareness across finite horizons</p>
                         </div>
                     </div>
 
@@ -129,10 +127,10 @@ export function TimePerspectivePanel() {
                                 ? 'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] border-[var(--color-brand)] shadow-xs' 
                                 : 'bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] border-[var(--color-border-subtle)]'
                         }`}
-                        title="Edit DOB & expected lifespan"
+                        title="Edit birth date and lifespan estimate"
                     >
                         {isEditing ? <Check size={13} /> : <Edit3 size={13} />}
-                        <span>{isEditing ? 'Save' : 'Edit Targets'}</span>
+                        <span>{isEditing ? 'Save' : 'Edit estimate'}</span>
                     </button>
                 </div>
 
@@ -141,7 +139,7 @@ export function TimePerspectivePanel() {
                     <div className="mt-3 p-3 rounded-xl bg-[var(--color-surface-card)] border border-[var(--color-border-default)] space-y-3 animate-fade-in text-xs">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="space-y-1">
-                                <label className="font-semibold text-[var(--color-text-strong)]">Date of Birth</label>
+                                <label className="font-semibold text-[var(--color-text-strong)]">Date of birth</label>
                                 <input
                                     type="date"
                                     value={dobInput}
@@ -150,7 +148,7 @@ export function TimePerspectivePanel() {
                                 />
                             </div>
                             <div className="space-y-1">
-                                <label className="font-semibold text-[var(--color-text-strong)]">Expected Lifespan (Years)</label>
+                                <label className="font-semibold text-[var(--color-text-strong)]">Estimated lifespan (years)</label>
                                 <input
                                     type="number"
                                     min={1}
@@ -174,11 +172,11 @@ export function TimePerspectivePanel() {
                             <Heart size={15} />
                         </span>
                         <span className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-strong)] font-[family-name:var(--font-sans)]">
-                            Estimated Lifetime Remaining
+                            Time remaining based on your estimate
                         </span>
                     </div>
                     <span className="text-[11px] font-medium text-[var(--color-text-muted)] font-mono">
-                        Target: {config.lifespanYears} yrs (Born {config.dob})
+                        Estimate: {config.lifespanYears} years · Born {config.dob}
                     </span>
                 </div>
 
@@ -192,7 +190,7 @@ export function TimePerspectivePanel() {
                             ~{stats.daysUntilDeath.toLocaleString()} days
                         </span>
                         <span className="px-2 py-0.5 rounded-md bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] font-mono text-[var(--color-text-strong)]">
-                            ~{stats.yearsUntilDeath} years left
+                            ~{stats.yearsUntilDeath} years in estimate
                         </span>
                         <span className="px-2 py-0.5 rounded-md bg-[var(--color-surface-raised)] border border-[var(--color-border-subtle)] font-mono font-bold text-[var(--color-brand)]">
                             {stats.lifeProgressPercent.toFixed(1)}% elapsed
@@ -203,9 +201,9 @@ export function TimePerspectivePanel() {
                 {/* Progress bar */}
                 <div className="space-y-1 pt-1">
                     <div className="flex items-center justify-between text-[10px] text-[var(--color-text-muted)] font-medium">
-                        <span>0 yrs</span>
-                        <span className="text-[var(--color-brand)] font-semibold">{stats.lifeProgressPercent.toFixed(1)}% lived</span>
-                        <span>{config.lifespanYears} yrs</span>
+                        <span>0 years</span>
+                        <span className="text-[var(--color-brand)] font-semibold">{stats.lifeProgressPercent.toFixed(1)}% of estimate</span>
+                        <span>{config.lifespanYears} years</span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-[var(--color-surface-soft)] overflow-hidden">
                         <div 
@@ -237,7 +235,7 @@ export function TimePerspectivePanel() {
 
                             <div className="space-y-1">
                                 <div className="text-lg sm:text-xl font-bold font-mono text-[var(--color-text-strong)] tabular-nums">
-                                    {card.minutes.toLocaleString()} <span className="text-xs font-normal text-[var(--color-text-muted)] font-sans">mins</span>
+                                    {card.minutes.toLocaleString()} <span className="text-xs font-normal text-[var(--color-text-muted)] font-sans">min</span>
                                 </div>
                                 <div className="w-full h-1.5 rounded-full bg-[var(--color-surface-soft)] overflow-hidden">
                                     <div 
@@ -251,13 +249,6 @@ export function TimePerspectivePanel() {
                 })}
             </div>
 
-            {/* Footer Reminder Callout */}
-            <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--color-surface-soft)]/60 border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] leading-relaxed">
-                <Info size={14} className="shrink-0 mt-0.5 text-[var(--color-brand)]" />
-                <p>
-                    <span className="font-semibold text-[var(--color-text-strong)]">Why track time?</span> Time is our only non-renewable resource. Read, reflect, and create with clear intent.
-                </p>
-            </div>
         </div>
     );
 }

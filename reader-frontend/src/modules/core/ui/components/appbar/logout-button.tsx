@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCallback, useState } from 'react';
 import { disableGoogleAutoSelect } from '@modules/auth/login/google-client';
 
-export function LogoutButton() {
+export function LogoutButton({ showLabel = false }: { showLabel?: boolean }) {
     const authStore = useAuthStore();
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
@@ -27,12 +27,12 @@ export function LogoutButton() {
         <Observer>
             {() => authStore.isAuthenticated
                 ? <>
-                    <Button variant="outlined" size="sm" iconOnly onClick={() => setOpen(true)} tooltip="Logout"><LogOut size={16} /></Button>
+                    <Button variant="outlined" size="sm" iconOnly={!showLabel} aria-label="Sign out" onClick={() => setOpen(true)} tooltip="Sign out"><LogOut size={16} aria-hidden="true" />{showLabel && <span>Sign out</span>}</Button>
                     <Dialog open={open} onOpenChange={setOpen}>
                         <div className="flex flex-col gap-6">
                             <div className="flex flex-col gap-2 text-sm text-[var(--color-text-body)]">
-                                <p className="break-words">Logged in as <span className="font-semibold text-[var(--color-text-strong)]">{authStore.currentUser.label}</span></p>
-                                <p>Are you sure you want to sign out?</p>
+                                <p className="break-words">Signed in as <span className="font-semibold text-[var(--color-text-strong)]">{authStore.currentUser.label}</span></p>
+                                <p>Sign out of do100x?</p>
                                 {authStore.error && <p role="alert">{authStore.error}</p>}
                             </div>
                             <div className="flex justify-end gap-3">

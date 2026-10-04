@@ -15,7 +15,7 @@ export const ListTimeAnalyticsSchema = z.object({
 });
 
 export const TimeAnalyticsSchema = z.object({
-  periodLabel: z.string().default('Last 7 Days'),
+  periodLabel: z.string().default('Last 7 days'),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   periodDays: z.number().optional().default(7),
@@ -40,7 +40,7 @@ export class TimeAnalytics {
   readonly dailyTimeline: Record<string, number>;
 
   constructor(data: TimeAnalyticsData) {
-    this.periodLabel = data.periodLabel || 'Last 7 Days';
+    this.periodLabel = data.periodLabel || 'Last 7 days';
     this.startDate = data.startDate;
     this.endDate = data.endDate;
     this.periodDays = data.periodDays || 7;

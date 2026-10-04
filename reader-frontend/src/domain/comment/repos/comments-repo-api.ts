@@ -14,7 +14,7 @@ export class CommentsRepoApi implements ICommentsRepo {
             const { data } = await apiClient.get('/comments', { params: query });
             return ok((data as unknown[]).map((item) => DbCommentSchema.parse(item)));
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to get comments'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load comments. Try again.'), cause: error }));
         }
     }
 
@@ -31,7 +31,7 @@ export class CommentsRepoApi implements ICommentsRepo {
             const { data } = await apiClient.post('/comments', params);
             return ok(data as string);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to create comment'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t add the comment. Try again.'), cause: error }));
         }
     }
 
@@ -48,7 +48,7 @@ export class CommentsRepoApi implements ICommentsRepo {
             await apiClient.put(`/comments/${commentId}`, payload);
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to edit comment'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save the comment. Try again.'), cause: error }));
         }
     }
 
@@ -57,7 +57,7 @@ export class CommentsRepoApi implements ICommentsRepo {
             await apiClient.delete(`/comments/${commentId}`);
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete comment'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete the comment. Try again.'), cause: error }));
         }
     }
 
@@ -66,7 +66,7 @@ export class CommentsRepoApi implements ICommentsRepo {
             await apiClient.delete('/comments', { params: { pageId } });
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete all comments'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete the comments. Try again.'), cause: error }));
         }
     }
 }

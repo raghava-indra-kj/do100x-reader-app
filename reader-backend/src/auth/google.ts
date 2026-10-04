@@ -15,7 +15,7 @@ export const verifyGoogleToken: VerifyGoogleToken = async credential => {
   const ticket = await client.verifyIdToken({ idToken: credential, audience: authConfig().clientId });
   const payload = ticket.getPayload();
   const nonce = (payload as typeof payload & { nonce?: unknown })?.nonce;
-  if (!payload || typeof payload.sub !== "string" || !payload.sub || payload.sub.length > 255 || typeof payload.email !== "string" || !payload.email || payload.email.length > 320 || payload.email_verified !== true || typeof nonce !== "string" || !nonce) throw new Error("Google did not return a verified identity");
+  if (!payload || typeof payload.sub !== "string" || !payload.sub || payload.sub.length > 255 || typeof payload.email !== "string" || !payload.email || payload.email.length > 320 || payload.email_verified !== true || typeof nonce !== "string" || !nonce) throw new Error("Google couldn’t verify this account.");
   const picture = payload.picture;
   return {
     subject: payload.sub, email: payload.email, displayName: typeof payload.name === "string" ? payload.name.slice(0, 255) || null : null,

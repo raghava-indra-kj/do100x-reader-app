@@ -43,7 +43,7 @@ export function buildQuizChanges(base: QuizRevision, draft: QuizDraft): QuizChan
     for (const question of draft.questions) {
         if (!question.sourceId) continue;
         const original = base.questions.find((item) => item.id === question.sourceId);
-        if (!original) throw new Error('The draft contains a question from another revision');
+        if (!original) throw new Error('This draft includes a question from a different quiz version.');
         if (JSON.stringify(questionInput(original)) !== JSON.stringify(question.value)) {
             operations.push({ type: 'replaceQuestion', questionId: question.sourceId, question: question.value });
         }
@@ -66,17 +66,17 @@ export function buildQuizChanges(base: QuizRevision, draft: QuizDraft): QuizChan
 }
 
 export function validateQuizDraft(draft: QuizDraft): string | null {
-    if (!draft.title.trim()) return 'Add a quiz title.';
-    if (draft.questions.length < 1) return 'A quiz needs at least one question.';
+    if (!draft.title.trim()) return 'Enter a quiz title.';
+    if (draft.questions.length < 1) return 'Add at least one question.';
     for (const [index, question] of draft.questions.entries()) {
         const value = question.value;
-        if (!value.promptMarkdown.trim() || !value.explanationMarkdown.trim()) return `Question ${index + 1} needs a prompt and an explanation.`;
+        if (!value.promptMarkdown.trim() || !value.explanationMarkdown.trim()) return `Add the question and explanation for question ${index + 1}.`;
         if (value.kind === 'OBJECTIVE') {
-            if (value.options.length < 2 || value.options.length > 10) return `Question ${index + 1} needs 2–10 options.`;
-            if (value.options.some((option) => !option.bodyMarkdown.trim())) return `Question ${index + 1} has an empty option.`;
+            if (value.options.length < 2 || value.options.length > 10) return `Add 2–10 options to question ${index + 1}.`;
+            if (value.options.some((option) => !option.bodyMarkdown.trim())) return `Fill in every option for question ${index + 1}.`;
             const correct = value.options.filter((option) => option.isCorrect).length;
-            if (value.selectionMode === 'SINGLE' && correct !== 1 || value.selectionMode === 'MULTIPLE' && correct < 1) return `Question ${index + 1} needs valid correct choices.`;
-        } else if (!value.referenceAnswerMarkdown.trim()) return `Question ${index + 1} needs a reference answer.`;
+            if (value.selectionMode === 'SINGLE' && correct !== 1 || value.selectionMode === 'MULTIPLE' && correct < 1) return `Select the correct option or options for question ${index + 1}.`;
+        } else if (!value.referenceAnswerMarkdown.trim()) return `Add a reference answer for question ${index + 1}.`;
     }
     return null;
 }

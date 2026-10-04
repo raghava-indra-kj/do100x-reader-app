@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
-const nonemptyMarkdown = z.string().refine((value) => value.trim().length > 0, "Markdown must not be empty");
+const nonemptyMarkdown = z.string().refine((value) => value.trim().length > 0, "Enter content.");
 const uuid = z.string().uuid();
 
 const optionInput = z.object({
@@ -20,10 +20,10 @@ const objectiveQuestion = z.object({
 }).strict().superRefine((question, ctx) => {
   const correctCount = question.options.filter((option) => option.isCorrect).length;
   if (question.selectionMode === "SINGLE" && correctCount !== 1) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["options"], message: "Single-select questions need exactly one correct option" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["options"], message: "Select exactly one correct option." });
   }
   if (question.selectionMode === "MULTIPLE" && correctCount < 1) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["options"], message: "Multi-select questions need at least one correct option" });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["options"], message: "Select at least one correct option." });
   }
 });
 
@@ -93,21 +93,21 @@ export function applyChangesToDraft(snapshot: QuizDraft, operations: QuizChange[
   const lastAddedAfter = new Map<string, string>();
 
   const locate = (id: string): number => {
-    if (!originalIds.has(id)) throw new QuizError(422, `Question ${id} is not in the expected revision`);
+    if (!originalIds.has(id)) throw new QuizError(422, `Question ${id} isn’t in this quiz version.`);
     const index = draft.questions.findIndex((question) => question.sourceId === id);
-    if (index < 0) throw new QuizError(422, `Question ${id} was already removed`);
+    if (index < 0) throw new QuizError(422, `Question ${id} has already been removed.`);
     return index;
   };
 
   for (const operation of operations) {
     if (operation.type === "setMetadata") {
-      if (operation.title === undefined && operation.instructionsMarkdown === undefined) throw new QuizError(422, "Specify a field to change");
+      if (operation.title === undefined && operation.instructionsMarkdown === undefined) throw new QuizError(422, "Choose what to change.");
       if (operation.title !== undefined) draft.title = operation.title;
       if (operation.instructionsMarkdown !== undefined) draft.instructionsMarkdown = operation.instructionsMarkdown;
       continue;
     }
     if (operation.type === "addQuestion") {
-      if (operation.afterQuestionId != null && operation.beforeQuestionId !== undefined) throw new QuizError(422, "Choose before or after, not both");
+      if (operation.afterQuestionId != null && operation.beforeQuestionId !== undefined) throw new QuizError(422, "Choose one position: before or after.");
       let index = draft.questions.length;
       if (operation.beforeQuestionId !== undefined) {
         index = locate(operation.beforeQuestionId);
@@ -126,7 +126,7 @@ export function applyChangesToDraft(snapshot: QuizDraft, operations: QuizChange[
     }
     const previous = touched.get(operation.questionId) ?? new Set<string>();
     if (previous.has(operation.type) || previous.has("removeQuestion") || (operation.type === "removeQuestion" && previous.size > 0)) {
-      throw new QuizError(422, `Question ${operation.questionId} has incompatible changes`);
+      throw new QuizError(422, `Question ${operation.questionId} has conflicting changes.`);
     }
     previous.add(operation.type);
     touched.set(operation.questionId, previous);
@@ -136,7 +136,7 @@ export function applyChangesToDraft(snapshot: QuizDraft, operations: QuizChange[
     } else if (operation.type === "removeQuestion") {
       draft.questions.splice(index, 1);
     } else {
-      if (operation.beforeQuestionId === operation.questionId) throw new QuizError(422, "A question cannot move before itself");
+      if (operation.beforeQuestionId === operation.questionId) throw new QuizError(422, "Choose another question as the new position.");
       const [moved] = draft.questions.splice(index, 1);
       const before = operation.beforeQuestionId == null ? draft.questions.length : locate(operation.beforeQuestionId);
       draft.questions.splice(before, 0, moved);
@@ -148,6 +148,6 @@ export function applyChangesToDraft(snapshot: QuizDraft, operations: QuizChange[
     instructionsMarkdown: draft.instructionsMarkdown,
     questions: draft.questions.map((question) => question.value),
   });
-  if (!validated.success) throw new QuizError(422, validated.error.issues[0]?.message ?? "Invalid quiz revision");
+  if (!validated.success) throw new QuizError(422, validated.error.issues[0]?.message ?? "Check the quiz version and try again.");
   return draft;
 }

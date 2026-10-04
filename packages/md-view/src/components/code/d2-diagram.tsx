@@ -83,7 +83,7 @@ export function D2Diagram({
       } catch (err) {
         if (!cancelled) {
           const msg = err instanceof Error ? err.message : String(err);
-          setError(msg || "Failed to render D2 diagram");
+          setError(msg || "Couldn’t render this D2 diagram.");
         }
       } finally {
         if (!cancelled) {
@@ -120,8 +120,8 @@ export function D2Diagram({
               type="button"
               className="md-d2-fullscreen-btn"
               onClick={() => setIsFullscreen(true)}
-              title="View diagram in full screen"
-              aria-label="View D2 diagram in full screen"
+              title="Open diagram fullscreen"
+              aria-label="Open D2 diagram fullscreen"
             >
               <Maximize2 size={16} aria-hidden="true" />
             </button>

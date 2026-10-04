@@ -7,14 +7,14 @@ export const PageExplanationPanel = observer(function PageExplanationPanel() {
     const store = usePageStore();
     return (
         <PageAiLookupPanel
-            title="AI Explanation"
+            title="Explanations"
             icon={<Compass size={12} className="text-[var(--color-brand)]" />}
             storeInstance={store.explanationStore}
             queryLabel="Passage"
-            rephraseLabel="Rephrase Passage / Instructions"
-            rephrasePlaceholder="Modify passage or add custom instructions..."
-            emptyStateLabel="Select text on the page and click 'AI Explain' to get an explanation."
-            loadingLabel="Generating AI explanation..."
+            rephraseLabel="Edit selection or instructions"
+            rephrasePlaceholder="Edit the selection or add instructions…"
+            emptyStateLabel="Select text and choose “Explain with AI”."
+            loadingLabel="Getting an explanation…"
         />
     );
 });

@@ -23,7 +23,7 @@ interface Viewport {
   pan: { x: number; y: number };
 }
 
-export function D2FullscreenModal({ svg, colors, onClose, title = "D2 Diagram Fullscreen" }: D2FullscreenModalProps) {
+export function D2FullscreenModal({ svg, colors, onClose, title = "D2 diagram" }: D2FullscreenModalProps) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -254,20 +254,20 @@ export function D2FullscreenModal({ svg, colors, onClose, title = "D2 Diagram Fu
             type="button"
             className="md-d2-control-btn"
             onClick={() => zoomByFactor(0.8)}
-            title="Zoom Out (-)"
-            aria-label="Zoom Out"
+            title="Zoom out (-)"
+            aria-label="Zoom out"
           >
             <ZoomOut size={16} />
           </button>
 
-          <span className="md-d2-zoom-badge" title="Current Zoom">{zoomPercent}%</span>
+          <span className="md-d2-zoom-badge" title="Zoom">{zoomPercent}%</span>
 
           <button
             type="button"
             className="md-d2-control-btn"
             onClick={() => zoomByFactor(1.25)}
-            title="Zoom In (+)"
-            aria-label="Zoom In"
+            title="Zoom in (+)"
+            aria-label="Zoom in"
           >
             <ZoomIn size={16} />
           </button>
@@ -276,8 +276,8 @@ export function D2FullscreenModal({ svg, colors, onClose, title = "D2 Diagram Fu
             type="button"
             className="md-d2-control-btn"
             onClick={fitToScreen}
-            title="Fit to Screen (0)"
-            aria-label="Fit to Screen"
+            title="Fit to screen (0)"
+            aria-label="Fit to screen"
           >
             <Maximize size={16} />
             <span className="md-d2-control-label">Fit</span>
@@ -289,8 +289,8 @@ export function D2FullscreenModal({ svg, colors, onClose, title = "D2 Diagram Fu
             type="button"
             className="md-d2-control-btn md-d2-close-btn"
             onClick={onClose}
-            title="Close Fullscreen (Esc)"
-            aria-label="Close Fullscreen"
+            title="Close fullscreen (Esc)"
+            aria-label="Close fullscreen"
           >
             <X size={16} />
           </button>
@@ -321,7 +321,7 @@ export function D2FullscreenModal({ svg, colors, onClose, title = "D2 Diagram Fu
 
       {/* Floating Info Chip */}
       <div className="md-d2-fullscreen-chip">
-        <span>Drag canvas to move • Scroll to zoom • Double-click to fit • Press <b>Esc</b> to close</span>
+        <span>Drag to move · Scroll to zoom · Double-click to fit · <b>Esc</b> to close</span>
       </div>
     </div>,
     document.body

@@ -13,7 +13,7 @@ const route = (handler: Route): Route => async (req, res) => {
   try { await handler(req, res); }
   catch (error) {
     if (error instanceof QuizError) { res.status(error.status).json({ message: error.message }); return; }
-    if (error instanceof z.ZodError) { res.status(422).json({ message: error.issues[0]?.message ?? "Invalid request" }); return; }
+    if (error instanceof z.ZodError) { res.status(422).json({ message: error.issues[0]?.message ?? "Check the details and try again." }); return; }
     throw error;
   }
 };

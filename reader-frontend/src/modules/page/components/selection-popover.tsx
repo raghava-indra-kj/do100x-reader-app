@@ -234,7 +234,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
         setIsSavingVocab(false);
         if (result.ok) {
             setView('menu');
-            toast.success('Added to vocabulary');
+            toast.success('Word saved');
             store.bumpVocabVersion();
         }
     };
@@ -263,10 +263,10 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                         store.meaningStore.open(trimmedText, page.title, sectionTitle);
                     }}
                     className={`${btnBase} ${btnEnabled}`}
-                    title="Get AI Meaning"
+                    title="Look up with AI"
                 >
                     <Sparkles size={13} />
-                    <span>AI Meaning</span>
+                    <span>Word meanings</span>
                 </button>
 
                 <button
@@ -274,10 +274,10 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                         store.explanationStore.open(trimmedText, page.title, sectionTitle);
                     }}
                     className={`${btnBase} ${btnEnabled}`}
-                    title="Get AI Explanation"
+                    title="Explain with AI"
                 >
                     <Sparkles size={13} />
-                    <span>AI Explain</span>
+                    <span>Explain with AI</span>
                 </button>
 
                 <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
@@ -299,7 +299,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                 <button
                     onClick={handleDuck}
                     className={`${btnBase} ${canDuck ? btnEnabled : btnDisabled}`}
-                    title={canDuck ? 'Explain with DuckAI (Supports longer selections)' : 'Selection too long for DuckAI'}
+                    title={canDuck ? 'Explain with DuckAI' : 'Selection too long for DuckAI'}
                     disabled={!canDuck}
                 >
                     <Sparkles size={13} />
@@ -312,11 +312,11 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                 <button
                     onClick={() => setView('doubt')}
                     className={`${btnBase} ${canDoubt ? btnEnabled : btnDisabled}`}
-                    title={canDoubt ? 'Ask a doubt about this selection' : 'Selection too long'}
+                    title={canDoubt ? 'Ask a question about this text' : 'Selection too long'}
                     disabled={!canDoubt}
                 >
                     <MessageSquare size={13} />
-                    <span>Ask Doubt</span>
+                    <span>Ask a question</span>
                 </button>
 
                 <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
@@ -325,10 +325,10 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                 <button
                     onClick={() => setView('comment')}
                     className={`${btnBase} ${btnEnabled}`}
-                    title="Add a comment on this selection"
+                    title="Add a comment"
                 >
                     <StickyNote size={13} />
-                    <span>Add Comment</span>
+                    <span>Add comment</span>
                 </button>
 
                 <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
@@ -338,10 +338,10 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                     onClick={handleVocabSubmit}
                     disabled={isSavingVocab}
                     className={`${btnBase} ${btnEnabled}`}
-                    title="Add this term to your vocabulary"
+                    title="Save this word"
                 >
                     <NotebookPen size={13} />
-                    <span>{isSavingVocab ? 'Adding…' : 'Add to Vocabulary'}</span>
+                    <span>{isSavingVocab ? 'Adding…' : 'Save word'}</span>
                 </button>
             </div>
         ) : view === 'doubt' ? (
@@ -355,7 +355,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                         <MessageSquare size={13} className="text-[var(--color-brand)]" />
-                        <span className="text-[11px] font-semibold text-[var(--color-text-strong)]">Ask Doubt</span>
+                        <span className="text-[11px] font-semibold text-[var(--color-text-strong)]">Ask a question</span>
                     </div>
                     <button
                         onClick={() => setView('menu')}
@@ -371,14 +371,14 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                     value={doubt}
                     onChange={(e) => setDoubt(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="What's your doubt? (Ctrl+Enter to send)"
+                    placeholder="Ask a question… (Ctrl+Enter to send)"
                     className="w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] px-3 py-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] focus:ring-1 focus:ring-[var(--color-brand)] resize-none h-20 transition-colors"
                     autoFocus
                 />
 
                 {/* Character Counter Row */}
                 <div className="flex justify-between items-center text-[10px] text-[var(--color-text-subtle)] tabular-nums px-0.5 -mt-1">
-                    <span>{doubt.length} chars typed</span>
+                    <span>{doubt.length} characters</span>
                     <div className="flex gap-2">
                         <span className={remainingGoogleChars < 0 ? 'text-[var(--color-text-error)] font-medium' : ''}>
                             Google: {remainingGoogleChars >= 0 ? `${remainingGoogleChars} left` : 'Too long'}
@@ -400,10 +400,10 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                             ? 'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-hover)] cursor-pointer active:scale-95'
                             : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] opacity-40 cursor-not-allowed'
                     }`}
-                    title="Explain within the app"
+                    title="Get an answer with AI"
                 >
                     <Sparkles size={13} className="shrink-0" />
-                    <span>Ask AI (In-App)</span>
+                    <span>Ask AI</span>
                 </button>
 
                 {/* Linear Action Buttons */}
@@ -447,7 +447,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                                 ? 'bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:border-[var(--color-text-muted)] cursor-pointer active:scale-95'
                                 : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] border-transparent opacity-40 cursor-not-allowed'
                         }`}
-                        title="Copy doubt as prompt"
+                        title="Copy question and context"
                     >
                         {doubtCopied ? <Check size={12} className="text-[var(--color-brand)] shrink-0" /> : <Copy size={12} className="shrink-0" />}
                         <span>{doubtCopied ? 'Copied' : 'Copy'}</span>
@@ -462,7 +462,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                 onMouseDown={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-1.5">
-                    <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase tracking-wider">Add Comment</span>
+                    <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase tracking-wider">Add comment</span>
                     <button
                         onClick={() => setView('menu')}
                         className="flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] cursor-pointer"
@@ -476,7 +476,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                     value={commentBody}
                     onChange={(e) => setCommentBody(e.target.value)}
                     onKeyDown={handleCommentKeyDown}
-                    placeholder="Type your comment (Ctrl+Enter to save)..."
+                    placeholder="Write a comment… (Ctrl+Enter to save)"
                     className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] resize-none h-20"
                     autoFocus
                 />
@@ -488,7 +488,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                         onChange={(e) => setIsExplanation(e.target.checked)}
                         className="h-3 w-3 rounded border-[var(--color-border-default)] accent-[var(--color-brand)] cursor-pointer"
                     />
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Mark as my explanation</span>
+                    <span className="text-[10px] text-[var(--color-text-muted)]">Save to my explanations</span>
                 </label>
 
                 <div className="flex items-center justify-end mt-1">
@@ -501,7 +501,7 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                                 : 'bg-[var(--color-surface-soft)] text-[var(--color-text-body)] opacity-40 cursor-not-allowed'
                         }`}
                     >
-                        {isSavingComment ? 'Saving…' : 'Save Comment'}
+                        {isSavingComment ? 'Saving…' : 'Save comment'}
                     </button>
                 </div>
             </div>

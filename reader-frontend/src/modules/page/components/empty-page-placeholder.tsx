@@ -5,7 +5,7 @@ import { Page } from '@domain/page/models/page';
 import { PageListItem } from '@domain/page/models/page-list-item';
 import { queryPages } from '@domain/page/services/pages-service';
 import { DataState } from '@lib/utils/data-state';
-import { pagesPageWithIdRouteValue } from '@boot/routes';
+import { readerPageWithIdRouteValue } from '@boot/routes';
 import { usePageStore } from '../store';
 import { UpsertPageDialog } from './upsert-page';
 import { Button } from '@modules/core/ui/primitives/button';
@@ -18,7 +18,6 @@ import {
     Pencil,
     ClipboardPaste,
     ChevronRight,
-    Sparkles,
     FolderTree,
     Layers,
 } from 'lucide-react';
@@ -107,7 +106,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                                     className="flex items-center gap-1.5"
                                 >
                                     <FilePlus size={14} />
-                                    <span>New Subpage</span>
+                                    <span>New subpage</span>
                                 </Button>
                                 <Button
                                     size="sm"
@@ -115,7 +114,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                                     className="flex items-center gap-1.5"
                                 >
                                     <Pencil size={14} />
-                                    <span>Add Content</span>
+                                    <span>Add content</span>
                                 </Button>
                             </div>
                         )}
@@ -123,7 +122,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
 
                     {!hasSubpages && (
                         <p className="text-sm text-[var(--color-text-muted)] leading-relaxed max-w-2xl">
-                            This page is empty. Start writing notes, paste markdown content, or create subpages to organize your thoughts.
+                            Add content or create a subpage.
                         </p>
                     )}
                 </div>
@@ -132,10 +131,6 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
             {/* Quick Action Onboarding (When completely empty with no subpages and user is owner) */}
             {store.isOwner && !hasSubpages && subpagesState.isLoaded && (
                 <div className="mt-8">
-                    <h2 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider mb-4 flex items-center gap-1.5">
-                        <Sparkles size={14} className="text-[var(--color-brand)]" />
-                        <span>Quick Actions</span>
-                    </h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Action 1: Write Content */}
                         <div
@@ -149,10 +144,10 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                                 <ChevronRight size={16} className="text-[var(--color-text-subtle)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all" />
                             </div>
                             <h3 className="text-sm font-semibold text-[var(--color-text-strong)] group-hover:text-[var(--color-brand)] transition-colors">
-                                Write Markdown
+                                Write content
                             </h3>
                             <p className="mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed">
-                                Add notes, headers, code blocks, or documentation to this page.
+                                Start writing or paste your content.
                             </p>
                         </div>
 
@@ -168,10 +163,10 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                                 <ChevronRight size={16} className="text-[var(--color-text-subtle)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all" />
                             </div>
                             <h3 className="text-sm font-semibold text-[var(--color-text-strong)] group-hover:text-[var(--color-brand)] transition-colors">
-                                Create a Subpage
+                                Create a subpage
                             </h3>
                             <p className="mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed">
-                                Nest a child page under this section to build a structured hierarchy.
+                                Add a page inside this one.
                             </p>
                         </div>
 
@@ -187,10 +182,10 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                                 <ChevronRight size={16} className="text-[var(--color-text-subtle)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all" />
                             </div>
                             <h3 className="text-sm font-semibold text-[var(--color-text-strong)] group-hover:text-[var(--color-brand)] transition-colors">
-                                Paste Content
+                                Paste content
                             </h3>
                             <p className="mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed">
-                                Paste formatted Markdown or copied articles directly into the editor.
+                                Paste from your clipboard.
                             </p>
                         </div>
                     </div>
@@ -203,7 +198,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
                             <Layers size={14} className="text-[var(--color-brand)]" />
-                            <span>Subpages in this Section ({subpages.length})</span>
+                            <span>Pages in this section ({subpages.length})</span>
                         </h2>
                     </div>
 
@@ -211,7 +206,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                         {subpages.map((subpage) => (
                             <div
                                 key={subpage.id}
-                                onClick={() => navigate(pagesPageWithIdRouteValue(subpage.id))}
+                                onClick={() => navigate(readerPageWithIdRouteValue(subpage.id))}
                                 className="group flex flex-col justify-between rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] p-4 transition-all duration-150 hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:shadow-sm cursor-pointer"
                             >
                                 <div className="flex items-start gap-3">

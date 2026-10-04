@@ -44,7 +44,7 @@ export const MatrixView = observer(({ store }: Props) => {
           <div className="flex items-center space-x-2">
             <input
               type="text"
-              placeholder={`+ Add to ${title}...`}
+              placeholder={`Add a task to ${title}…`}
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               onKeyDown={async (e) => {
@@ -78,7 +78,7 @@ export const MatrixView = observer(({ store }: Props) => {
         <div className="flex-1 overflow-y-auto p-2.5 space-y-2">
           {tasks.length === 0 ? (
             <div className="py-8 text-center text-xs text-[var(--color-text-muted)] italic">
-              No tasks in this quadrant
+              No tasks here.
             </div>
           ) : (
             tasks.map((task) => {
@@ -146,9 +146,9 @@ export const MatrixView = observer(({ store }: Props) => {
   return (
     <div className="flex-1 flex flex-col h-full bg-[var(--color-surface-canvas)] min-w-0 border-r border-[var(--color-border-subtle)] p-4 overflow-hidden">
       <div className="mb-4">
-        <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-strong)]">Eisenhower Priority Matrix</h1>
+        <h1 className="text-xl font-bold tracking-tight text-[var(--color-text-strong)]">Priority matrix</h1>
         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-          Organize and prioritize your daily focus based on urgency and importance.
+          Group tasks by urgency and importance.
         </p>
       </div>
 
@@ -156,14 +156,14 @@ export const MatrixView = observer(({ store }: Props) => {
       {store.isLoadingTasks ? (
         <div className="flex-1 flex flex-col items-center justify-center space-y-2 text-[var(--color-text-muted)] select-none">
           <Loader size={24} className="text-[var(--color-brand)]" />
-          <span className="text-xs font-medium">Loading priority matrix...</span>
+          <span className="text-xs font-medium">Loading priorities…</span>
         </div>
       ) : (
         <div className="flex-1 grid grid-cols-2 grid-rows-2 gap-3 min-h-0">
         {/* Q1: Urgent & Important */}
         {renderQuadrant(
-          'Q1: Urgent & Important',
-          'Do First — Critical & time-sensitive goals',
+          'Urgent and important',
+          'Do first',
           1,
           store.matrixQ1Tasks,
           q1Input,
@@ -179,8 +179,8 @@ export const MatrixView = observer(({ store }: Props) => {
 
         {/* Q2: Important, Not Urgent */}
         {renderQuadrant(
-          'Q2: Important, Not Urgent',
-          'Schedule — High impact long-term goals',
+          'Important, not urgent',
+          'Schedule',
           2,
           store.matrixQ2Tasks,
           q2Input,
@@ -196,8 +196,8 @@ export const MatrixView = observer(({ store }: Props) => {
 
         {/* Q3: Urgent, Not Important */}
         {renderQuadrant(
-          'Q3: Urgent, Not Important',
-          'Delegate / Quick — Interruptions & errands',
+          'Urgent, not important',
+          'Delegate or do quickly',
           3,
           store.matrixQ3Tasks,
           q3Input,
@@ -213,8 +213,8 @@ export const MatrixView = observer(({ store }: Props) => {
 
         {/* Q4: Not Urgent, Not Important */}
         {renderQuadrant(
-          'Q4: Not Urgent & Not Important',
-          'Eliminate / Backlog — Low value distractions',
+          'Neither urgent nor important',
+          'Leave for later or remove',
           4,
           store.matrixQ4Tasks,
           q4Input,

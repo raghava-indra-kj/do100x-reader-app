@@ -31,7 +31,7 @@ export const ListDialog = observer(({ store }: Props) => {
             </div>
             <div>
               <h2 className="text-xs font-bold text-[var(--color-text-strong)]">
-                {store.editingListId ? 'Edit List' : 'Create New List'}
+                {store.editingListId ? 'Edit list' : 'New list'}
               </h2>
             </div>
           </div>
@@ -48,10 +48,10 @@ export const ListDialog = observer(({ store }: Props) => {
         <div className="p-4 space-y-3.5 text-xs">
           {/* List Name */}
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[var(--color-text-strong)]">List Name</label>
+            <label className="text-[11px] font-bold text-[var(--color-text-strong)]">List name</label>
             <input
               type="text"
-              placeholder="e.g. Work, Deep Reading, Side Project..."
+              placeholder="e.g. Work, Reading, Personal"
               value={store.listNameInput}
               onChange={(e) => store.setListNameInput(e.target.value)}
               className="w-full px-2.5 py-1.5 text-xs rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] transition"
@@ -61,7 +61,7 @@ export const ListDialog = observer(({ store }: Props) => {
 
           {/* Color Palette */}
           <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-[var(--color-text-strong)]">Accent Color</label>
+            <label className="text-[11px] font-bold text-[var(--color-text-strong)]">List color</label>
             <div className="flex items-center justify-between pt-0.5">
               {LIST_COLORS.map((c) => (
                 <button
@@ -95,7 +95,7 @@ export const ListDialog = observer(({ store }: Props) => {
             disabled={!store.listNameInput.trim()}
             className="px-3.5 py-1.5 bg-[var(--color-brand)] text-white text-xs font-semibold rounded-md shadow-xs hover:bg-[var(--color-brand-hover)] disabled:opacity-35 transition cursor-pointer"
           >
-            {store.editingListId ? 'Update List' : 'Create List'}
+            {store.editingListId ? 'Save' : 'Create list'}
           </button>
         </div>
       </div>

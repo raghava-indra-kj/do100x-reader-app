@@ -15,7 +15,6 @@ import {
     Coffee,
     BookOpen,
     DoorOpen,
-    Heart,
     ArrowLeft,
     Wind
 } from 'lucide-react';
@@ -43,22 +42,22 @@ const BREAK_QUOTES = [
     {
         quote: "Almost everything will work again if you unplug it for a few minutes, including you.",
         by: "Anne Lamott",
-        advice: "Give yourself permission to pause. Stand up, stretch, take a drink of water, or rest your eyes."
+        advice: "Take a moment to stretch, get some water or rest your eyes."
     },
     {
         quote: "Rest when you're weary. Refresh and renew yourself, your body, your mind, your spirit.",
         by: "Ralph Marston",
-        advice: "Fatigue is your brain's natural cue to consolidate memory. Stepping away now will make your next session sharper."
+        advice: "If you’re tired, pause and come back later."
     },
     {
         quote: "Tension is who you think you should be. Relaxation is who you are.",
         by: "Chinese Proverb",
-        advice: "There is no guilt in calling it a day. Close your workspace, take a slow breath, and recharge."
+        advice: "You can finish for today. Your pages will be here when you return."
     },
     {
         quote: "Sometimes the most productive thing you can do is relax.",
         by: "Mark Black",
-        advice: "Even a brief 10-minute break away from screens restores dopamine and resets cognitive bandwidth."
+        advice: "Take a few minutes away from the screen."
     }
 ];
 
@@ -163,7 +162,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
     const handleCopy = useCallback(() => {
         const current = quotes[currentIndex];
         if (!current) return;
-        const text = `"${current.quote}"\n— ${current.by}\n\nKey Takeaway: ${current.meaning}`;
+        const text = `"${current.quote}"\n— ${current.by}\n\n${current.meaning}`;
         navigator.clipboard.writeText(text);
         setCopied(true);
         setTimeout(() => setCopied(false), 1600);
@@ -279,11 +278,8 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                             </div>
                             <div>
                                 <h1 className="text-xs sm:text-sm font-bold text-[var(--color-text-strong)] font-[family-name:var(--font-sans)] tracking-tight">
-                                    Inspirations &amp; Perspective
+                                    Take a break
                                 </h1>
-                                <p className="text-[10px] text-[var(--color-text-muted)] hidden sm:block">
-                                    Reflect, reset, and regain focus
-                                </p>
                             </div>
                         </div>
 
@@ -302,10 +298,10 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                         ? 'bg-sky-500 hover:bg-sky-600 text-white border-sky-400 shadow-sm'
                                         : 'bg-[var(--color-surface-card)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:border-sky-500/50'
                                 }`}
-                                title="Mindful deep breathing exercise"
+                                title="Breathing break"
                             >
                                 <Wind size={14} className={isDeepBreathMode ? 'text-white animate-pulse' : 'text-sky-400'} />
-                                <span className="hidden sm:inline">Deep Breath</span>
+                                <span className="hidden sm:inline">Breathe</span>
                                 <span className="sm:hidden">Breathe</span>
                             </button>
 
@@ -323,10 +319,10 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                         ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-400 shadow-sm'
                                         : 'bg-[var(--color-surface-card)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:border-amber-500/50'
                                 }`}
-                                title="Step away and rest your mind"
+                                title="Take a break from the screen"
                             >
                                 <Coffee size={14} className={isTiredBreakMode ? 'text-white animate-bounce' : 'text-amber-400'} />
-                                <span className="hidden sm:inline">Take a Break</span>
+                                <span className="hidden sm:inline">Take a break</span>
                                 <span className="sm:hidden">Break</span>
                             </button>
 
@@ -337,7 +333,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                 title="Resume reading"
                             >
                                 <BookOpen size={13} />
-                                <span>Continue Reading</span>
+                                <span>Back to reading</span>
                             </button>
 
                             <button
@@ -394,25 +390,21 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                                 <Coffee size={28} />
                                             </div>
                                             <h2 className="text-xl sm:text-2xl font-bold text-[var(--color-text-strong)] font-[family-name:var(--font-sans)] tracking-tight">
-                                                Permission to Pause
+                                                Time for a break
                                             </h2>
                                             <p className="text-xs text-[var(--color-text-muted)] max-w-md leading-relaxed">
-                                                Deep focus requires intentional recovery. Stepping away helps reset cognitive bandwidth and consolidate learning.
+                                                You can stop here and return when you’re ready.
                                             </p>
                                         </div>
 
                                         {/* Mindful Rest Quote Card */}
                                         <div className="p-5 sm:p-6 rounded-2xl bg-[var(--color-surface-card)] border border-[var(--color-border-default)] backdrop-blur-md shadow-lg text-left space-y-3">
-                                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
-                                                <Heart size={13} />
-                                                <span>Reflection on Rest</span>
-                                            </div>
                                             <blockquote className="text-base sm:text-lg font-medium font-[family-name:var(--font-serif)] text-[var(--color-text-strong)] leading-relaxed italic">
                                                 &ldquo;{currentBreakQuote.quote}&rdquo;
                                             </blockquote>
                                             <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border-subtle)] text-xs text-[var(--color-text-muted)]">
                                                 <cite className="not-italic font-semibold text-[var(--color-text-strong)]">&mdash; {currentBreakQuote.by}</cite>
-                                                <span className="text-[10px] bg-[var(--color-surface-soft)] px-2 py-0.5 rounded-full font-medium">Mindful Break</span>
+                                                <span className="text-[10px] bg-[var(--color-surface-soft)] px-2 py-0.5 rounded-full font-medium">Break</span>
                                             </div>
                                             <p className="text-xs text-[var(--color-text-body)] pt-1 leading-relaxed bg-[var(--color-surface-soft)]/60 p-2.5 rounded-xl border border-[var(--color-border-subtle)]">
                                                 💡 {currentBreakQuote.advice}
@@ -426,21 +418,21 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--color-surface-card)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-strong)] font-semibold text-xs border border-[var(--color-border-default)] transition-all cursor-pointer shadow-xs"
                                             >
                                                 <DoorOpen size={14} />
-                                                <span>Step Away for Now</span>
+                                                <span>Take a break</span>
                                             </button>
                                             <button
                                                 onClick={() => onOpenChange(false)}
                                                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-[var(--color-text-on-brand)] font-bold text-xs transition-all cursor-pointer shadow-sm"
                                             >
                                                 <BookOpen size={14} />
-                                                <span>Continue Reading</span>
+                                                <span>Back to reading</span>
                                             </button>
                                             <button
                                                 onClick={() => setIsTiredBreakMode(false)}
                                                 className="flex items-center gap-1 px-3 py-2 rounded-xl text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-all cursor-pointer"
                                             >
                                                 <ArrowLeft size={13} />
-                                                <span>Back to Quotes</span>
+                                                <span>Back to quotes</span>
                                             </button>
                                         </div>
                                     </div>
@@ -485,7 +477,6 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                                         <cite className="not-italic text-sm font-bold text-[var(--color-text-strong)] font-[family-name:var(--font-sans)]">
                                                             {currentQuote.by}
                                                         </cite>
-                                                        <p className="text-[10px] text-[var(--color-text-muted)]">Author &amp; Thinker</p>
                                                     </div>
                                                 </div>
 
@@ -493,7 +484,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                                 <div className="p-4 rounded-2xl bg-[var(--color-surface-soft)]/90 border border-[var(--color-border-subtle)] backdrop-blur-sm space-y-1.5 shadow-sm">
                                                     <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand)] uppercase tracking-wider">
                                                         <Lightbulb size={13} />
-                                                        <span>Practical Takeaway</span>
+                                                        <span>A thought to try</span>
                                                     </div>
                                                     <p className="text-xs sm:text-sm leading-relaxed text-[var(--color-text-body)]">
                                                         {currentQuote.meaning}
@@ -530,7 +521,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                                 </button>
                                             </Tooltip>
 
-                                            <Tooltip content={copied ? "Copied!" : "Copy quote (C)"}>
+                                            <Tooltip content={copied ? "Copied" : "Copy quote (C)"}>
                                                 <button
                                                     onClick={handleCopy}
                                                     className={`
@@ -559,7 +550,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
 
                                         {/* Next / Prev Reel Buttons */}
                                         <div className="flex items-center gap-1.5">
-                                            <Tooltip content="Previous Quote (↑ / K)">
+                                            <Tooltip content="Previous quote (↑ / K)">
                                                 <button
                                                     onClick={goToPrev}
                                                     className="p-2 rounded-full bg-[var(--color-surface-card)] hover:bg-[var(--color-surface-hover)] text-[var(--color-text-strong)] transition-all cursor-pointer border border-[var(--color-border-default)] shadow-xs active:scale-95"
@@ -568,7 +559,7 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                                     <ChevronUp size={16} />
                                                 </button>
                                             </Tooltip>
-                                            <Tooltip content="Next Quote (↓ / J / Space)">
+                                            <Tooltip content="Next quote (↓ / J / Space)">
                                                 <button
                                                     onClick={goToNext}
                                                     className="flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-[var(--color-text-on-brand)] font-bold text-xs transition-all cursor-pointer shadow-sm active:scale-95"

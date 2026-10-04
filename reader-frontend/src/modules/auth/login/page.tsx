@@ -15,10 +15,10 @@ export default observer(function LoginPage() {
         <main className="flex flex-1 items-center justify-center overflow-y-auto p-4">
             <section className="w-full max-w-sm space-y-6 rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] p-6">
                 <div className="space-y-2 text-center">
-                    <h1 className="text-xl font-semibold text-[var(--color-text-strong)]">Welcome to Reader</h1>
-                    <p className="text-sm text-[var(--color-text-muted)]">Sign in with your Google account to use Reader and Tasks.</p>
+                    <h1 className="text-xl font-semibold text-[var(--color-text-strong)]">Sign in to do100x</h1>
+                    <p className="text-sm text-[var(--color-text-muted)]">Sign in to continue.</p>
                 </div>
-                {auth.status === 'loading' ? <p role="status" className="text-center text-sm">Checking your session…</p>
+                {auth.status === 'loading' ? <p role="status" className="text-center text-sm">Checking sign-in…</p>
                     : auth.status === 'error' ? <div className="space-y-3"><p role="alert">{auth.error}</p><Button onClick={() => void auth.bootstrap()}>Retry</Button></div>
                     : <GoogleSignIn />}
             </section>

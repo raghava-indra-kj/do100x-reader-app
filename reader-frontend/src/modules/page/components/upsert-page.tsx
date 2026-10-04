@@ -8,7 +8,7 @@ import { Dialog } from "@modules/core/ui/primitives/dialog";
 import { FormLabel } from "@modules/core/ui/primitives/form-label";
 import { Input } from "@modules/core/ui/primitives/input";
 import { toast } from "@modules/core/ui/primitives/toast/toast";
-import { pagesPageWithIdRouteValue } from "@boot/routes";
+import { readerPageWithIdRouteValue } from "@boot/routes";
 import { setDialogConsuming } from "../clipboard-paste";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -127,7 +127,7 @@ export function UpsertPageDialog({
             if (extracted.title) setTitle(extracted.title);
             if (extracted.category) setCategory(extracted.category);
             setContent(extracted.content);
-            toast.success("Pasted content detected with frontmatter");
+            toast.success("Page details found in pasted content");
         },
         [],
     );
@@ -186,7 +186,7 @@ export function UpsertPageDialog({
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
                 onOpenChange(false);
-                navigate(pagesPageWithIdRouteValue(result.data));
+                navigate(readerPageWithIdRouteValue(result.data));
             } else {
                 setSubmitState(DataState.error(result.error));
             }
@@ -201,7 +201,7 @@ export function UpsertPageDialog({
         >
             <div className="flex items-center justify-between shrink-0 px-6 pt-6 pb-4">
                 <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
-                    {isEdit ? "Edit Page" : "New Page"}
+                    {isEdit ? "Edit page" : "New page"}
                 </h2>
                 <Button
                     variant="outlined"
@@ -209,7 +209,7 @@ export function UpsertPageDialog({
                     onClick={() => setReadNowOpen(true)}
                     disabled={!content.trim()}
                 >
-                    Read Now
+                    Read now
                 </Button>
             </div>
             <div className="flex flex-col gap-5 px-6 pb-4 min-h-0 flex-1">
@@ -250,35 +250,35 @@ export function UpsertPageDialog({
                         className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-subtle)] hover:text-[var(--color-text-strong)] cursor-pointer select-none"
                     >
                         <span className="w-3 text-center">{isAdvancedOpen ? '▼' : '▶'}</span>
-                        <span>AI Prompt Customizations (Optional)</span>
+                        <span>Custom AI instructions (optional)</span>
                     </button>
 
                     {isAdvancedOpen && (
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4 rounded-lg bg-[var(--color-surface-soft)] border border-[var(--color-border-subtle)] animate-in fade-in slide-in-from-top-2 duration-150">
                             <div className="space-y-2">
-                                <FormLabel>Prompt for Explanation</FormLabel>
+                                <FormLabel>Explanation instructions</FormLabel>
                                 <textarea
                                     value={explanationSystemPrompt}
                                     onChange={(e) => setExplanationSystemPrompt(e.target.value)}
-                                    placeholder="Use inherited page prompt..."
+                                    placeholder="Leave blank to use inherited instructions"
                                     className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <FormLabel>Prompt for Meanings</FormLabel>
+                                <FormLabel>Word-meaning instructions</FormLabel>
                                 <textarea
                                     value={meaningSystemPrompt}
                                     onChange={(e) => setMeaningSystemPrompt(e.target.value)}
-                                    placeholder="Use inherited page prompt..."
+                                    placeholder="Leave blank to use inherited instructions"
                                     className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <FormLabel>Prompt for Asking Doubts</FormLabel>
+                                <FormLabel>Question instructions</FormLabel>
                                 <textarea
                                     value={doubtSystemPrompt}
                                     onChange={(e) => setDoubtSystemPrompt(e.target.value)}
-                                    placeholder="Use inherited page prompt..."
+                                    placeholder="Leave blank to use inherited instructions"
                                     className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-[var(--radius-md)] transition-colors outline-none h-20"
                                 />
                             </div>
@@ -353,7 +353,7 @@ const ReadNowDialog = observer(function ReadNowDialog({
         >
             <div className="flex items-center justify-between shrink-0 px-6 pt-6 pb-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-raised)]">
                 <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
-                    Preview Content
+                    Preview
                 </h2>
                 <div className="flex items-center gap-3">
                     <Button
@@ -361,7 +361,7 @@ const ReadNowDialog = observer(function ReadNowDialog({
                         size="sm"
                         onClick={() => onOpenChange(false)}
                     >
-                        Back to Edit
+                        Back to editing
                     </Button>
                     <Button
                         variant="outlined"

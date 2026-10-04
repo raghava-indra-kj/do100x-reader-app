@@ -20,12 +20,12 @@ function SenseItem({ sense, index }: { sense: DictionarySense; index: number }) 
             )}
             {sense.synonyms.length > 0 && (
                 <p className="text-xs text-[var(--color-text-muted)] ml-4">
-                    <span className="font-medium">Synonyms:</span> {sense.synonyms.join(', ')}
+                    <span className="font-medium">Synonyms</span> {sense.synonyms.join(', ')}
                 </p>
             )}
             {sense.antonyms.length > 0 && (
                 <p className="text-xs text-[var(--color-text-muted)] ml-4">
-                    <span className="font-medium">Antonyms:</span> {sense.antonyms.join(', ')}
+                    <span className="font-medium">Antonyms</span> {sense.antonyms.join(', ')}
                 </p>
             )}
             {sense.subsenses.length > 0 && (
@@ -59,12 +59,12 @@ function EntryCard({ entry }: { entry: DictionaryEntry }) {
             )}
             {entry.synonyms.length > 0 && (
                 <p className="text-xs text-[var(--color-text-muted)]">
-                    <span className="font-medium">Synonyms:</span> {entry.synonyms.join(', ')}
+                    <span className="font-medium">Synonyms</span> {entry.synonyms.join(', ')}
                 </p>
             )}
             {entry.antonyms.length > 0 && (
                 <p className="text-xs text-[var(--color-text-muted)]">
-                    <span className="font-medium">Antonyms:</span> {entry.antonyms.join(', ')}
+                    <span className="font-medium">Antonyms</span> {entry.antonyms.join(', ')}
                 </p>
             )}
         </div>
@@ -126,7 +126,7 @@ export const DictionaryPanel = observer(function DictionaryPanel() {
                 {dictStore.lookupState.isInit && (
                     <div className="flex flex-col items-center justify-center h-full gap-2 text-center">
                         <Search size={24} className="text-[var(--color-text-subtle)]" />
-                        <p className="text-sm text-[var(--color-text-muted)]">Search for a word to see its definition</p>
+                        <p className="text-sm text-[var(--color-text-muted)]">Enter a word to look it up.</p>
                     </div>
                 )}
 
@@ -174,7 +174,7 @@ export const DictionaryPanel = observer(function DictionaryPanel() {
                             {/* Source attribution */}
                             <div className="border-t border-[var(--color-border-subtle)] pt-3 mt-2">
                                 <p className="text-[10px] text-[var(--color-text-subtle)]">
-                                    Source:{' '}
+                                    Source{' '}
                                     <a
                                         href={result.source.url}
                                         target="_blank"

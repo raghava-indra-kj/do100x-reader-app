@@ -9,10 +9,10 @@ const panels: { id: SidebarPanelId; label: string; shortcut: string; icon: typeo
     { id: 'subpages', label: 'Subpages', shortcut: 'Alt+S', icon: FileText },
     { id: 'quizzes', label: 'Quizzes', shortcut: 'Alt+Q', icon: ClipboardList },
     { id: 'comments', label: 'Comments', shortcut: 'Alt+M', icon: MessageSquare },
-    { id: 'vocabulary', label: 'Vocabulary', shortcut: 'Alt+V', icon: NotebookPen },
-    { id: 'meaning', label: 'AI Meaning', shortcut: 'Alt+A', icon: Sparkles },
-    { id: 'explanation', label: 'AI Explanation', shortcut: 'Alt+E', icon: Compass },
-    { id: 'doubt', label: 'AI Doubts', shortcut: 'Alt+D', icon: HelpCircle },
+    { id: 'vocabulary', label: 'Saved words', shortcut: 'Alt+V', icon: NotebookPen },
+    { id: 'meaning', label: 'Word meanings', shortcut: 'Alt+A', icon: Sparkles },
+    { id: 'explanation', label: 'Explanations', shortcut: 'Alt+E', icon: Compass },
+    { id: 'doubt', label: 'Questions', shortcut: 'Alt+D', icon: HelpCircle },
 ];
 
 export function NavRail() {

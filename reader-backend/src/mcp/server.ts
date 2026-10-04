@@ -4,6 +4,7 @@ import { registerCommentTools } from "./tools/comments";
 import { registerVocabularyTools } from "./tools/vocabulary";
 import { registerTaskTools } from "./tools/tasks";
 import { registerQuizTools } from "./tools/quizzes";
+import { registerFinanceTools } from "./tools/finance";
 import { registerResources } from "./resources";
 import { registerPrompts } from "./prompts";
 
@@ -22,6 +23,7 @@ export function createReaderMcpServer(userId: string): McpServer {
   registerVocabularyTools(server, userId);
   registerTaskTools(server, userId);
   registerQuizTools(server, userId);
+  registerFinanceTools(server, userId);
   registerResources(server, userId);
   registerPrompts(server, userId);
 

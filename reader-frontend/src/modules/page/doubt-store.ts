@@ -85,11 +85,11 @@ export class DoubtStore {
         const entry = this.history.find(e => e.id === entryId);
         if (entry && entry.isLoading) {
             entry.isLoading = false;
-            entry.error = 'Request was cancelled';
+            entry.error = 'Request cancelled';
             entry.errorDetails = {
                 errorType: 'CANCELLED',
-                message: 'Request Cancelled',
-                description: 'The AI doubt answering request was cancelled.',
+                message: 'Request cancelled',
+                description: 'The request was cancelled.',
             };
         }
     }
@@ -200,11 +200,11 @@ export class DoubtStore {
             this.abortControllers.delete(entryId);
             runInAction(() => {
                 entry.isLoading = false;
-                entry.error = 'AI configuration not found. Please verify your settings.';
+                entry.error = 'Set up your AI connection in settings.';
                 entry.errorDetails = {
                     errorType: 'CONFIG_ERROR',
-                    message: 'AI Configuration Missing',
-                    description: 'No AI configuration found. Please go to Settings to configure your Base URL and API key.',
+                    message: 'AI connection needed',
+                    description: 'Add a provider URL and API key in settings.',
                 };
             });
             return;
@@ -215,11 +215,11 @@ export class DoubtStore {
             this.abortControllers.delete(entryId);
             runInAction(() => {
                 entry.isLoading = false;
-                entry.error = 'Default Model for Asking Doubts is not configured. Please go to Settings to select one.';
+                entry.error = 'Choose a model for questions in settings.';
                 entry.errorDetails = {
                     errorType: 'CONFIG_ERROR',
-                    message: 'Doubt Model Not Selected',
-                    description: 'Please go to Settings -> Model Selection and select a default model for Asking Doubts.',
+                    message: 'Choose a question model',
+                    description: 'Choose a model for questions in Settings → AI models.',
                 };
             });
             return;
@@ -261,10 +261,10 @@ Please help me understand this and directly answer my doubt.`;
                     entry.error = chatRes.error.details.message;
                     entry.errorDetails = chatRes.error.details;
                 } else {
-                    entry.error = chatRes.error.message || 'Failed to fetch AI answer.';
+                    entry.error = chatRes.error.message || 'Couldn’t get an answer. Try again.';
                     entry.errorDetails = {
                         errorType: 'UNKNOWN',
-                        message: chatRes.error.message || 'AI request failed',
+                        message: chatRes.error.message || 'Couldn’t get a response. Try again.',
                         rawError: chatRes.error,
                     };
                 }
@@ -280,8 +280,8 @@ Please help me understand this and directly answer my doubt.`;
 
         const result = await createPage({
             parentPageId: this.pageStore.pageId,
-            title: `Doubt: ${entry.searchTerm}`,
-            content: `### Context\n\n> ${entry.selectedText.split('\n').join('\n> ')}\n\n### Doubt\n\n*${entry.searchTerm}*\n\n### Answer\n\n${entry.responseMarkdown}`,
+            title: `Question: ${entry.searchTerm}`,
+            content: `### Context\n\n> ${entry.selectedText.split('\n').join('\n> ')}\n\n### Question\n\n*${entry.searchTerm}*\n\n### Answer\n\n${entry.responseMarkdown}`,
             category: null,
         });
 
@@ -290,9 +290,9 @@ Please help me understand this and directly answer my doubt.`;
             if (result.ok) {
                 entry.isSaved = true;
                 entry.savedPageId = result.data;
-                toast.success('Doubt saved as sub-page');
+                toast.success('Answer saved as a subpage');
             } else {
-                toast.error(result.error.message || 'Failed to save sub-page');
+                toast.error(result.error.message || 'Couldn’t save the subpage. Try again.');
             }
         });
     }

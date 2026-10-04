@@ -27,7 +27,7 @@ router.post("/", async (req, res) => {
   if (!name || !modelId) {
     res
       .status(400)
-      .json({ message: "name and modelId are required" });
+      .json({ message: "Enter a display name and model ID." });
     return;
   }
 
@@ -55,13 +55,13 @@ router.put("/:id", async (req, res) => {
   };
 
   if (!name || !modelId) {
-    res.status(400).json({ message: "name and modelId are required" });
+    res.status(400).json({ message: "Enter a display name and model ID." });
     return;
   }
 
   const existing = await prisma.user_model.findFirst({ where: { id, userId: res.locals.userId } });
   if (!existing) {
-    res.status(404).json({ message: "Model entry not found" });
+    res.status(404).json({ message: "Model not found." });
     return;
   }
 
@@ -83,7 +83,7 @@ router.delete("/:id", async (req, res) => {
 
   const existing = await prisma.user_model.findFirst({ where: { id, userId: res.locals.userId } });
   if (!existing) {
-    res.status(404).json({ message: "Model entry not found" });
+    res.status(404).json({ message: "Model not found." });
     return;
   }
 

@@ -320,7 +320,7 @@ const PageContent = observer(function PageContent() {
                             <div className="flex flex-col gap-5">
                                 <div className="flex items-start justify-between">
                                     <div className="flex flex-col gap-1">
-                                        <p className="text-sm font-semibold text-[var(--color-brand)]">You completed this page!</p>
+                                        <p className="text-sm font-semibold text-[var(--color-brand)]">Page finished</p>
                                     </div>
                                     <BaseDialog.Close className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
                                         <span className="text-lg leading-none">&times;</span>
@@ -339,7 +339,7 @@ const PageContent = observer(function PageContent() {
                                 </div>
                                 <div className="flex justify-end">
                                     <Button onClick={() => store.dismissMotivation()}>
-                                        Keep reading
+                                        Continue reading
                                     </Button>
                                 </div>
                             </div>

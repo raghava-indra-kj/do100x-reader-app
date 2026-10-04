@@ -47,7 +47,7 @@ router.get("/:pageId/edit-targets", requireSession, async (req, res) => {
 
 router.patch("/:pageId/section-body", async (req, res) => {
   const parsed = sectionEditSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: "Invalid section edit request" }); return; }
+  if (!parsed.success) { res.status(400).json({ message: "Check the section changes and try again." }); return; }
   try {
     res.json(await editSectionBody(prisma, res.locals.userId, req.params.pageId, parsed.data));
   } catch (error) {
@@ -283,7 +283,7 @@ router.patch("/:pageId/share", async (req, res) => {
   }
 
   if (reqUserId && page.userId !== reqUserId) {
-    res.status(403).json({ message: "Only the page owner can change sharing settings" });
+    res.status(403).json({ message: "Only the page owner can change sharing." });
     return;
   }
 
@@ -304,7 +304,7 @@ router.put("/:pageId", async (req, res) => {
   const { pageId } = req.params;
   const reqUserId = res.locals.userId as string;
   const parsed = fullPageEditSchema.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ message: "Title, Markdown content, and a valid contentVersion are required" }); return; }
+  if (!parsed.success) { res.status(400).json({ message: "A title, page content and current page version are required." }); return; }
   const {
     title,
     content,
@@ -325,7 +325,7 @@ router.put("/:pageId", async (req, res) => {
   }
 
   if (reqUserId && page.userId !== reqUserId) {
-    res.status(403).json({ message: "Only the page owner can edit this page" });
+    res.status(403).json({ message: "Only the page owner can edit this page." });
     return;
   }
 
@@ -342,7 +342,7 @@ router.put("/:pageId", async (req, res) => {
     },
   });
 
-  if (saved.count !== 1) { res.status(409).json({ message: "This page changed while you were editing. Reload before saving; your draft is preserved." }); return; }
+  if (saved.count !== 1) { res.status(409).json({ message: "This page has changed. Your draft is kept here. Copy it before reloading." }); return; }
 
   res.status(204).send();
 });
@@ -363,7 +363,7 @@ router.delete("/:pageId", async (req, res) => {
   }
 
   if (reqUserId && page.userId !== reqUserId) {
-    res.status(403).json({ message: "Only the page owner can delete this page" });
+    res.status(403).json({ message: "Only the page owner can delete this page." });
     return;
   }
 

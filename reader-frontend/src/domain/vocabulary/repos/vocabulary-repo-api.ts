@@ -13,7 +13,7 @@ export class VocabularyRepoApi implements IVocabularyRepo {
             const { data } = await apiClient.get('/vocabulary', { params: query });
             return ok((data as unknown[]).map((item) => DbVocabularySchema.parse(item)));
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to get vocabulary'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load saved words. Try again.'), cause: error }));
         }
     }
 
@@ -22,7 +22,7 @@ export class VocabularyRepoApi implements IVocabularyRepo {
             const { data } = await apiClient.post('/vocabulary', params);
             return ok(data as string);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to add to vocabulary'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t save the word. Try again.'), cause: error }));
         }
     }
 
@@ -31,7 +31,7 @@ export class VocabularyRepoApi implements IVocabularyRepo {
             await apiClient.delete(`/vocabulary/${vocabId}`);
             return ok(undefined);
         } catch (error) {
-            return err(new AppError({ message: getApiErrorMessage(error, 'Failed to delete vocabulary entry'), cause: error }));
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t remove the saved word. Try again.'), cause: error }));
         }
     }
 }

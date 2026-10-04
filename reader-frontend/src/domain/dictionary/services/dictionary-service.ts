@@ -17,7 +17,7 @@ export async function lookupWord(
 ): AsyncResult<DictionaryResult, AppError> {
     const trimmed = word.trim().toLowerCase();
     if (!trimmed) {
-        return err(new AppError({ message: 'Please enter a word to look up' }));
+        return err(new AppError({ message: 'Enter a word.' }));
     }
 
     const url = `${API_BASE}/entries/${encodeURIComponent(language)}/${encodeURIComponent(trimmed)}`;
@@ -27,7 +27,7 @@ export async function lookupWord(
         response = await fetch(url);
     } catch (cause) {
         return err(new AppError({
-            message: 'Unable to connect to dictionary service',
+            message: 'Couldn’t reach the dictionary. Try again.',
             cause,
         }));
     }
@@ -38,7 +38,7 @@ export async function lookupWord(
             return ok(data);
         } catch (cause) {
             return err(new AppError({
-                message: 'Failed to parse dictionary response',
+                message: 'Couldn’t read the dictionary response. Try again.',
                 cause,
             }));
         }
@@ -48,15 +48,15 @@ export async function lookupWord(
     switch (response.status) {
         case 404:
             return err(new AppError({
-                message: `No definitions found for "${trimmed}"`,
+                message: `No definition found for “${trimmed}”.`,
             }));
         case 429:
             return err(new AppError({
-                message: 'Dictionary rate limit exceeded. Try again later.',
+                message: 'The dictionary is busy. Try again later.',
             }));
         default:
             return err(new AppError({
-                message: `Dictionary lookup failed (${response.status}: ${response.statusText})`,
+                message: `Couldn’t look up this word (${response.status}: ${response.statusText}).`,
             }));
     }
 }

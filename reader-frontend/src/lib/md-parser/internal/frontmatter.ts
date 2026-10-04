@@ -39,12 +39,12 @@ export function extractFrontmatter(tree: Root): MdFrontmatter | null {
     try {
         parsed = load(node.value, { schema: JSON_SCHEMA });
     } catch (error) {
-        throw new MdParseError("Invalid YAML front matter", { cause: error });
+        throw new MdParseError("Check the YAML in the page’s front matter.", { cause: error });
     }
 
     if (parsed == null) return null;
     if (typeof parsed !== "object" || Array.isArray(parsed)) {
-        throw new MdParseError("Front matter must be a key-value mapping");
+        throw new MdParseError("Front matter must contain key-value pairs.");
     }
     return parsed as MdFrontmatter;
 }

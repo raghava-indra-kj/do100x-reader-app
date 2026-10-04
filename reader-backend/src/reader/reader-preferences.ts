@@ -35,7 +35,7 @@ export function createReaderPreferencesRouter(db: PrismaClient = prisma) {
   router.post("/home", async (_req, res) => res.json({ homePageId: await ensureReaderHome(db, res.locals.userId) }));
   router.patch("/preferences", async (req, res) => {
     const input = z.object({ homePageId: z.string().uuid().nullable() }).strict().safeParse(req.body);
-    if (!input.success) { res.status(400).json({ message: "Invalid Reader preference" }); return; }
+    if (!input.success) { res.status(400).json({ message: "Check your Reader preference and try again." }); return; }
     const userId: string = res.locals.userId;
     const homePageId = input.data.homePageId;
     const updated = await db.$transaction(async tx => {
