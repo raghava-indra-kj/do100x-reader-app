@@ -30,6 +30,7 @@ import {
 import { getLifePerspectiveConfig, saveLifePerspectiveConfig } from '@modules/core/utils/time-perspective';
 import { FORMAT_LLM_MD_CONTENT } from '@modules/core/constants/format-llm-guide';
 import { useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
+import './settings.css';
 
 type SettingsTab = 'account' | 'ai' | 'mcp' | 'guide';
 
@@ -119,12 +120,12 @@ export default function SettingsPage() {
   );
 
   return (
-    <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
+    <div className="settings-page flex h-screen flex-col bg-[var(--color-surface-canvas)]">
       <AppBar />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col md:flex-row overflow-hidden">
         {/* Left Sidebar Navigation */}
-        <aside className="w-64 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-card)]/40 p-4 shrink-0 flex flex-col gap-1 hidden md:flex overflow-y-auto">
+        <aside className="w-56 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-card)]/40 p-3 shrink-0 flex flex-col gap-1 hidden md:flex overflow-y-auto">
           <div className="px-3 py-2">
             <h1 className="text-xl font-semibold text-[var(--color-text-strong)] font-[family-name:var(--font-serif)]">
               Settings
@@ -193,8 +194,8 @@ export default function SettingsPage() {
         </div>
 
         {/* Right Main Content Pane */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
-          <div className="max-w-3xl mx-auto space-y-6">
+        <main className="settings-main flex-1 min-w-0 overflow-y-auto p-4 lg:p-6">
+          <div className="settings-content space-y-5">
             <Observer>
               {() =>
                 store.isLoading ? (
@@ -356,14 +357,6 @@ export default function SettingsPage() {
                                   <div className="flex items-center gap-1">
                                     <button
                                       type="button"
-                                      onClick={() => setShowApiKey((prev) => !prev)}
-                                      className="flex items-center gap-1 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer px-1.5 py-0.5 rounded"
-                                    >
-                                      {showApiKey ? <EyeOff size={13} /> : <Eye size={13} />}
-                                      <span>{showApiKey ? 'Hide' : 'Show'}</span>
-                                    </button>
-                                    <button
-                                      type="button"
                                       onClick={() => {
                                         navigator.clipboard.writeText(store.apiKeyInput);
                                         setCopiedApiKey(true);
@@ -390,6 +383,7 @@ export default function SettingsPage() {
                                   onClick={() => setShowApiKey((prev) => !prev)}
                                   className="absolute right-2.5 p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"
                                   title={showApiKey ? 'Hide API key' : 'Show API key'}
+                                  aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
                                 >
                                   {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                                 </button>
@@ -397,89 +391,74 @@ export default function SettingsPage() {
                             </div>
                           </div>
 
-                          {/* Task-Specific Model Assignments */}
-                          <div className="border-t border-[var(--color-border-subtle)] pt-4">
-                            <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider mb-3">
-                              Models by feature
-                            </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <div className="border-t border-[var(--color-border-subtle)] pt-4 space-y-3">
+                            <h4 className="text-xs font-semibold text-[var(--color-text-muted)]">Models by feature</h4>
+                            <div className="settings-feature-grid">
+                            <div className="settings-feature" role="group" aria-label="Explanations">
+                              <h4 className="text-sm font-semibold text-[var(--color-text-strong)]">Explanations</h4>
                               <div className="space-y-2">
-                                <FormLabel>Explanations</FormLabel>
-                                <Select
-                                  value={store.explanationModelIdInput}
+                                <FormLabel>Model</FormLabel>
+                                <Select value={store.explanationModelIdInput}
                                   onValueChange={(v) => store.setExplanationModelIdInput(v || '')}
-                                  items={{
-                                    '': 'None',
-                                    ...Object.fromEntries(store.userModels.map((m: any) => [m.modelId, m.name])),
-                                  }}
-                                  placeholder="Select model"
+                                  items={{ '': 'None', ...Object.fromEntries(store.userModels.map((m: any) => [m.modelId, m.name])) }}
+                                  placeholder="Select model" tooltip="Explanations model" className="w-full min-w-0"
                                 />
                               </div>
                               <div className="space-y-2">
-                                <FormLabel>Word meanings</FormLabel>
-                                <Select
-                                  value={store.meaningModelIdInput}
-                                  onValueChange={(v) => store.setMeaningModelIdInput(v || '')}
-                                  items={{
-                                    '': 'None',
-                                    ...Object.fromEntries(store.userModels.map((m: any) => [m.modelId, m.name])),
-                                  }}
-                                  placeholder="Select model"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <FormLabel>Questions</FormLabel>
-                                <Select
-                                  value={store.doubtModelIdInput}
-                                  onValueChange={(v) => store.setDoubtModelIdInput(v || '')}
-                                  items={{
-                                    '': 'None',
-                                    ...Object.fromEntries(store.userModels.map((m: any) => [m.modelId, m.name])),
-                                  }}
-                                  placeholder="Select model"
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Global Custom System Prompts */}
-                          <div className="border-t border-[var(--color-border-subtle)] pt-4 space-y-4">
-                            <h4 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">
-                              Custom instructions (optional)
-                            </h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                              <div className="space-y-2">
-                                <FormLabel>Explanation instructions</FormLabel>
-                                <textarea
+                                <FormLabel htmlFor="settings-explanation-instructions">Custom instructions (optional)</FormLabel>
+                                <textarea id="settings-explanation-instructions" aria-label="Explanation instructions"
                                   value={store.explanationSystemPromptInput}
                                   onChange={(e) => store.setExplanationSystemPromptInput(e.target.value)}
                                   placeholder="How should passages be explained?"
-                                  className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-xl transition-colors outline-none h-20"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <FormLabel>Word-meaning instructions</FormLabel>
-                                <textarea
-                                  value={store.meaningSystemPromptInput}
-                                  onChange={(e) => store.setMeaningSystemPromptInput(e.target.value)}
-                                  placeholder="How should words be explained?"
-                                  className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-xl transition-colors outline-none h-20"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <FormLabel>Question instructions</FormLabel>
-                                <textarea
-                                  value={store.doubtSystemPromptInput}
-                                  onChange={(e) => store.setDoubtSystemPromptInput(e.target.value)}
-                                  placeholder="How should questions be answered?"
-                                  className="w-full resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-2 text-xs rounded-xl transition-colors outline-none h-20"
+                                  className="settings-instructions"
                                 />
                               </div>
                             </div>
+                            <div className="settings-feature" role="group" aria-label="Word meanings">
+                              <h4 className="text-sm font-semibold text-[var(--color-text-strong)]">Word meanings</h4>
+                              <div className="space-y-2">
+                                <FormLabel>Model</FormLabel>
+                                <Select value={store.meaningModelIdInput}
+                                  onValueChange={(v) => store.setMeaningModelIdInput(v || '')}
+                                  items={{ '': 'None', ...Object.fromEntries(store.userModels.map((m: any) => [m.modelId, m.name])) }}
+                                  placeholder="Select model" tooltip="Word meanings model" className="w-full min-w-0"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <FormLabel htmlFor="settings-meaning-instructions">Custom instructions (optional)</FormLabel>
+                                <textarea id="settings-meaning-instructions" aria-label="Word-meaning instructions"
+                                  value={store.meaningSystemPromptInput}
+                                  onChange={(e) => store.setMeaningSystemPromptInput(e.target.value)}
+                                  placeholder="How should words be explained?"
+                                  className="settings-instructions"
+                                />
+                              </div>
+                            </div>
+                            <div className="settings-feature" role="group" aria-label="Questions">
+                              <h4 className="text-sm font-semibold text-[var(--color-text-strong)]">Questions</h4>
+                              <div className="space-y-2">
+                                <FormLabel>Model</FormLabel>
+                                <Select value={store.doubtModelIdInput}
+                                  onValueChange={(v) => store.setDoubtModelIdInput(v || '')}
+                                  items={{ '': 'None', ...Object.fromEntries(store.userModels.map((m: any) => [m.modelId, m.name])) }}
+                                  placeholder="Select model" tooltip="Questions model" className="w-full min-w-0"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <FormLabel htmlFor="settings-doubt-instructions">Custom instructions (optional)</FormLabel>
+                                <textarea id="settings-doubt-instructions" aria-label="Question instructions"
+                                  value={store.doubtSystemPromptInput}
+                                  onChange={(e) => store.setDoubtSystemPromptInput(e.target.value)}
+                                  placeholder="How should questions be answered?"
+                                  className="settings-instructions"
+                                />
+                              </div>
+                            </div>
+                            </div>
                           </div>
 
-                          <div className="pt-2">
-                            <Button onClick={() => store.saveConfig()} loading={store.isSavingConfig}>
+                          <div className="settings-save-footer">
+                            <Button size="sm" onClick={() => store.saveConfig()} loading={store.isSavingConfig}>
                               Save
                             </Button>
                           </div>
