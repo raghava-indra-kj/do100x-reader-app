@@ -6,6 +6,24 @@ the `zip` utility. No new Node dependency is used for packaging. The host must
 allow a shell startup command, dependency installation, Prisma's native engine,
 outgoing npm/Prisma downloads and access to the configured MySQL database.
 
+## Database initialization
+
+Fresh installations use one migration, `20261004000000_initial_schema`, which
+creates the complete current schema. `start.sh` applies it once with Prisma's
+migration tracking; subsequent starts do not recreate tables. Keep future schema
+changes as new incremental migrations once real data exists.
+
+The initial schema retains case-sensitive Google identity subjects and vocabulary
+duplicate keys. Do not substitute `db push`, which cannot represent these custom
+column collations in the Prisma schema.
+
+This baseline replaces the pre-release migration chain. It is only for empty
+databases, not an upgrade for databases using that chain. For a failed first
+installation, stop the hosting application's automatic startup, inspect all
+application tables, take a backup, then explicitly approve any database cleanup
+before applying the new baseline. Never clear migration records alone while
+leaving partially created tables. Neither packaging nor startup resets databases.
+
 ## Two explicit profiles
 
 | Usage | Configuration |

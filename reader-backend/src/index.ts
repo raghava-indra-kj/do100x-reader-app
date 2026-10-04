@@ -80,13 +80,32 @@ process.on("unhandledRejection", (reason) => {
   console.error("Unhandled rejection:", reason);
 });
 
-process.title = `Reader App [Port ${PORT}]`;
+process.title = `do100x [Port ${PORT}]`;
 
-app.listen(PORT, () => {
-  console.log("\n=======================================================");
-  console.log(`   READER APP SERVER RUNNING`);
-  console.log(`   URL:      http://localhost:${PORT}`);
-  console.log(`   PID:      ${process.pid}`);
-  console.log(`   Frontend: ${hasFrontend ? "Unified (dist/)" : "API Mode"}`);
-  console.log("=======================================================\n");
+app.listen(PORT, (error?: Error) => {
+  if (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "EADDRINUSE") {
+      console.error(`do100x could not start: port ${PORT} is already in use. Stop the existing instance before starting another.`);
+    } else if (code === "EACCES") {
+      console.error(`do100x could not start: permission denied for port ${PORT}. Check the hosting port configuration.`);
+    } else {
+      console.error(`do100x could not start${code ? ` (${code})` : ""}. Check the server configuration.`);
+    }
+    process.exit(1);
+  }
+
+  const environment = process.env.NODE_ENV || "development";
+  const website = environment === "production"
+    ? authConfig().origins[0]
+    : `http://localhost:${PORT}`;
+  console.log([
+    "",
+    "do100x is running",
+    `Environment: ${environment}`,
+    `Website:     ${website}`,
+    `Port:        ${PORT}`,
+    `Process ID:  ${process.pid}`,
+    "",
+  ].join("\n"));
 });

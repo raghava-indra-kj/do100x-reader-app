@@ -11,16 +11,16 @@ Markdown explanation, difficulty, usage frequency, learning status, practice
 sentence, last review, timestamps and version. Words/phrases and different case
 variants remain distinct; no stemming or dictionary lookup is used to merge them.
 
-The forward migration removes `pageId`, keeps the earliest copy of each exact
-trimmed word for each user, and initializes learning fields. No old API parameters,
-compatibility aliases or fallback data structures are retained. It does not reset
-the database or change Reader pages, quizzes, Finance or Tasks. The migration must
-be deployed before running the new backend. Prisma generation must also run.
+The initial schema creates the generic vocabulary table directly, without a
+`pageId` or legacy conversion steps. The single initial migration creates all
+current application tables in dependency order. Deploy it to an empty database
+before starting the backend, and generate the Prisma client as usual. Existing
+databases with older migration histories require a separately approved recovery;
+startup never clears their data or migration history.
 
 The existing root `npm run prod` performs installation, Prisma generation,
 migration deployment and the application builds before starting the server.
-These operations were **not run** as part of this implementation. Back up a
-populated database before deploying any schema migration. Use migrations, not
+Back up a populated database before deploying any schema migration. Use migrations, not
 `db push`: the explicit binary collation on `normalizedTerm` is essential.
 
 ## Shared operations

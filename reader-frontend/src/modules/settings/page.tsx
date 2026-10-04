@@ -110,7 +110,7 @@ export default function SettingsPage() {
   const mcpConfigJson = JSON.stringify(
     {
       mcpServers: {
-        reader: {
+        do100x: {
           serverUrl: mcpUrl,
         },
       },
