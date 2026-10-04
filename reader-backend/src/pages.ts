@@ -220,7 +220,6 @@ router.post("/", async (req, res) => {
     title: string;
     content: string;
     category: string | null;
-    userId: string;
     meaningSystemPrompt?: string;
     explanationSystemPrompt?: string;
     doubtSystemPrompt?: string;

@@ -3,6 +3,7 @@ import type { AppError } from '../../../core/errors/app-error';
 import type { CurrentUserData } from '../models/current-user';
 
 export interface IAuthRepo {
-    me(params: { username: string; password: string }): AsyncResult<CurrentUserData, AppError>;
-    signup(params: { username: string; password: string }): AsyncResult<CurrentUserData, AppError>;
+    session(): AsyncResult<CurrentUserData | null, AppError>;
+    signIn(credential: string, nonce: string): AsyncResult<CurrentUserData, AppError>;
+    logout(): AsyncResult<void, AppError>;
 }

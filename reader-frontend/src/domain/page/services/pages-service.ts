@@ -32,7 +32,6 @@ export async function getPage(
 
 export async function createPage(
     params: {
-        userId: string;
         parentPageId: string | null;
         title: string;
         content: string;

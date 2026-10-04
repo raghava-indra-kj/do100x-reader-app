@@ -1,5 +1,4 @@
 import { AppRouter } from '@boot/router';
-import { loadEnv } from '@core/models/env';
 import '@di/container';
 import '@fontsource/atkinson-hyperlegible/400.css';
 import '@fontsource/atkinson-hyperlegible/700.css';
@@ -13,7 +12,6 @@ import 'reflect-metadata';
 
 async function main() {
     const rootElement = document.getElementById('root')!;
-    await loadEnv();
     createRoot(rootElement).render(
         <StrictMode>
             <ThemeProvider>

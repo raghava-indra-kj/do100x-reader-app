@@ -13,7 +13,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("pins attempts, validates sele
   const rollback = new Error("attempt fixture rollback");
   try {
     await db.$transaction(async (tx) => {
-      const owner = await tx.appuser.create({ data: { id: randomUUID(), username: `q${randomUUID().slice(0, 12)}`, password: "0000" } });
+      const owner = await tx.appuser.create({ data: { id: randomUUID(), email: `test-${randomUUID()}@example.com`, identities: { create: { provider: "GOOGLE", providerSubject: randomUUID() } } } });
       const page = await tx.page.create({ data: { id: randomUUID(), userId: owner.id, title: "Attempt fixture", content: "Page unchanged", childrenCount: 0, sortOrder: 0, isPublic: true, createdAt: new Date(), updatedAt: new Date() } });
       const quiz = await createQuiz(tx, owner.id, page.id, {
         title: "Mixed paper", questions: [

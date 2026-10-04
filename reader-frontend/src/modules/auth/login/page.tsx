@@ -1,73 +1,27 @@
-import { pagesPageWithIdRouteValue, signupPageRoute } from '@boot/routes';
 import { AppBar } from '@modules/core/ui/components/appbar';
 import { Button } from '@modules/core/ui/primitives/button';
-import { FormError } from '@modules/core/ui/primitives/form-error';
-import { FormLabel } from '@modules/core/ui/primitives/form-label';
-import { Input } from '@modules/core/ui/primitives/input';
-import { Observer } from 'mobx-react-lite';
-import { useMemo } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { observer } from 'mobx-react-lite';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../provider/store';
-import { LoginStore } from './store';
+import { GoogleSignIn } from './google-sign-in';
+import { safeReturnPath } from './return-path';
 
-export default function LoginPage() {
-    const navigate = useNavigate();
-    const authStore = useAuthStore();
-    const loginStore = useMemo(() => new LoginStore({ navigate, authStore }), [authStore]);
-
-    if (authStore.isAuthenticated) {
-        const currentUser = authStore.currentUser;
-        const redirectUrl = pagesPageWithIdRouteValue(currentUser.homepageId);
-        return <Navigate to={redirectUrl} replace />;
-    }
-
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        await loginStore.submit();
-    };
-
-    return (
-        <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
-            <AppBar />
-            <div className="flex-1 overflow-y-auto">
-                <div className="min-h-full flex flex-col p-4">
-                    <form onSubmit={handleSubmit} className="w-full max-w-sm mx-auto my-auto space-y-4 rounded-[var(--radius-lg)] bg-[var(--color-surface-card)] p-6">
-                    <h1 className="text-lg font-semibold text-[var(--color-text-strong)]">Login</h1>
-                    <Observer>
-                        {() => (
-                            <div className="space-y-2">
-                                <FormLabel>Username</FormLabel>
-                                <Input value={loginStore.username} onValueChange={(v) => loginStore.setUsername(v)} placeholder="Enter username" />
-                            </div>
-                        )}
-                    </Observer>
-                    <Observer>
-                        {() => (
-                            <div className="space-y-2">
-                                <FormLabel>Password</FormLabel>
-                                <Input type="password" value={loginStore.password} onValueChange={(v) => loginStore.setPassword(v)} placeholder="Enter password" />
-                            </div>
-                        )}
-                    </Observer>
-                    <Observer>
-                        {() => (
-                            <>
-                                {loginStore.error && <FormError message={loginStore.error} />}
-                                <Button type="submit" className="w-full" disabled={!loginStore.isSubmittable || loginStore.submitting}>
-                                    {loginStore.submitting ? 'Logging in...' : 'Login'}
-                                </Button>
-                            </>
-                        )}
-                    </Observer>
-                        <p className="text-center text-sm text-[var(--color-text-subtle)]">
-                            Don't have an account?{' '}
-                            <Link to={signupPageRoute} className="text-[var(--color-text-body)] underline">
-                                Sign Up
-                            </Link>
-                        </p>
-                    </form>
+export default observer(function LoginPage() {
+    const auth = useAuthStore();
+    const location = useLocation();
+    if (auth.isAuthenticated) return <Navigate to={safeReturnPath(location.state?.returnTo)} replace />;
+    return <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
+        <AppBar />
+        <main className="flex flex-1 items-center justify-center overflow-y-auto p-4">
+            <section className="w-full max-w-sm space-y-6 rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-card)] p-6">
+                <div className="space-y-2 text-center">
+                    <h1 className="text-xl font-semibold text-[var(--color-text-strong)]">Welcome to Reader</h1>
+                    <p className="text-sm text-[var(--color-text-muted)]">Sign in with your Google account to use Reader and Tasks.</p>
                 </div>
-            </div>
-        </div>
-    );
-}
+                {auth.status === 'loading' ? <p role="status" className="text-center text-sm">Checking your session…</p>
+                    : auth.status === 'error' ? <div className="space-y-3"><p role="alert">{auth.error}</p><Button onClick={() => void auth.bootstrap()}>Retry</Button></div>
+                    : <GoogleSignIn />}
+            </section>
+        </main>
+    </div>;
+});

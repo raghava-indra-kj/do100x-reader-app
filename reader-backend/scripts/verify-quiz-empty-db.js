@@ -31,7 +31,7 @@ async function main() {
     await root.$executeRawUnsafe(`CREATE DATABASE \`${temporaryDatabase}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
     created = true;
     fresh = new PrismaClient({ datasources: { db: { url: temporaryUrl } } });
-    prismaCli(["db", "push", "--skip-generate", "--schema", "prisma/schema.prisma"]);
+    prismaCli(["migrate", "deploy", "--schema", "prisma/schema.prisma"]);
     prismaCli(["migrate", "diff", "--from-schema-datasource", "prisma/schema.prisma", "--to-schema-datamodel", "prisma/schema.prisma", "--exit-code"]);
     const rows = await fresh.$queryRawUnsafe("SELECT COUNT(*) AS total FROM quiz");
     if (Number(rows[0]?.total) !== 0) throw new Error("Fresh quiz table was not empty");

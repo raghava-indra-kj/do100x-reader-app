@@ -11,7 +11,7 @@ async function runMcpFullTest() {
     process.exit(1);
   }
 
-  console.log(`Testing MCP Server strictly locked to user: ${user.username} (${user.id})`);
+  console.log(`Testing MCP Server strictly locked to user: ${user.displayName || user.email} (${user.id})`);
 
   const server = createReaderMcpServer(user.id);
   const toolMap = (server as any)._registeredTools;

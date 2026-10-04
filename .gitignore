@@ -8,6 +8,9 @@ reader-frontend/dist/
 reader-backend/dist/
 
 # Environment files
+client_secret*.json
+.env.*
+!.env.example
 .env
 reader-frontend/.env
 reader-backend/.env

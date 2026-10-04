@@ -1,20 +1,14 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "./prisma";
+import { requireSession } from "./session";
 
 const router = Router();
+router.use(requireSession);
 
-function getUserId(req: Request): string | undefined {
-  return (req.headers["x-user-id"] as string) || (req.query.userId as string) || undefined;
-}
 
 // GET /backend-api/task-lists - Get all lists for user with task counts
 router.get("/", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const lists = await prisma.task_list.findMany({
     where: { userId, deletedAt: null },
     orderBy: { sortOrder: "asc" },
@@ -71,12 +65,7 @@ router.get("/", async (req: Request, res: Response) => {
 
 // POST /backend-api/task-lists - Create new list
 router.post("/", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { name, color, icon } = req.body;
   if (!name || typeof name !== "string") {
     res.status(400).json({ error: "List name is required" });
@@ -118,12 +107,7 @@ router.post("/", async (req: Request, res: Response) => {
 
 // PATCH /backend-api/task-lists/:id - Update list
 router.patch("/:id", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { id } = req.params;
   const { name, color, icon, sortOrder } = req.body;
 
@@ -162,12 +146,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
 
 // DELETE /backend-api/task-lists/:id - Soft delete list (tasks move to Inbox or get deleted)
 router.delete("/:id", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { id } = req.params;
   const deleteTasks = req.query.deleteTasks === "true";
 

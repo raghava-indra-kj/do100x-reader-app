@@ -40,23 +40,28 @@ async function clean() {
   await admin.$disconnect();
 }
 async function main() {
+  if (process.env.NODE_ENV === 'production' || process.env.RUN_BROWSER_TESTS !== '1') throw new Error('Browser fixtures require RUN_BROWSER_TESTS=1 in a nonproduction environment');
   await admin.$executeRawUnsafe(`CREATE DATABASE \`${name}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
   created = true;
-  const result = spawnSync(process.execPath, [require.resolve('prisma'), 'db', 'push', '--skip-generate', '--schema', 'prisma/schema.prisma'], {
+  const result = spawnSync(process.execPath, [require.resolve('prisma'), 'migrate', 'deploy', '--schema', 'prisma/schema.prisma'], {
     cwd: path.resolve(__dirname, '..'), env: { ...process.env, DATABASE_URL: disposableUrl }, encoding: 'utf8', timeout: 120000,
   });
   if (result.status !== 0) throw new Error(result.stderr || result.stdout || 'Prisma setup failed');
   process.env.DATABASE_URL = disposableUrl;
   appDb = new isolatedClient.PrismaClient({ datasources: { db: { url: disposableUrl } } });
-  const owner = await appDb.appuser.create({ data: { id: randomUUID(), username: `q${randomBytes(6).toString('hex')}`, password: '0000' } });
+  const ownerId = randomUUID();
+  const owner = await appDb.appuser.create({ data: { id: ownerId, displayName: 'Quiz verification', email: `${ownerId}@example.com`, identities: { create: { provider: 'GOOGLE', providerSubject: `fixture-${ownerId}` } } } });
   const page = await appDb.page.create({ data: { id: randomUUID(), userId: owner.id, title: 'Quiz browser fixture', content: '## Reader page\n\nA disposable quiz testing page.', childrenCount: 0, sortOrder: 0, isPublic: true, createdAt: new Date(), updatedAt: new Date() } });
-  const { issueSession } = require('../src/session');
+  const { attachSession, issueSession } = require('../src/session');
+  const { createAuthRouter } = require('../src/auth/auth-router');
   const { createQuizRouter } = require('../src/quiz/quiz-router');
   const app = express();
   app.use(express.json({ limit: '10mb' }));
+  app.use('/backend-api', attachSession(appDb));
+  app.use('/backend-api/auth', createAuthRouter(appDb));
   app.get('/__verify/login', (_req, res) => {
     issueSession(res, owner.id);
-    res.type('html').send(`<script>localStorage.setItem('current_user', ${JSON.stringify(JSON.stringify({ id: owner.id, username: owner.username, password: '0000', homepageId: page.id }))}); location.replace('/pages/${page.id}');</script>`);
+    res.redirect(`/pages/${page.id}`);
   });
   app.post('/__verify/stop', (_req, res) => { res.json({ stopped: true }); setImmediate(() => clean().catch((error) => { console.error(error); process.exitCode = 1; })); });
   app.get('/__verify/state', async (_req, res) => res.json({ pageId: page.id, quizzes: await appDb.quiz.count(), attempts: await appDb.quiz_attempt.count() }));
@@ -74,6 +79,7 @@ async function main() {
   app.get('*splat', (_req, res) => res.sendFile(path.join(frontend, 'index.html')));
   server = app.listen(0, '127.0.0.1', () => {
     const port = server.address().port;
+    process.env.APP_ORIGINS = `http://127.0.0.1:${port}`;
     console.log(JSON.stringify({ url: `http://127.0.0.1:${port}/__verify/login`, pageId: page.id, database: name }));
   });
 }

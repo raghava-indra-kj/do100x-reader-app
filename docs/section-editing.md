@@ -95,25 +95,25 @@ Clients using the older tool schemas must fetch and pass a fresh version.
 
 ## Setup and verification
 
-The database adds `page.contentVersion Int @default(0)` without deleting data.
-This repository uses Prisma schema push (no migration history). Stop the running
-backend first on Windows so it does not lock Prisma's engine, then from the root:
+The current Google-only release uses the checked-in Prisma migration baseline.
+Use a new empty database; the old username/password database is not migrated.
+Stop the running backend first on Windows so it does not lock Prisma's engine,
+then from the root:
 
 ```powershell
 npm install
 npm run db:generate
-npm run db:push
+npm run db:migrate
 npm run build
 npm start
 ```
 
-Page ownership now uses a signed HttpOnly SameSite=Strict session cookie instead
-of trusting `x-user-id`. The existing stable branch's sign-in/signup flow issues
-it; sign in again after upgrading. This is not a replacement of the branch's
-authentication provider. Production requires HTTPS and `SESSION_SECRET` (at
-least 32 random characters) in `reader-backend/.env`. Use the same secret across
-instances/restarts. Development without a secret invalidates sessions on restart.
-Other legacy non-page API routes have not been migrated by this feature.
+Page ownership uses a signed HttpOnly SameSite=Strict session cookie issued only
+after server verification of Google sign-in. Private HTTP APIs derive account
+identity from that cookie, not from request headers or submitted user IDs.
+Configure a stable `SESSION_SECRET` of at least 32 random characters in every
+environment. Production requires HTTPS. See [google-sign-in.md](google-sign-in.md)
+for database cutover, environment settings, Google setup, and startup.
 
 ```powershell
 npm test --workspace @reader/md-ast

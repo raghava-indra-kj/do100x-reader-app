@@ -8,12 +8,49 @@ datasource db {
 }
 
 model appuser {
-  id         String  @id @default(uuid()) @db.VarChar(36)
-  username   String  @db.VarChar(255)
-  password   String  @db.VarChar(255)
-  homepageId String? @db.VarChar(36)
+  id          String   @id @default(uuid()) @db.VarChar(36)
+  displayName String?  @db.VarChar(255)
+  email       String   @db.VarChar(320)
+  avatarUrl   String?  @db.Text
+  createdAt   DateTime @default(now()) @db.DateTime(6)
+  updatedAt   DateTime @updatedAt @db.DateTime(6)
 
   quizAttempts quiz_attempt[]
+  identities auth_identity[]
+  readerPreferences reader_preferences?
+}
+
+enum auth_provider {
+  GOOGLE
+}
+
+model auth_identity {
+  id              String        @id @default(uuid()) @db.VarChar(36)
+  userId          String        @db.VarChar(36)
+  provider        auth_provider
+  providerSubject String        @db.VarChar(255)
+  createdAt       DateTime      @default(now()) @db.DateTime(6)
+  updatedAt       DateTime      @updatedAt @db.DateTime(6)
+  user            appuser       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+  @@unique([userId, provider])
+}
+
+model auth_login_challenge {
+  idHash    String   @id @db.Char(64)
+  nonceHash String   @db.Char(64)
+  expiresAt DateTime @db.DateTime(6)
+
+  @@index([expiresAt])
+}
+
+model reader_preferences {
+  userId     String   @id @db.VarChar(36)
+  homePageId String?  @db.VarChar(36)
+  updatedAt  DateTime @updatedAt @db.DateTime(6)
+  user       appuser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  homePage   page?    @relation(fields: [homePageId], references: [id], onDelete: SetNull)
 }
 
 model user_preferences {
@@ -41,6 +78,7 @@ model page {
   doubtSystemPrompt       String?   @db.Text
 
   quizzes quiz[]
+  homePreferences reader_preferences[]
 }
 
 enum quiz_question_kind {
@@ -202,7 +240,7 @@ model quiz_answer_evaluation {
 
 model comment {
   id            String   @id @default(uuid()) @db.VarChar(36)
-  userId        String?  @db.VarChar(36)
+  userId        String   @db.VarChar(36)
   pageId        String   @db.VarChar(36)
   pageTitle     String   @db.VarChar(1000)
   sectionTitle  String?  @db.VarChar(1000)
@@ -216,7 +254,7 @@ model comment {
 
 model vocabulary {
   id        String   @id @default(uuid()) @db.VarChar(36)
-  userId    String?  @db.VarChar(36)
+  userId    String   @db.VarChar(36)
   pageId    String   @db.VarChar(36)
   term      String   @db.VarChar(255)
   createdAt DateTime @db.DateTime(6)

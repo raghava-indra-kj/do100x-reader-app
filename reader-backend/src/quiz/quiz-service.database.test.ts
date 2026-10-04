@@ -14,8 +14,8 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("stores immutable quiz revisio
   const rollback = new Error("quiz fixture rollback");
   try {
     await db.$transaction(async (tx) => {
-      const owner = await tx.appuser.create({ data: { id: randomUUID(), username: `q${randomUUID().slice(0, 12)}`, password: "0000" } });
-      const stranger = await tx.appuser.create({ data: { id: randomUUID(), username: `q${randomUUID().slice(0, 12)}`, password: "0000" } });
+      const owner = await tx.appuser.create({ data: { id: randomUUID(), email: `test-${randomUUID()}@example.com`, identities: { create: { provider: "GOOGLE", providerSubject: randomUUID() } } } });
+      const stranger = await tx.appuser.create({ data: { id: randomUUID(), email: `test-${randomUUID()}@example.com`, identities: { create: { provider: "GOOGLE", providerSubject: randomUUID() } } } });
       const page = await tx.page.create({ data: { id: randomUUID(), userId: owner.id, title: "Quiz fixture", content: "## Page only", childrenCount: 0, sortOrder: 0, isPublic: true, createdAt: new Date(), updatedAt: new Date() } });
       const first = await createQuiz(tx, owner.id, page.id, {
         title: "First paper",

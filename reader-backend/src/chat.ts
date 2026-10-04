@@ -1,8 +1,11 @@
 import { Router } from "express";
 import OpenAI from "openai";
 import { prisma } from "./prisma";
+import { requireSession } from "./session";
+import { canReadPage } from "./page-access";
 
 const router = Router();
+router.use(requireSession);
 
 async function resolveSystemPrompt(
   userId: string,
@@ -63,8 +66,8 @@ async function resolveSystemPrompt(
 
 // POST /backend-api/chat
 router.post("/", async (req, res) => {
-  const { userId, modelId, systemPrompt, userPrompt, pageId, actionType } = req.body as {
-    userId: string;
+  const userId = res.locals.userId as string;
+  const { modelId, systemPrompt, userPrompt, pageId, actionType } = req.body as {
     modelId: string;
     systemPrompt: string;
     userPrompt: string;
@@ -73,18 +76,19 @@ router.post("/", async (req, res) => {
   };
 
   // 1. Validate inputs
-  if (!userId || !modelId || !systemPrompt || !userPrompt) {
+  if (!modelId || !systemPrompt || !userPrompt) {
     res.status(400).json({
       error: {
         type: "CONFIG_ERROR",
         message: "Missing required fields",
-        description: "userId, modelId, systemPrompt, and userPrompt are all required.",
+        description: "modelId, systemPrompt, and userPrompt are all required.",
         rawError: { body: req.body },
       },
     });
     return;
   }
 
+  if (pageId && !await canReadPage(prisma, pageId, userId)) { res.status(404).json({ message: "Page not found" }); return; }
   // 2. Resolve System Prompt
   const resolvedSystemPrompt = await resolveSystemPrompt(userId, pageId, actionType, systemPrompt);
 

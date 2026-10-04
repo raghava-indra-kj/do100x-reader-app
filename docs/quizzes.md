@@ -4,7 +4,7 @@ Quizzes are separate records attached to a Reader page, not embedded in its Mark
 
 ## Data and revision behavior
 
-The schema has eight additive tables: `quiz`, `quiz_revision`, `quiz_question`, `quiz_option`, `quiz_attempt`, `quiz_attempt_answer`, `quiz_answer_selection`, and `quiz_answer_evaluation`. The full schema contract and one-time SQL application procedure are in [quiz-step-1.md](quiz-step-1.md).
+The schema has eight additive tables: `quiz`, `quiz_revision`, `quiz_question`, `quiz_option`, `quiz_attempt`, `quiz_attempt_answer`, `quiz_answer_selection`, and `quiz_answer_evaluation`. The full schema contract and migration procedure are in [quiz-step-1.md](quiz-step-1.md).
 
 Each save publishes a complete immutable `quiz_revision`. Question and option rows are new for each revision. Editing, regenerating, reordering, or removing a question requires the question ID from the *expected* revision and a matching `expectedRevisionNo`. A stale edit returns HTTP 409 / MCP error 409 and changes nothing. Archiving a quiz hides it from new starts, but does not delete revisions, answers, evaluations, or earlier submissions.
 
@@ -45,7 +45,7 @@ To evaluate, an agent reads a *submitted* attempt's context, then records a batc
 
 ## Deployment and verification
 
-Back up the target database and review the schema diff before applying the one-time additive SQL; do not run `migrate reset`, `--force-reset`, or `--accept-data-loss`. A fresh database can be created by the normal `npm run db:push` workflow. Generate the Prisma client and build before starting the updated server. On Windows, a running Reader backend may lock the Prisma engine DLL: stop it during a planned restart before `npm run db:generate`, then start the new build. Do not run the SQL file a second time.
+The Google-only release uses a new empty database and the checked-in migration baseline. Leave the old database untouched; run `npm run db:migrate` to deploy the schema. Normal startup never resets or seeds data. Generate the Prisma client and build before starting the updated server. On Windows, stop your running backend before `npm run db:generate` because it may lock the Prisma engine DLL. See [google-sign-in.md](google-sign-in.md).
 
 From the repository root:
 

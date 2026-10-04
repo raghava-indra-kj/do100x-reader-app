@@ -15,23 +15,24 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@reader/md-ast": "*",
     "@modelcontextprotocol/sdk": "^1.6.1",
     "@prisma/client": "^5.22.0",
+    "@reader/md-ast": "*",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "google-auth-library": "11.1.0",
     "openai": "^6.45.0",
     "prisma": "^5.22.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "esbuild": "0.28.2",
-    "vitest": "^4.1.9",
     "@types/express": "^5.0.6",
     "@types/node": "^25.9.3",
     "cross-env": "^10.1.0",
+    "esbuild": "0.28.2",
     "nodemon": "^3.1.14",
     "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
   }
 }

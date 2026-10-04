@@ -11,7 +11,6 @@ export interface IPagesRepo {
     getPage(params: { pageId: string }): AsyncResult<DbPage, AppError>;
 
     createPage(params: {
-        userId: string;
         parentPageId: string | null;
         title: string;
         content: string;

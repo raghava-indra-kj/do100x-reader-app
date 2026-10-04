@@ -1,10 +1,10 @@
 import express from 'express';
 import type { Server } from 'node:http';
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { issueSession } from './session';
+import { issueSession, attachSession } from './session';
 
 const state = vi.hoisted(() => ({ row: null as any }));
-vi.mock('./prisma', () => ({ prisma: { page: {
+vi.mock('./prisma', () => ({ prisma: { auth_identity: { findUnique: vi.fn(async ({ where }: any) => ({ userId: where.userId_provider.userId })) }, page: {
     findFirst: vi.fn(async ({ where }: any) => {
         const row = state.row;
         if (!row || row.deletedAt || row.id !== where.id || (where.userId && row.userId !== where.userId)) return null;
@@ -23,7 +23,7 @@ describe('page editing HTTP contract', () => {
     let base: string;
     let cookie: string;
     beforeAll(async () => {
-        const app = express(); app.use(express.json());
+        const app = express(); app.use(express.json()); app.use(attachSession());
         app.post('/fixture-session/:id', (req, res) => { issueSession(res, req.params.id); res.sendStatus(204); });
         app.use('/pages', pagesRouter);
         server = await new Promise<Server>((resolve) => { const s = app.listen(0, '127.0.0.1', () => resolve(s)); });
@@ -33,7 +33,7 @@ describe('page editing HTTP contract', () => {
     afterAll(async () => { await new Promise<void>((resolve) => server.close(() => resolve())); });
     beforeEach(() => { state.row = { id: 'page', userId: 'owner', content: '## First\n\nold\n\n### Child\n\nchild\n\n## Next\n\nnext', contentVersion: 0, deletedAt: null, title: 'Keep title', category: 'Keep category', meaningSystemPrompt: 'Keep prompt', isPublic: true, parentId: null }; });
     const snapshot = async () => (await fetch(`${base}/pages/page/edit-targets`, { headers: { cookie } })).json();
-    const save = async (body: any, headers: Record<string, string> = { cookie }) => fetch(`${base}/pages/page/section-body`, { method: 'PATCH', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
+    const save = async (body: any, headers: Record<string, string> = { cookie }) => fetch(`${base}/pages/page/section-body`, { method: 'PATCH', headers: { 'content-type': 'application/json', origin: 'http://localhost:3000', ...headers }, body: JSON.stringify(body) });
 
     it('requires a real signed session, not an asserted owner header', async () => {
         expect((await save({}, { 'x-user-id': 'owner' })).status).toBe(401);
@@ -80,11 +80,11 @@ describe('page editing HTTP contract', () => {
     it('full-page edits use the same version gate and reject stale overwrites', async () => {
         const s = await snapshot();
         await save({ contentVersion: s.contentVersion, ...s.sections[0], newBody: 'new' });
-        const response = await fetch(`${base}/pages/page`, { method: 'PUT', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Title', content: 'overwrite', contentVersion: 0, category: null }) });
+        const response = await fetch(`${base}/pages/page`, { method: 'PUT', headers: { cookie, origin: 'http://localhost:3000', 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Title', content: 'overwrite', contentVersion: 0, category: null }) });
         expect(response.status).toBe(409); expect(state.row.content).toContain('new');
     });
     it('full-page writes reject omitted content instead of accidentally clearing metadata', async () => {
-        const response = await fetch(`${base}/pages/page`, { method: 'PUT', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Title', contentVersion: 0 }) });
+        const response = await fetch(`${base}/pages/page`, { method: 'PUT', headers: { cookie, origin: 'http://localhost:3000', 'content-type': 'application/json' }, body: JSON.stringify({ title: 'Title', contentVersion: 0 }) });
         expect(response.status).toBe(400); expect(state.row.title).toBe('Keep title'); expect(state.row.contentVersion).toBe(0);
     });
 });

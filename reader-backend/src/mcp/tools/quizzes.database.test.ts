@@ -6,7 +6,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { expect, it } from "vitest";
-import { issueSession } from "../../session";
+import { issueSession, attachSession } from "../../session";
 import { createQuizRouter } from "../../quiz/quiz-router";
 import { registerQuizTools } from "./quizzes";
 
@@ -18,7 +18,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("MCP and HTTP share quiz, revi
   const rollback = new Error("MCP quiz fixture rollback");
   try {
     await db.$transaction(async (tx) => {
-      const owner = await tx.appuser.create({ data: { id: randomUUID(), username: `q${randomUUID().slice(0, 12)}`, password: "0000" } });
+      const owner = await tx.appuser.create({ data: { id: randomUUID(), email: `test-${randomUUID()}@example.com`, identities: { create: { provider: "GOOGLE", providerSubject: randomUUID() } } } });
       const page = await tx.page.create({ data: { id: randomUUID(), userId: owner.id, title: "MCP fixture", content: "Unchanged", childrenCount: 0, sortOrder: 0, isPublic: true, createdAt: new Date(), updatedAt: new Date() } });
       const server = new McpServer({ name: "quiz-test", version: "1" });
       registerQuizTools(server, owner.id, tx);
@@ -30,7 +30,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("MCP and HTTP share quiz, revi
         if (result.isError) throw new Error(JSON.stringify(result.content));
         return JSON.parse((result.content as { type: "text"; text: string }[])[0].text);
       };
-      const app = express(); app.use(express.json());
+      const app = express(); app.use(express.json()); app.use(attachSession(tx));
       app.get("/login", (_req, res) => { issueSession(res, owner.id); res.json({ ok: true }); });
       app.use("/quizzes", createQuizRouter(tx));
       const http = app.listen(0);
@@ -48,7 +48,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("MCP and HTTP share quiz, revi
         expect(removed.questions).toHaveLength(1);
         const httpRead = await (await fetch(`${base}/quizzes/${quizId}?view=author`, { headers: { Cookie: cookie } })).json();
         expect(httpRead.revisionId).toBe(removed.revisionId);
-        const changed = await fetch(`${base}/quizzes/${quizId}`, { method: "PATCH", headers: { Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ expectedRevisionNo: 3, operations: [{ type: "setMetadata", title: "HTTP revision" }] }) });
+        const changed = await fetch(`${base}/quizzes/${quizId}`, { method: "PATCH", headers: { Origin: "http://localhost:3000", Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ expectedRevisionNo: 3, operations: [{ type: "setMetadata", title: "HTTP revision" }] }) });
         expect(changed.status).toBe(200);
         expect((await call("reader_get_quiz", { quizId })).title).toBe("HTTP revision");
         const second = await call("reader_create_quiz", { pageId: page.id, quiz: { title: "Second", questions: [{ kind: "SUBJECTIVE", responseLength: "LONG", promptMarkdown: "Discuss", referenceAnswerMarkdown: "Answer", explanationMarkdown: "Why", options: [] }] } });

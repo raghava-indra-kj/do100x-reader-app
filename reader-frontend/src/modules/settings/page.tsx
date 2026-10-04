@@ -70,14 +70,12 @@ const TABS: TabItem[] = [
 export default function SettingsPage() {
   const authStore = useAuthStore();
   const motivationPreferences = useMotivationPreferences();
-  const store = useMemo(() => new SettingsStore({ userId: authStore.currentUser.id }), [authStore]);
+  const store = useMemo(() => new SettingsStore(), [authStore]);
 
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [motivationError, setMotivationError] = useState(false);
 
   // Credential Visibility & Copy States
-  const [showPassword, setShowPassword] = useState(false);
-  const [copiedPassword, setCopiedPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [copiedApiKey, setCopiedApiKey] = useState(false);
   const [copiedGuide, setCopiedGuide] = useState(false);
@@ -211,7 +209,7 @@ export default function SettingsPage() {
                         <div>
                           <h2 className="text-xl font-semibold text-[var(--color-text-strong)]">Account & Preferences</h2>
                           <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                            Your credentials and personal settings
+                            Your Google account and personal settings
                           </p>
                         </div>
 
@@ -226,45 +224,16 @@ export default function SettingsPage() {
 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                             <div>
-                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Username</span>
+                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Name</span>
                               <p className="text-sm font-medium text-[var(--color-text-strong)] mt-1.5 bg-[var(--color-surface-canvas)] px-3 py-2 rounded-xl border border-[var(--color-border-default)]">
-                                {authStore.currentUser.username}
+                                {authStore.currentUser.label}
                               </p>
                             </div>
 
                             <div>
-                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Password</span>
-                              <div className="flex items-center gap-2 mt-1.5">
-                                <p className="text-sm font-mono text-[var(--color-text-strong)] bg-[var(--color-surface-canvas)] px-3 py-2 rounded-xl border border-[var(--color-border-default)] select-all flex-1 min-w-[140px]">
-                                  {showPassword ? authStore.currentUser.password || '(no password set)' : '••••••••••••'}
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={() => setShowPassword((prev) => !prev)}
-                                  className="p-2 rounded-xl text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-hover)] border border-[var(--color-border-default)] transition-colors cursor-pointer"
-                                  title={showPassword ? 'Hide password' : 'Show password'}
-                                >
-                                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                                </button>
-                                {authStore.currentUser.password && (
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(authStore.currentUser.password);
-                                      setCopiedPassword(true);
-                                      setTimeout(() => setCopiedPassword(false), 1500);
-                                    }}
-                                    className={`p-2 rounded-xl border border-[var(--color-border-default)] transition-colors cursor-pointer ${
-                                      copiedPassword
-                                        ? 'text-[var(--color-brand)] bg-[var(--color-surface-hover)]'
-                                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-hover)]'
-                                    }`}
-                                    title={copiedPassword ? 'Copied!' : 'Copy password'}
-                                  >
-                                    {copiedPassword ? <Check size={15} /> : <Copy size={15} />}
-                                  </button>
-                                )}
-                              </div>
+                              <span className="text-xs text-[var(--color-text-muted)] uppercase font-medium">Google account</span>
+                              <p className="text-sm font-medium text-[var(--color-text-strong)] mt-1.5 break-all">{authStore.currentUser.email}</p>
+                              <p className="text-xs text-[var(--color-text-muted)] mt-1">Google is the only sign-in method.</p>
                             </div>
                           </div>
                         </section>

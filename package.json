@@ -12,8 +12,8 @@
     "build:backend": "cd reader-backend && npm run build",
     "build": "npm run build:frontend && npm run build:backend",
     "db:generate": "cd reader-backend && npx prisma generate",
-    "db:push": "cd reader-backend && npx prisma db push",
-    "setup": "npm install && npm run db:generate && npm run db:push && npm run build",
+    "db:migrate": "cd reader-backend && npx prisma migrate deploy",
+    "setup": "npm install && npm run db:generate && npm run db:migrate && npm run build",
     "start": "cd reader-backend && npm run start",
     "prod": "npm run setup && cd reader-backend && node dist/index.js"
   }

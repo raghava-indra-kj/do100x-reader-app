@@ -2,7 +2,7 @@ import { prisma } from "../prisma";
 
 export interface AuthenticatedMcpUser {
   id: string;
-  username: string;
+  displayName: string | null;
 }
 
 /**
@@ -17,15 +17,10 @@ export async function validateUserToken(token?: string): Promise<AuthenticatedMc
 
   const cleanToken = token.trim();
 
-  // Match against appuser ID or username
+  // MCP remains scoped by the internal account UUID.
   const user = await prisma.appuser.findFirst({
-    where: {
-      OR: [
-        { id: cleanToken },
-        { username: cleanToken },
-      ],
-    },
-    select: { id: true, username: true },
+    where: { id: cleanToken, identities: { some: { provider: "GOOGLE" } } },
+    select: { id: true, displayName: true },
   });
 
   if (user) {

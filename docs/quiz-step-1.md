@@ -52,37 +52,24 @@ attempt reads expose the pinned revision and explanations.
 `listQuizzesForPage` returns active quizzes in sort order, with cursor
 pagination (default 50, maximum 100).
 
-## Applying the schema without erasing data
+## Applying the schema
 
-This repository currently uses `prisma db push` and has no migration history.
-The reviewed, one-time additive SQL file is
-`reader-backend/prisma/manual-migrations/20260929_quiz_foundation.sql`. It only
-creates the eight tables and their foreign keys. Back up the target database
-first. Check the target connection and review the proposed delta from
-`reader-backend`:
+Quizzes are included in the checked-in Google-only migration baseline.
+Configure a new empty database in `reader-backend/.env`, then run these commands
+from the repository root:
 
 ```powershell
-npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --script
+npm run db:generate
+npm run db:migrate
 ```
 
-For an existing database where the quiz tables are absent, that delta must
-contain only the quiz `CREATE TABLE` and `ALTER TABLE ... ADD CONSTRAINT`
-statements. Then apply the file **once**:
+This is a clean cutover, not an in-place migration of the old credentials
+database. Leave the original database untouched. Startup uses `migrate deploy`,
+not schema push, reset, or seed. Future schema changes must have a reviewed
+migration. See [google-sign-in.md](google-sign-in.md).
 
-```powershell
-npx prisma db execute --file prisma/manual-migrations/20260929_quiz_foundation.sql --schema prisma/schema.prisma
-npx prisma migrate diff --from-schema-datasource prisma/schema.prisma --to-schema-datamodel prisma/schema.prisma --exit-code
-```
-
-The final command should report no difference. Do not run `migrate reset`,
-`--force-reset`, or `--accept-data-loss`. Re-running the SQL file is not needed
-and will fail because the tables already exist. For a truly fresh database,
-the project's normal `prisma db push` can create the entire schema.
-
-On Windows, a running backend may lock Prisma's query-engine DLL. Stop that
-backend before `npx prisma generate`, then restart it. The SQL migration itself
-does not require stopping the server. Do not terminate someone else's running
-server just to regenerate the local client.
+On Windows, stop your running backend before generating the Prisma client
+because it may lock the query-engine DLL. Do not terminate someone else's server.
 
 ## Verification
 

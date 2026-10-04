@@ -4,8 +4,7 @@ import type { ChatCompletionResult } from '../models/chat-types';
 
 export interface IChatRepo {
     getChatCompletion(params: {
-        userId: string;
-        modelId: string;
+            modelId: string;
         systemPrompt: string;
         userPrompt: string;
         pageId?: string;

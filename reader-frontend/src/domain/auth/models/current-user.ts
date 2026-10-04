@@ -1,29 +1,25 @@
 import { z } from 'zod';
 
 export const CurrentUserSchema = z.object({
-    id: z.string(),
-    username: z.string(),
-    password: z.string(),
-    homepageId: z.string(),
-});
-
+    id: z.string().uuid(),
+    displayName: z.string().nullable(),
+    email: z.string().email(),
+    avatarUrl: z.string().url().nullable(),
+}).strict();
 export type CurrentUserData = z.infer<typeof CurrentUserSchema>;
 
 export class CurrentUser {
     readonly id: string;
-    readonly username: string;
-    readonly password: string;
-    readonly homepageId: string;
+    readonly displayName: string | null;
+    readonly email: string;
+    readonly avatarUrl: string | null;
 
-    constructor(params: {
-        id: string;
-        username: string;
-        password: string;
-        homepageId: string;
-    }) {
-        this.id = params.id;
-        this.username = params.username;
-        this.password = params.password;
-        this.homepageId = params.homepageId;
+    constructor(data: CurrentUserData) {
+        this.id = data.id;
+        this.displayName = data.displayName;
+        this.email = data.email;
+        this.avatarUrl = data.avatarUrl;
     }
+
+    get label(): string { return this.displayName || this.email; }
 }

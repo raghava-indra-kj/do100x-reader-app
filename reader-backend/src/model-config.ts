@@ -1,16 +1,14 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
+import { requireSession } from "./session";
 
 const router = Router();
+router.use(requireSession);
 
-// GET /backend-api/model-config?userId=
+// GET /backend-api/model-config
 router.get("/", async (req, res) => {
-  const { userId } = req.query as { userId?: string };
+  const userId = res.locals.userId as string;
 
-  if (!userId) {
-    res.status(400).json({ message: "userId query parameter is required" });
-    return;
-  }
 
   const config = await prisma.model_config.findUnique({ where: { userId } });
 
@@ -24,8 +22,8 @@ router.get("/", async (req, res) => {
 
 // POST /backend-api/model-config  (upsert — creates or updates)
 router.post("/", async (req, res) => {
+  const userId = res.locals.userId as string;
   const {
-    userId,
     baseUrl,
     apiKey,
     explanationModelId,
@@ -35,7 +33,6 @@ router.post("/", async (req, res) => {
     explanationSystemPrompt,
     doubtSystemPrompt,
   } = req.body as {
-    userId: string;
     baseUrl: string;
     apiKey: string;
     explanationModelId?: string;
@@ -46,10 +43,10 @@ router.post("/", async (req, res) => {
     doubtSystemPrompt?: string;
   };
 
-  if (!userId || !baseUrl || !apiKey) {
+  if (!baseUrl || !apiKey) {
     res
       .status(400)
-      .json({ message: "userId, baseUrl, and apiKey are required" });
+      .json({ message: "baseUrl and apiKey are required" });
     return;
   }
 

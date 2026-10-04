@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
+import { readSession, requireSession } from "./session";
+import { canReadPage } from "./page-access";
 
 const router = Router();
+router.use((req, res, next) => req.method === "GET" ? next() : requireSession(req, res, next));
 
 // GET /comments?pageId=&isExplanation=&date=
 // - pageId (optional): scope to one page; when omitted returns across all pages (daily recap mode)
@@ -13,7 +16,7 @@ router.get("/", async (req, res) => {
     isExplanation?: string;
     date?: string;
   };
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
 
   // Unauthenticated guests have no personal comments
   if (!reqUserId) {
@@ -29,10 +32,7 @@ router.get("/", async (req, res) => {
   }
 
   const where: Record<string, unknown> = {
-    OR: [
-      { userId: reqUserId },
-      { userId: null }, // Support legacy comments created before multi-user schema
-    ],
+    userId: reqUserId,
   };
   if (pageId) where.pageId = pageId;
 
@@ -74,7 +74,7 @@ router.get("/", async (req, res) => {
 
 // POST /comments
 router.post("/", async (req, res) => {
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
   const {
     pageId,
     pageTitle,
@@ -83,7 +83,6 @@ router.post("/", async (req, res) => {
     body,
     linkedPageId,
     isExplanation,
-    userId,
   } = req.body as {
     pageId: string;
     pageTitle: string;
@@ -92,16 +91,17 @@ router.post("/", async (req, res) => {
     body: string;
     linkedPageId: string | null;
     isExplanation?: boolean;
-    userId?: string;
   };
 
-  const finalUserId = userId || reqUserId;
+  const finalUserId = reqUserId;
   if (!finalUserId) {
     res.status(401).json({ message: "Sign in required to create comments" });
     return;
   }
 
   const now = new Date();
+  if (!pageId || !await canReadPage(prisma, pageId, finalUserId)) { res.status(404).json({ message: "Page not found" }); return; }
+  if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId: finalUserId, deletedAt: null } })) { res.status(404).json({ message: "Linked page not found" }); return; }
 
   const newComment = await prisma.comment.create({
     data: {
@@ -124,14 +124,14 @@ router.post("/", async (req, res) => {
 // PUT /comments/:commentId
 router.put("/:commentId", async (req, res) => {
   const { commentId } = req.params;
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
   const { body, linkedPageId } = req.body as {
     body: string;
     linkedPageId?: string | null;
   };
 
   const existing = await prisma.comment.findFirst({
-    where: { id: commentId },
+    where: { id: commentId, userId: reqUserId },
   });
 
   if (!existing) {
@@ -139,21 +139,18 @@ router.put("/:commentId", async (req, res) => {
     return;
   }
 
-  if (existing.userId && reqUserId && existing.userId !== reqUserId) {
-    res.status(403).json({ message: "Forbidden" });
-    return;
-  }
 
   const updateData: Record<string, unknown> = {
     body,
     updatedAt: new Date(),
   };
   if (linkedPageId !== undefined) {
+    if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId: reqUserId, deletedAt: null } })) { res.status(404).json({ message: "Linked page not found" }); return; }
     updateData.linkedPageId = linkedPageId ?? null;
   }
 
   await prisma.comment.update({
-    where: { id: commentId },
+    where: { id: commentId, userId: reqUserId },
     data: updateData,
   });
 
@@ -163,7 +160,7 @@ router.put("/:commentId", async (req, res) => {
 // DELETE /comments?pageId=
 router.delete("/", async (req, res) => {
   const { pageId } = req.query as { pageId?: string };
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
 
   if (!pageId) {
     res.status(400).json({ message: "pageId query parameter is required" });
@@ -173,7 +170,7 @@ router.delete("/", async (req, res) => {
   await prisma.comment.deleteMany({
     where: {
       pageId,
-      ...(reqUserId ? { userId: reqUserId } : {}),
+      userId: reqUserId,
     },
   });
 
@@ -183,10 +180,10 @@ router.delete("/", async (req, res) => {
 // DELETE /comments/:commentId
 router.delete("/:commentId", async (req, res) => {
   const { commentId } = req.params;
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
 
   const existing = await prisma.comment.findFirst({
-    where: { id: commentId },
+    where: { id: commentId, userId: reqUserId },
   });
 
   if (!existing) {
@@ -194,13 +191,9 @@ router.delete("/:commentId", async (req, res) => {
     return;
   }
 
-  if (existing.userId && reqUserId && existing.userId !== reqUserId) {
-    res.status(403).json({ message: "Forbidden" });
-    return;
-  }
 
   await prisma.comment.delete({
-    where: { id: commentId },
+    where: { id: commentId, userId: reqUserId },
   });
 
   res.status(204).send();

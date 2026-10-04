@@ -1,7 +1,10 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
+import { readSession, requireSession } from "./session";
+import { canReadPage } from "./page-access";
 
 const router = Router();
+router.use((req, res, next) => req.method === "GET" ? next() : requireSession(req, res, next));
 
 // GET /vocabulary?pageId=  | /vocabulary?date=YYYY-MM-DD
 // - pageId: list vocabulary for a single page
@@ -11,7 +14,7 @@ router.get("/", async (req, res) => {
     pageId?: string;
     date?: string;
   };
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
 
   // Unauthenticated guests have no personal vocabulary
   if (!reqUserId) {
@@ -27,10 +30,7 @@ router.get("/", async (req, res) => {
   }
 
   const where: Record<string, unknown> = {
-    OR: [
-      { userId: reqUserId },
-      { userId: null }, // Support legacy vocabulary entries
-    ],
+    userId: reqUserId,
   };
   if (pageId) where.pageId = pageId;
 
@@ -61,14 +61,13 @@ router.get("/", async (req, res) => {
 
 // POST /vocabulary
 router.post("/", async (req, res) => {
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
-  const { pageId, term, userId } = req.body as {
+  const reqUserId = readSession(req);
+  const { pageId, term } = req.body as {
     pageId: string;
     term: string;
-    userId?: string;
   };
 
-  const finalUserId = userId || reqUserId;
+  const finalUserId = reqUserId;
   if (!finalUserId) {
     res.status(401).json({ message: "Sign in required to save vocabulary terms" });
     return;
@@ -81,6 +80,7 @@ router.post("/", async (req, res) => {
     return;
   }
 
+  if (!await canReadPage(prisma, pageId, finalUserId)) { res.status(404).json({ message: "Page not found" }); return; }
   const newVocab = await prisma.vocabulary.create({
     data: {
       userId: finalUserId,
@@ -96,10 +96,10 @@ router.post("/", async (req, res) => {
 // DELETE /vocabulary/:vocabId
 router.delete("/:vocabId", async (req, res) => {
   const { vocabId } = req.params;
-  const reqUserId = req.headers["x-user-id"] as string | undefined;
+  const reqUserId = readSession(req);
 
   const existing = await prisma.vocabulary.findFirst({
-    where: { id: vocabId },
+    where: { id: vocabId, userId: reqUserId },
   });
 
   if (!existing) {
@@ -107,13 +107,9 @@ router.delete("/:vocabId", async (req, res) => {
     return;
   }
 
-  if (existing.userId && reqUserId && existing.userId !== reqUserId) {
-    res.status(403).json({ message: "Forbidden" });
-    return;
-  }
 
   await prisma.vocabulary.delete({
-    where: { id: vocabId },
+    where: { id: vocabId, userId: reqUserId },
   });
 
   res.status(204).send();

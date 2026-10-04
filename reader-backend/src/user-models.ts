@@ -1,16 +1,14 @@
 import { Router } from "express";
 import { prisma } from "./prisma";
+import { requireSession } from "./session";
 
 const router = Router();
+router.use(requireSession);
 
-// GET /backend-api/user-models?userId=
+// GET /backend-api/user-models
 router.get("/", async (req, res) => {
-  const { userId } = req.query as { userId?: string };
+  const userId = res.locals.userId as string;
 
-  if (!userId) {
-    res.status(400).json({ message: "userId query parameter is required" });
-    return;
-  }
 
   const models = await prisma.user_model.findMany({ where: { userId } });
   res.json(models);
@@ -18,18 +16,18 @@ router.get("/", async (req, res) => {
 
 // POST /backend-api/user-models
 router.post("/", async (req, res) => {
-  const { userId, name, modelId, baseUrl, apiKey } = req.body as {
-    userId: string;
+  const userId = res.locals.userId as string;
+  const { name, modelId, baseUrl, apiKey } = req.body as {
     name: string;
     modelId: string;
     baseUrl?: string;
     apiKey?: string;
   };
 
-  if (!userId || !name || !modelId) {
+  if (!name || !modelId) {
     res
       .status(400)
-      .json({ message: "userId, name, and modelId are required" });
+      .json({ message: "name and modelId are required" });
     return;
   }
 
@@ -61,7 +59,7 @@ router.put("/:id", async (req, res) => {
     return;
   }
 
-  const existing = await prisma.user_model.findFirst({ where: { id } });
+  const existing = await prisma.user_model.findFirst({ where: { id, userId: res.locals.userId } });
   if (!existing) {
     res.status(404).json({ message: "Model entry not found" });
     return;
@@ -83,7 +81,7 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   const { id } = req.params;
 
-  const existing = await prisma.user_model.findFirst({ where: { id } });
+  const existing = await prisma.user_model.findFirst({ where: { id, userId: res.locals.userId } });
   if (!existing) {
     res.status(404).json({ message: "Model entry not found" });
     return;

@@ -2,8 +2,10 @@ import "dotenv/config";
 import express from "express";
 import fs from "fs";
 import path from "path";
-import meRouter from "./me";
-import signupRouter from "./signup";
+import { createAuthRouter } from "./auth/auth-router";
+import { authConfig } from "./auth/config";
+import { attachSession } from "./session";
+import { createReaderPreferencesRouter } from "./reader/reader-preferences";
 import pagesRouter from "./pages";
 import commentsRouter from "./comments";
 import vocabularyRouter from "./vocabulary";
@@ -19,6 +21,7 @@ import { prisma } from "./prisma";
 import { createMcpSseRouter } from "./mcp/sse-router";
 
 const app = express();
+authConfig();
 const PORT = process.env.PORT || 3000;
 const frontendDist = path.resolve(__dirname, "../../reader-frontend/dist");
 const hasFrontend = fs.existsSync(path.join(frontendDist, "index.html"));
@@ -45,8 +48,9 @@ app.use("/backend-api", (_req, res, next) => {
 app.get("/backend-api/status", (_req, res) => {
   res.json({ success: true });
 });
-app.use("/backend-api/me", meRouter);
-app.use("/backend-api/signup", signupRouter);
+app.use("/backend-api", attachSession());
+app.use("/backend-api/auth", createAuthRouter());
+app.use("/backend-api/reader", createReaderPreferencesRouter());
 app.use("/backend-api/pages", pagesRouter);
 app.use("/backend-api/quizzes", createQuizRouter(prisma));
 app.use("/backend-api/comments", commentsRouter);
@@ -58,6 +62,7 @@ app.use("/backend-api/chat", chatRouter);
 app.use("/backend-api/tasks", tasksRouter);
 app.use("/backend-api/task-lists", taskListsRouter);
 app.use("/backend-api/timer", timerRouter);
+app.use("/backend-api", (_req, res) => res.status(404).json({ message: "API route not found" }));
 
 if (hasFrontend) {
   app.get("*splat", (_req, res) => {

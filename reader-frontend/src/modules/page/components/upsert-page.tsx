@@ -175,7 +175,6 @@ export function UpsertPageDialog({
             }
         } else {
             const result = await createPage({
-                userId: authStore.optCurrentUser?.id || '',
                 parentPageId,
                 title: title.trim(),
                 content,

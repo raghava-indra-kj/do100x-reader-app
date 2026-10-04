@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import express from "express";
 import type { PrismaClient } from "@prisma/client";
 import { expect, it } from "vitest";
-import { issueSession } from "../session";
+import { issueSession, attachSession } from "../session";
 import { createQuizRouter } from "./quiz-router";
 
 const requireClient = createRequire(import.meta.url);
@@ -14,11 +14,12 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("HTTP quiz routes enforce acce
   const rollback = new Error("HTTP quiz fixture rollback");
   try {
     await db.$transaction(async (tx) => {
-      const owner = await tx.appuser.create({ data: { id: randomUUID(), username: `q${randomUUID().slice(0, 12)}`, password: "0000" } });
-      const stranger = await tx.appuser.create({ data: { id: randomUUID(), username: `q${randomUUID().slice(0, 12)}`, password: "0000" } });
+      const owner = await tx.appuser.create({ data: { id: randomUUID(), email: `test-${randomUUID()}@example.com`, identities: { create: { provider: "GOOGLE", providerSubject: randomUUID() } } } });
+      const stranger = await tx.appuser.create({ data: { id: randomUUID(), email: `test-${randomUUID()}@example.com`, identities: { create: { provider: "GOOGLE", providerSubject: randomUUID() } } } });
       const page = await tx.page.create({ data: { id: randomUUID(), userId: owner.id, title: "HTTP fixture", content: "Unchanged", childrenCount: 0, sortOrder: 0, isPublic: true, createdAt: new Date(), updatedAt: new Date() } });
       const app = express();
       app.use(express.json());
+      app.use(attachSession(tx));
       app.get("/test-login/:userId", (req, res) => { issueSession(res, req.params.userId as string); res.json({ ok: true }); });
       app.use("/quizzes", createQuizRouter(tx));
       const server = app.listen(0);
@@ -30,7 +31,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("HTTP quiz routes enforce acce
         const ownerCookie = await cookie(owner.id);
         const strangerCookie = await cookie(stranger.id);
         const request = (path: string, method = "GET", body?: unknown, session?: string) => fetch(`${base}/quizzes${path}`, {
-          method, headers: { ...(session ? { Cookie: session } : {}), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+          method, headers: { Origin: "http://localhost:3000", ...(session ? { Cookie: session } : {}), ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
           ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         });
         const input = { pageId: page.id, quiz: { title: "API paper", questions: [{ kind: "OBJECTIVE", selectionMode: "SINGLE", promptMarkdown: "Q?", explanationMarkdown: "Why.", options: [{ bodyMarkdown: "Yes", isCorrect: true }, { bodyMarkdown: "No", isCorrect: false }] }] } };

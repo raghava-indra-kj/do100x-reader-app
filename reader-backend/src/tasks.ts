@@ -1,20 +1,14 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "./prisma";
+import { requireSession } from "./session";
 
 const router = Router();
+router.use(requireSession);
 
-function getUserId(req: Request): string | undefined {
-  return (req.headers["x-user-id"] as string) || (req.query.userId as string) || undefined;
-}
 
 // GET /backend-api/tasks - List tasks with smart filters
 router.get("/", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { listId, status, priority, due, search, parentId, includeSubtasks } = req.query;
 
   const where: Record<string, unknown> = {
@@ -131,12 +125,7 @@ router.get("/", async (req: Request, res: Response) => {
 
 // GET /backend-api/tasks/:id - Get task detail with full subtasks tree & time sessions
 router.get("/:id", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { id } = req.params;
 
   const task = await prisma.task.findFirst({
@@ -228,12 +217,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
 // POST /backend-api/tasks - Create task or subtask
 router.post("/", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { title, description, listId, parentId, priority, dueDate, dueTime, status } = req.body;
   if (!title || typeof title !== "string" || !title.trim()) {
     res.status(400).json({ error: "Task title is required" });
@@ -246,7 +230,8 @@ router.post("/", async (req: Request, res: Response) => {
     const parent = await prisma.task.findFirst({
       where: { id: parentId, userId, deletedAt: null },
     });
-    if (parent) validParentId = parent.id;
+    if (!parent) { res.status(404).json({ error: "Parent task not found" }); return; }
+    validParentId = parent.id;
   }
 
   // Validate listId if provided
@@ -255,7 +240,8 @@ router.post("/", async (req: Request, res: Response) => {
     const list = await prisma.task_list.findFirst({
       where: { id: listId, userId, deletedAt: null },
     });
-    if (list) validListId = list.id;
+    if (!list) { res.status(404).json({ error: "List not found" }); return; }
+    validListId = list.id;
   }
 
   const now = new Date();
@@ -310,12 +296,7 @@ router.post("/", async (req: Request, res: Response) => {
 
 // PATCH /backend-api/tasks/:id - Update task properties
 router.patch("/:id", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { id } = req.params;
   const existing = await prisma.task.findFirst({
     where: { id, userId, deletedAt: null },
@@ -373,6 +354,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
   }
 
   if (listId !== undefined) {
+    if (listId && listId !== "null" && listId !== "inbox" && !await prisma.task_list.findFirst({ where: { id: listId, userId, deletedAt: null } })) { res.status(404).json({ error: "List not found" }); return; }
     updateData.listId = listId === null || listId === "null" || listId === "inbox" ? null : listId;
   }
 
@@ -383,6 +365,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
       return;
     }
     if (targetParentId) {
+      if (!await prisma.task.findFirst({ where: { id: targetParentId, userId, deletedAt: null } })) { res.status(404).json({ error: "Parent task not found" }); return; }
       // Prevent cyclic nesting: check if targetParentId is a descendant of id
       let curr: string | null = targetParentId;
       let isCycle = false;
@@ -434,12 +417,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
 
 // DELETE /backend-api/tasks/:id - Soft delete task, all descendant subtasks, and clean up time sessions
 router.delete("/:id", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { id } = req.params;
   const existing = await prisma.task.findFirst({
     where: { id, userId, deletedAt: null },
@@ -490,12 +468,7 @@ router.delete("/:id", async (req: Request, res: Response) => {
 
 // POST /backend-api/tasks/reorder - Reorder task sortOrders
 router.post("/reorder", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { orderedIds } = req.body;
   if (!Array.isArray(orderedIds)) {
     res.status(400).json({ error: "orderedIds array is required" });

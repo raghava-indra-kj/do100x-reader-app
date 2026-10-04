@@ -4,7 +4,6 @@ import { getModelConfig, saveModelConfig, getUserModels, createUserModel, update
 import type { UserModel } from '@domain/settings/models/user-model';
 
 export class SettingsStore {
-    readonly userId: string;
 
     baseUrlInput: string = '';
     apiKeyInput: string = '';
@@ -37,8 +36,7 @@ export class SettingsStore {
 
     userModels: UserModel[] = [];
 
-    constructor({ userId }: { userId: string }) {
-        this.userId = userId;
+    constructor() {
         makeObservable(this, {
             baseUrlInput: observable,
             apiKeyInput: observable,
@@ -128,7 +126,7 @@ export class SettingsStore {
         this.isLoading = true;
         
         // Load config
-        const configRes = await getModelConfig({ userId: this.userId });
+        const configRes = await getModelConfig();
         runInAction(() => {
             if (configRes.ok) {
                 this.baseUrlInput = configRes.data.baseUrl;
@@ -143,7 +141,7 @@ export class SettingsStore {
         });
 
         // Load user models
-        const modelsRes = await getUserModels({ userId: this.userId });
+        const modelsRes = await getUserModels();
         runInAction(() => {
             this.isLoading = false;
             if (modelsRes.ok) {
@@ -159,7 +157,6 @@ export class SettingsStore {
         }
         this.isSavingConfig = true;
         const res = await saveModelConfig({
-            userId: this.userId,
             baseUrl: this.baseUrlInput.trim(),
             apiKey: this.apiKeyInput.trim(),
             explanationModelId: this.explanationModelIdInput || undefined,
@@ -186,7 +183,6 @@ export class SettingsStore {
         }
         this.isAddingModel = true;
         const res = await createUserModel({
-            userId: this.userId,
             name: this.newModelNameInput.trim(),
             modelId: this.newModelIdInput.trim(),
             baseUrl: this.newModelBaseUrlInput.trim() || undefined,
@@ -195,7 +191,7 @@ export class SettingsStore {
         
         if (res.ok) {
             // Reload models
-            const modelsRes = await getUserModels({ userId: this.userId });
+            const modelsRes = await getUserModels();
             runInAction(() => {
                 this.isAddingModel = false;
                 this.newModelNameInput = '';
@@ -229,7 +225,7 @@ export class SettingsStore {
         });
 
         if (res.ok) {
-            const modelsRes = await getUserModels({ userId: this.userId });
+            const modelsRes = await getUserModels();
             runInAction(() => {
                 this.isUpdatingModel = false;
                 this.editingModelId = null;
@@ -248,7 +244,7 @@ export class SettingsStore {
         this.deletingModelIds.add(id);
         const res = await deleteUserModel({ id });
         if (res.ok) {
-            const modelsRes = await getUserModels({ userId: this.userId });
+            const modelsRes = await getUserModels();
             runInAction(() => {
                 this.deletingModelIds.delete(id);
                 if (modelsRes.ok) {

@@ -257,7 +257,6 @@ export class PageStore {
                 if (this._currentPage) {
                     this._currentPage = new Page({
                         id: this._currentPage.id,
-                        userId: this._currentPage.userId,
                         parentPageId: this._currentPage.parentPageId,
                         title: this._currentPage.title,
                         content: this._currentPage.content,

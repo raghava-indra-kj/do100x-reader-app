@@ -1,30 +1,20 @@
 import type { AsyncResult } from '@raghava.indra/result-ts';
-import { err, ok } from '@raghava.indra/result-ts';
-import { AppError } from '../../../core/errors/app-error';
-import { validateCredentials } from './credential-validation';
-import type { CurrentUser } from '../models/current-user';
+import { ok } from '@raghava.indra/result-ts';
+import type { AppError } from '../../../core/errors/app-error';
+import { CurrentUser } from '../models/current-user';
 import type { IAuthRepo } from '../repos/auth-repo';
 import { container, TYPES } from '@di/container';
-import { toCurrentUser } from './auth-mapper';
 
-export async function me(
-    { username, password }: { username: string; password: string }
-): AsyncResult<CurrentUser, AppError> {
-    const validation = validateCredentials({ username, password });
-    if (validation) return err(new AppError(validation));
-    const repo = container.get<IAuthRepo>(TYPES.IAuthRepo);
-    const result = await repo.me({ username, password });
-    if (!result.ok) return result;
-    return ok(toCurrentUser(result.data));
+export async function restoreSession(): AsyncResult<CurrentUser | null, AppError> {
+    const result = await container.get<IAuthRepo>(TYPES.IAuthRepo).session();
+    return result.ok ? ok(result.data ? new CurrentUser(result.data) : null) : result;
 }
 
-export async function signup(
-    { username, password }: { username: string; password: string }
-): AsyncResult<CurrentUser, AppError> {
-    const validation = validateCredentials({ username, password });
-    if (validation) return err(new AppError(validation));
-    const repo = container.get<IAuthRepo>(TYPES.IAuthRepo);
-    const result = await repo.signup({ username, password });
-    if (!result.ok) return result;
-    return ok(toCurrentUser(result.data));
+export async function signInWithGoogle(credential: string, nonce: string): AsyncResult<CurrentUser, AppError> {
+    const result = await container.get<IAuthRepo>(TYPES.IAuthRepo).signIn(credential, nonce);
+    return result.ok ? ok(new CurrentUser(result.data)) : result;
+}
+
+export function signOut(): AsyncResult<void, AppError> {
+    return container.get<IAuthRepo>(TYPES.IAuthRepo).logout();
 }

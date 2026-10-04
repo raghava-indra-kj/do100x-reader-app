@@ -1,11 +1,10 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "./prisma";
+import { requireSession } from "./session";
 
 const router = Router();
+router.use(requireSession);
 
-function getUserId(req: Request): string | undefined {
-  return (req.headers["x-user-id"] as string) || (req.query.userId as string) || undefined;
-}
 
 /**
  * Recalculates and updates the totalTimeSeconds for a given task based on all its time_sessions.
@@ -29,12 +28,7 @@ async function recalculateTaskTotalTime(taskId: string, userId: string): Promise
 
 // GET /backend-api/timer/active - Get running timer status
 router.get("/active", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const active = await prisma.active_timer.findUnique({
     where: { userId },
   });
@@ -83,12 +77,7 @@ router.get("/active", async (req: Request, res: Response) => {
 
 // POST /backend-api/timer/start - Start server timer for a task
 router.post("/start", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { taskId, notes } = req.body;
   if (!taskId || typeof taskId !== "string") {
     res.status(400).json({ error: "taskId is required" });
@@ -171,12 +160,7 @@ router.post("/start", async (req: Request, res: Response) => {
 
 // POST /backend-api/timer/pause - Pause active timer
 router.post("/pause", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const active = await prisma.active_timer.findUnique({ where: { userId } });
   if (!active || active.isPaused) {
     res.status(400).json({ error: "No active unpaused timer to pause" });
@@ -214,12 +198,7 @@ router.post("/pause", async (req: Request, res: Response) => {
 
 // POST /backend-api/timer/resume - Resume paused timer
 router.post("/resume", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const active = await prisma.active_timer.findUnique({ where: { userId } });
   if (!active || !active.isPaused) {
     res.status(400).json({ error: "No paused timer to resume" });
@@ -254,12 +233,7 @@ router.post("/resume", async (req: Request, res: Response) => {
 
 // POST /backend-api/timer/stop - Finish timer, save notes, create session, update task total
 router.post("/stop", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { notes, durationSeconds } = req.body;
 
   const active = await prisma.active_timer.findUnique({ where: { userId } });
@@ -315,12 +289,7 @@ router.post("/stop", async (req: Request, res: Response) => {
 
 // POST /backend-api/timer/discard - Discard active timer without recording
 router.post("/discard", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   await prisma.active_timer.deleteMany({ where: { userId } });
   res.json({ success: true });
 });
@@ -331,12 +300,7 @@ router.post("/discard", async (req: Request, res: Response) => {
 
 // GET /backend-api/timer/tasks/:taskId/sessions - Get sessions for a task
 router.get("/tasks/:taskId/sessions", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { taskId } = req.params;
   const sessions = await prisma.time_session.findMany({
     where: { taskId, userId },
@@ -358,12 +322,7 @@ router.get("/tasks/:taskId/sessions", async (req: Request, res: Response) => {
 
 // POST /backend-api/timer/tasks/:taskId/sessions - Add manual session
 router.post("/tasks/:taskId/sessions", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { taskId } = req.params;
   const { startTime, endTime, durationSeconds, notes } = req.body;
 
@@ -412,12 +371,7 @@ router.post("/tasks/:taskId/sessions", async (req: Request, res: Response) => {
 
 // PATCH /backend-api/timer/sessions/:sessionId - Edit session
 router.patch("/sessions/:sessionId", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { sessionId } = req.params;
   const { startTime, endTime, durationSeconds, notes } = req.body;
 
@@ -462,12 +416,7 @@ router.patch("/sessions/:sessionId", async (req: Request, res: Response) => {
 
 // DELETE /backend-api/timer/sessions/:sessionId - Delete single session
 router.delete("/sessions/:sessionId", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { sessionId } = req.params;
   const existing = await prisma.time_session.findFirst({
     where: { id: sessionId, userId },
@@ -486,12 +435,7 @@ router.delete("/sessions/:sessionId", async (req: Request, res: Response) => {
 
 // DELETE /backend-api/timer/tasks/:taskId/sessions - Delete all sessions for task
 router.delete("/tasks/:taskId/sessions", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const { taskId } = req.params;
   await prisma.time_session.deleteMany({
     where: { taskId, userId },
@@ -511,12 +455,7 @@ router.delete("/tasks/:taskId/sessions", async (req: Request, res: Response) => 
 
 // GET /backend-api/timer/analytics - Comprehensive time metrics with flexible date ranges and scopes
 router.get("/analytics", async (req: Request, res: Response) => {
-  const userId = getUserId(req);
-  if (!userId) {
-    res.status(401).json({ error: "User ID required" });
-    return;
-  }
-
+  const userId = res.locals.userId as string;
   const {
     days,
     preset = "7",

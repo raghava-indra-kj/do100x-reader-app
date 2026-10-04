@@ -4,7 +4,8 @@ import express from 'express';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../src/prisma';
-import { issueSession } from '../src/session';
+import { attachSession, issueSession } from '../src/session';
+import { createAuthRouter } from '../src/auth/auth-router';
 import pagesRouter from '../src/pages';
 
 async function main() {
@@ -14,17 +15,19 @@ async function main() {
     const userId = randomUUID();
     const pageId = randomUUID();
     const now = new Date();
+    process.env.APP_ORIGINS = 'http://127.0.0.1:4317';
     const content = '# Verification document\n\nParent body untouched.\n\n## Repeated\n\nFirst body to edit.\n\n### Child\n\nChild body must stay untouched.\n\n## Repeated\n\nSecond body untouched.\n\n```toml\nname = "keep"\n```\n';
     await prisma.$transaction([
-        prisma.appuser.create({ data: { id: userId, username: `verify-${userId.slice(0, 7)}`, password: 'test', homepageId: pageId } }),
+        prisma.appuser.create({ data: { id: userId, displayName: 'Verification', email: `${userId}@example.com`, identities: { create: { provider: 'GOOGLE', providerSubject: `fixture-${userId}` } } } }),
         prisma.page.create({ data: { id: pageId, userId, title: 'Section editing verification', content, childrenCount: 0, sortOrder: 1, createdAt: now, updatedAt: now } }),
     ]);
     const app = express();
     app.use(express.json());
+    app.use('/backend-api', attachSession());
+    app.use('/backend-api/auth', createAuthRouter());
     app.get('/__verify/start', (_req, res) => {
         issueSession(res, userId);
-        const user = { id: userId, username: 'verification', password: 'test', homepageId: pageId };
-        res.type('html').send(`<script>localStorage.setItem('current_user', ${JSON.stringify(JSON.stringify(user))});location.replace('/pages/${pageId}');</script>`);
+        res.redirect(`/pages/${pageId}`);
     });
     app.get('/__verify/state', async (_req, res) => {
         const page = await prisma.page.findUniqueOrThrow({ where: { id: pageId } });
