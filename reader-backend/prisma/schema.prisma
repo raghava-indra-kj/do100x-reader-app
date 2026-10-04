@@ -485,6 +485,7 @@ model page {
 
   quizzes quiz[]
   homePreferences reader_preferences[]
+  @@index([userId, deletedAt, updatedAt])
 }
 
 enum quiz_question_kind {

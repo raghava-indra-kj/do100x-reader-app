@@ -8,6 +8,11 @@ import type { IPagesRepo } from '../repos/pages-repo';
 import { container, TYPES } from '@di/container';
 import { toPage, toPageListItem } from './page-mapper';
 import type { SectionEditParams, SectionEditSnapshot } from '../models/section-edit';
+import type { PageSearchResponse } from '../models/page-search';
+
+export function searchPages(params: { q: string; limit?: number; signal?: AbortSignal }): AsyncResult<PageSearchResponse, AppError> {
+    return container.get<IPagesRepo>(TYPES.IPagesRepo).searchPages(params);
+}
 
 export async function getSectionEditSnapshot(pageId: string): AsyncResult<SectionEditSnapshot, AppError> {
     return container.get<IPagesRepo>(TYPES.IPagesRepo).getSectionEditSnapshot(pageId);

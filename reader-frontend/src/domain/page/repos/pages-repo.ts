@@ -3,8 +3,10 @@ import type { AppError } from '../../../core/errors/app-error';
 import type { DbPage } from '../models/db-page';
 import type { DbPageListItem } from '../models/db-page-list-item';
 import type { SectionEditSnapshot, SectionEditParams } from '../models/section-edit';
+import type { PageSearchResponse } from '../models/page-search';
 
 export interface IPagesRepo {
+    searchPages(params: { q: string; limit?: number; signal?: AbortSignal }): AsyncResult<PageSearchResponse, AppError>;
     getSectionEditSnapshot(pageId: string): AsyncResult<SectionEditSnapshot, AppError>;
     editSectionBody(params: SectionEditParams): AsyncResult<{ content: string; contentVersion: number }, AppError>;
 

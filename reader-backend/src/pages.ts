@@ -4,9 +4,18 @@ import { z } from "zod";
 import { locateSections, sectionBodyTarget } from "@reader/md-ast";
 import { contentHash, editSectionBody, PageContentError } from "./page-content";
 import { readSession, requireSession } from "./session";
+import { pageSearchQuery, searchPages } from "./reader/page-search";
 
 const router = Router();
 router.use((req, res, next) => req.method === "GET" ? next() : requireSession(req, res, next));
+
+// Must precede /:pageId; searching is always owner-only, including public pages.
+router.get("/search", requireSession, async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const query = pageSearchQuery.safeParse(req.query);
+  if (!query.success) { res.status(400).json({ message: "Search must be 200 characters or fewer, with a limit between 1 and 50." }); return; }
+  res.json(await searchPages(prisma, res.locals.userId, query.data));
+});
 
 const sectionEditSchema = z.object({
   contentVersion: z.number().int().nonnegative(),

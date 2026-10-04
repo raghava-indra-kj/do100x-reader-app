@@ -6,8 +6,17 @@ import { DbPageSchema, type DbPage } from '../models/db-page';
 import { DbPageListItemSchema, type DbPageListItem } from '../models/db-page-list-item';
 import type { IPagesRepo } from './pages-repo';
 import { SectionEditSnapshotSchema, type SectionEditSnapshot, type SectionEditParams } from '../models/section-edit';
+import { PageSearchResponseSchema, type PageSearchResponse } from '../models/page-search';
 
 export class PageRepoApi implements IPagesRepo {
+    async searchPages({ q, limit = 20, signal }: { q: string; limit?: number; signal?: AbortSignal }): AsyncResult<PageSearchResponse, AppError> {
+        try {
+            const { data } = await apiClient.get('/pages/search', { params: { q, limit }, signal });
+            return ok(PageSearchResponseSchema.parse(data));
+        } catch (error) {
+            return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t search pages. Try again.'), cause: error }));
+        }
+    }
     async getSectionEditSnapshot(pageId: string): AsyncResult<SectionEditSnapshot, AppError> {
         try {
             const { data } = await apiClient.get(`/pages/${pageId}/edit-targets`);

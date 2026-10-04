@@ -1,6 +1,7 @@
 import { readerPageWithIdRouteValue } from '@boot/routes';
 import { AppBarLayout } from '@modules/core/ui/components/appbar/appbar-layout';
 import { AppBarTools } from '@modules/core/ui/components/appbar/appbar-tools';
+import { ReaderPageSearch } from '@modules/reader/search/page-search';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
@@ -75,6 +76,7 @@ export const PageAppbar = observer(function PageAppbar() {
     return (
         <>
             <AppBarLayout app="reader" showApps={Boolean(authStore.isAuthenticated && page && !page.isPubliclyAccessible)}
+                actions={<ReaderPageSearch enabled={Boolean(page && !page.isPubliclyAccessible)} />}
                 breadcrumbs={<div className="flex items-center gap-1.5 min-w-0 text-xs leading-tight">
 
                 <Observer>

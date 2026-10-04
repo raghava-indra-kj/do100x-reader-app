@@ -31,6 +31,7 @@ describe('Reader suite navigation boundaries', () => {
         expect(html).toContain('class="suite-appbar"');
         expect(html).toContain('Reader</span>');
         expect(html).toContain('aria-label="Reading tools"');
+        expect(html.match(/aria-label="Find a page"/g)).toHaveLength(1);
         expect(html).toContain('aria-label="Account settings — reader@example.com"');
     });
     it('retains the suite home link on nested pages alongside the parent navigation', () => {
@@ -45,6 +46,7 @@ describe('Reader suite navigation boundaries', () => {
         fixture.page.isPublic = true;
         const html = render();
         expect(html).not.toContain('Switch apps');
+        expect(html).not.toContain('Find a page');
         expect(html).not.toContain('Public</span>');
         expect(html).not.toContain('Take a break');
         fixture.page.isPublic = false;
