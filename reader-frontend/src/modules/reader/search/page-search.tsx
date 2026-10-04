@@ -9,7 +9,7 @@ import { Dialog } from '@modules/core/ui/primitives/dialog';
 import { usePageSearch } from './use-page-search';
 import './page-search.css';
 
-function SearchDialog({ onClose }: { onClose: () => void }) {
+function SearchDialog({ onClose, onNavigate }: { onClose: () => void; onNavigate?: (path: string) => void }) {
     const navigate = useNavigate();
     const titleId = useId(), listId = useId(), hintId = useId();
     const input = useRef<HTMLInputElement>(null);
@@ -23,7 +23,7 @@ function SearchDialog({ onClose }: { onClose: () => void }) {
         return () => window.cancelAnimationFrame(frame);
     }, []);
     useEffect(() => { document.getElementById(`${listId}-${active}`)?.scrollIntoView({ block: 'nearest' }); }, [active, data, listId]);
-    const choose = (id: string) => { onClose(); navigate(readerPageWithIdRouteValue(id)); };
+    const choose = (id: string) => { onClose(); (onNavigate ?? navigate)(readerPageWithIdRouteValue(id)); };
     return <Dialog open onOpenChange={open => { if (!open) onClose(); }} labelledBy={titleId} describedBy={hintId} className="reader-search-dialog">
         <div className="reader-search-heading"><h2 id={titleId}>Find a page</h2><Button variant="ghost" size="sm" iconOnly aria-label="Close search" onClick={onClose}><X size={16} aria-hidden="true" /></Button></div>
         <div className="reader-search-input"><Search size={16} aria-hidden="true" /><input ref={input} autoFocus value={query} maxLength={200} placeholder="Search titles and categories…" aria-label="Search pages" role="combobox" aria-autocomplete="list" aria-expanded="true" aria-controls={listId} aria-describedby={hintId} aria-activedescendant={items[active] ? `${listId}-${active}` : undefined}
@@ -49,7 +49,7 @@ function SearchDialog({ onClose }: { onClose: () => void }) {
     </Dialog>;
 }
 
-function SearchControl() {
+function SearchControl({ onNavigate }: { onNavigate?: (path: string) => void }) {
     const [open, setOpen] = useState(false);
     const { pathname } = useLocation();
     const trigger = useRef<HTMLButtonElement>(null);
@@ -66,11 +66,11 @@ function SearchControl() {
         window.addEventListener('keydown', shortcut);
         return () => window.removeEventListener('keydown', shortcut);
     }, []);
-    return <><Button ref={trigger} className="reader-search-trigger" variant="outlined" size="sm" iconOnly aria-label="Find a page" aria-keyshortcuts="Control+k Meta+k" tooltip="Find a page (Ctrl+K / ⌘K)" onClick={() => { if (canOpen()) setOpen(true); }}><Search size={16} aria-hidden="true" /></Button>{open && <SearchDialog onClose={close} />}</>;
+    return <><Button ref={trigger} className="reader-search-trigger" variant="outlined" size="sm" iconOnly aria-label="Find a page" aria-keyshortcuts="Control+k Meta+k" tooltip="Find a page (Ctrl+K / ⌘K)" onClick={() => { if (canOpen()) setOpen(true); }}><Search size={16} aria-hidden="true" /></Button>{open && <SearchDialog onClose={close} onNavigate={onNavigate} />}</>;
 }
 
-export const ReaderPageSearch = observer(function ReaderPageSearch({ enabled = true }: { enabled?: boolean }) {
+export const ReaderPageSearch = observer(function ReaderPageSearch({ enabled = true, onNavigate }: { enabled?: boolean; onNavigate?: (path: string) => void }) {
     const auth = useAuthStore();
     if (!enabled || !auth.isAuthenticated) return null;
-    return <SearchControl key={auth.currentUser.id} />;
+    return <SearchControl key={auth.currentUser.id} onNavigate={onNavigate} />;
 });

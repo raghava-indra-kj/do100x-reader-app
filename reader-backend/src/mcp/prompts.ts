@@ -80,12 +80,12 @@ Context:\n${page?.content ?? ""}\n\nCan you explain the following concept/sectio
   // 3. Vocabulary Quiz
   server.prompt(
     "reader_vocabulary_quiz",
-    "Create an interactive vocabulary quiz based on terms looked up in Reader",
+    "Create an interactive vocabulary quiz based on personal learning words",
     {
       limit: z.string().optional().describe("Number of terms to test (default: 5)"),
     },
     async ({ limit }) => {
-      const count = limit ? parseInt(limit, 10) : 5;
+      const count = limit ? z.coerce.number().int().min(1).max(50).parse(limit) : 5;
       const terms = await prisma.vocabulary.findMany({
         where: { userId },
         take: count,
@@ -100,7 +100,7 @@ Context:\n${page?.content ?? ""}\n\nCan you explain the following concept/sectio
             role: "user",
             content: {
               type: "text",
-              text: `Create a 5-question multiple-choice vocabulary quiz to test my understanding of these words:
+              text: `Create a ${count}-question multiple-choice vocabulary quiz to test my understanding of these words:
 Words: ${wordList}
 
 Format:

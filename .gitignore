@@ -6,11 +6,13 @@ reader-backend/node_modules/
 # Build outputs
 reader-frontend/dist/
 reader-backend/dist/
+releases/
 
 # Environment files
 client_secret*.json
 .env.*
 !.env.example
+!.env.prod.example
 .env
 reader-frontend/.env
 reader-backend/.env

@@ -8,6 +8,9 @@
     "reader-backend"
   ],
   "scripts": {
+    "dev": "node scripts/dev.cjs",
+    "package": "node scripts/package.cjs",
+    "start:hosting": "bash start.sh",
     "build:frontend": "cd reader-frontend && npm run build",
     "build:backend": "cd reader-backend && npm run build",
     "build": "npm run build:frontend && npm run build:backend",

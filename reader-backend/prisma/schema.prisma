@@ -660,11 +660,41 @@ model comment {
 }
 
 model vocabulary {
-  id        String   @id @default(uuid()) @db.VarChar(36)
-  userId    String   @db.VarChar(36)
-  pageId    String   @db.VarChar(36)
-  term      String   @db.VarChar(255)
-  createdAt DateTime @db.DateTime(6)
+  id                  String   @id @default(uuid()) @db.VarChar(36)
+  userId              String   @db.VarChar(36)
+  term                String   @db.VarChar(255)
+  normalizedTerm      String   @db.VarChar(255)
+  explanationMarkdown String?  @db.LongText
+  difficulty          VocabularyDifficulty @default(unrated)
+  usageFrequency      VocabularyFrequency @default(unrated)
+  learningStatus      VocabularyStatus @default(learning)
+  practiceText        String   @db.Text
+  lastReviewedAt      DateTime? @db.DateTime(6)
+  createdAt           DateTime @default(now()) @db.DateTime(6)
+  updatedAt           DateTime @updatedAt @db.DateTime(6)
+  version             Int      @default(1)
+
+  @@unique([userId, normalizedTerm])
+  @@index([userId, createdAt, id])
+}
+
+enum VocabularyDifficulty {
+  unrated
+  easy
+  medium
+  difficult
+}
+
+enum VocabularyFrequency {
+  frequent
+  occasional
+  rare
+  unrated
+}
+
+enum VocabularyStatus {
+  learning
+  learned
 }
 
 model model_config {

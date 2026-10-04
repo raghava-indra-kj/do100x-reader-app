@@ -1,26 +1,16 @@
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Page } from '@domain/page/models/page';
 import { PageListItem } from '@domain/page/models/page-list-item';
 import { queryPages } from '@domain/page/services/pages-service';
 import { DataState } from '@lib/utils/data-state';
-import { readerPageWithIdRouteValue } from '@boot/routes';
 import { usePageStore } from '../store';
 import { UpsertPageDialog } from './upsert-page';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
-import {
-    BookOpen,
-    FileText,
-    FilePlus,
-    Pencil,
-    ClipboardPaste,
-    ChevronRight,
-    FolderTree,
-    Layers,
-} from 'lucide-react';
+import { FolderTree, FilePlus, Pencil, ClipboardPaste } from 'lucide-react';
+import { SubpageRow } from './subpage-row';
 
 export interface EmptyPagePlaceholderProps {
     page: Page;
@@ -28,7 +18,6 @@ export interface EmptyPagePlaceholderProps {
 
 export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ page }: EmptyPagePlaceholderProps) {
     const store = usePageStore();
-    const navigate = useNavigate();
     const mountedRef = useRef(true);
 
     const [subpagesState, setSubpagesState] = useState<DataState<PageListItem[]>>(DataState.init);
@@ -76,172 +65,33 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
     }, []);
 
     return (
-        <div className="mx-auto max-w-[var(--container-prose-2xwide)] px-6 py-12">
-            {/* Hero Card */}
-            <div className="relative overflow-hidden rounded-2xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-8 shadow-sm transition-all duration-200">
-                <div className="flex flex-col gap-4">
-                    <div className="flex items-center justify-between flex-wrap gap-3">
-                        <div className="flex items-center gap-3">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--color-surface-soft)] text-[var(--color-brand)] border border-[var(--color-border-subtle)]">
-                                {hasSubpages ? <FolderTree size={22} /> : <BookOpen size={22} />}
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-[var(--color-text-strong)] tracking-tight">
-                                    {page.title}
-                                </h1>
-                                {page.category && (
-                                    <span className="inline-block mt-0.5 rounded-md bg-[var(--color-surface-soft)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-muted)] border border-[var(--color-border-subtle)]">
-                                        {page.category}
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        {store.isOwner && (
-                            <div className="flex items-center gap-2">
-                                <Button
-                                    variant="outlined"
-                                    size="sm"
-                                    onClick={() => setCreateSubpageOpen(true)}
-                                    className="flex items-center gap-1.5"
-                                >
-                                    <FilePlus size={14} />
-                                    <span>New subpage</span>
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    onClick={() => setEditPageOpen(true)}
-                                    className="flex items-center gap-1.5"
-                                >
-                                    <Pencil size={14} />
-                                    <span>Add content</span>
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-
-                    {!hasSubpages && (
-                        <p className="text-sm text-[var(--color-text-muted)] leading-relaxed max-w-2xl">
-                            Add content or create a subpage.
-                        </p>
-                    )}
+        <div className="subpage-explorer">
+            <header className="subpage-heading">
+                <div className="subpage-heading-copy">
+                    <FolderTree size={20} aria-hidden="true" />
+                    <div><h1>{page.title}</h1>{page.category && <p>{page.category}</p>}</div>
                 </div>
-            </div>
-
-            {/* Quick Action Onboarding (When completely empty with no subpages and user is owner) */}
-            {store.isOwner && !hasSubpages && subpagesState.isLoaded && (
-                <div className="mt-8">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Action 1: Write Content */}
-                        <div
-                            onClick={() => setEditPageOpen(true)}
-                            className="group relative cursor-pointer rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] p-5 transition-all duration-200 hover:border-[var(--color-brand)] hover:shadow-md"
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-surface-soft)] text-[var(--color-brand)] group-hover:scale-105 transition-transform">
-                                    <Pencil size={18} />
-                                </div>
-                                <ChevronRight size={16} className="text-[var(--color-text-subtle)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all" />
-                            </div>
-                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)] group-hover:text-[var(--color-brand)] transition-colors">
-                                Write content
-                            </h3>
-                            <p className="mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed">
-                                Start writing or paste your content.
-                            </p>
-                        </div>
-
-                        {/* Action 2: Create Subpage */}
-                        <div
-                            onClick={() => setCreateSubpageOpen(true)}
-                            className="group relative cursor-pointer rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] p-5 transition-all duration-200 hover:border-[var(--color-brand)] hover:shadow-md"
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-surface-soft)] text-[var(--color-brand)] group-hover:scale-105 transition-transform">
-                                    <FilePlus size={18} />
-                                </div>
-                                <ChevronRight size={16} className="text-[var(--color-text-subtle)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all" />
-                            </div>
-                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)] group-hover:text-[var(--color-brand)] transition-colors">
-                                Create a subpage
-                            </h3>
-                            <p className="mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed">
-                                Add a page inside this one.
-                            </p>
-                        </div>
-
-                        {/* Action 3: Paste from Clipboard */}
-                        <div
-                            onClick={handlePasteFromClipboard}
-                            className="group relative cursor-pointer rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] p-5 transition-all duration-200 hover:border-[var(--color-brand)] hover:shadow-md"
-                        >
-                            <div className="flex items-center justify-between mb-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--color-surface-soft)] text-[var(--color-brand)] group-hover:scale-105 transition-transform">
-                                    <ClipboardPaste size={18} />
-                                </div>
-                                <ChevronRight size={16} className="text-[var(--color-text-subtle)] group-hover:text-[var(--color-brand)] group-hover:translate-x-0.5 transition-all" />
-                            </div>
-                            <h3 className="text-sm font-semibold text-[var(--color-text-strong)] group-hover:text-[var(--color-brand)] transition-colors">
-                                Paste content
-                            </h3>
-                            <p className="mt-1 text-xs text-[var(--color-text-muted)] leading-relaxed">
-                                Paste from your clipboard.
-                            </p>
-                        </div>
-                    </div>
+                {store.isOwner && <div className="subpage-heading-actions">
+                    <Button variant="outlined" size="sm" onClick={() => setCreateSubpageOpen(true)}><FilePlus size={14} aria-hidden="true" /> New subpage</Button>
+                    <Button size="sm" onClick={() => setEditPageOpen(true)}><Pencil size={14} aria-hidden="true" /> Add content</Button>
+                    {!hasSubpages && subpagesState.isLoaded && <Button variant="ghost" size="sm" onClick={handlePasteFromClipboard}><ClipboardPaste size={14} aria-hidden="true" /> Paste content</Button>}
+                </div>}
+            </header>
+            {hasSubpages && <section className="subpage-list-section" aria-label="Subpages">
+                <h2 className="subpage-list-label">Subpages · {subpages.length}</h2>
+                <div className="subpage-list">
+                    {subpages.map(subpage => <SubpageRow key={subpage.id} page={subpage} parentPageId={page.id}
+                        showMetadata onDeleted={loadSubpages} onEdited={loadSubpages} />)}
                 </div>
-            )}
-
-            {/* Subpages Explorer Section (When subpages exist) */}
-            {hasSubpages && (
-                <div className="mt-8">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
-                            <Layers size={14} className="text-[var(--color-brand)]" />
-                            <span>Pages in this section ({subpages.length})</span>
-                        </h2>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {subpages.map((subpage) => (
-                            <div
-                                key={subpage.id}
-                                onClick={() => navigate(readerPageWithIdRouteValue(subpage.id))}
-                                className="group flex flex-col justify-between rounded-xl border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] p-4 transition-all duration-150 hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:shadow-sm cursor-pointer"
-                            >
-                                <div className="flex items-start gap-3">
-                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] group-hover:text-[var(--color-brand)] group-hover:bg-[var(--color-surface-canvas)] transition-colors">
-                                        <FileText size={16} />
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="text-sm font-medium text-[var(--color-text-strong)] truncate group-hover:text-[var(--color-brand)] transition-colors">
-                                            {subpage.title}
-                                        </h4>
-                                        {subpage.category && (
-                                            <span className="inline-block mt-1 text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-wider truncate">
-                                                {subpage.category}
-                                            </span>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between mt-3 pt-2 border-t border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-subtle)]">
-                                    <span>{new Date(subpage.createdAt).toLocaleDateString()}</span>
-                                    <span className="flex items-center gap-1 text-[var(--color-brand)] font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                        Open <ChevronRight size={12} />
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
-            {/* Subpages Loading State */}
-            {subpagesState.isLoading && (
-                <div className="flex items-center justify-center p-8 mt-6">
-                    <Loader />
-                </div>
-            )}
+            </section>}
+            {!hasSubpages && subpagesState.isLoaded && <div className="subpage-empty">
+                <p>No subpages yet.</p>
+                {store.isOwner && <p>Add content or create a subpage.</p>}
+            </div>}
+            {subpagesState.isLoading && <div className="flex justify-center p-6" role="status" aria-label="Loading subpages"><Loader /></div>}
+            {subpagesState.isError && <div className="subpage-empty" role="alert">
+                <p>Couldn’t load subpages.</p><Button variant="ghost" size="sm" onClick={loadSubpages}>Retry</Button>
+            </div>}
 
             {/* Edit Current Page Dialog */}
             {store.isOwner && (

@@ -24,6 +24,20 @@ HTTP; production needs HTTPS, `NODE_ENV=production`, and exact HTTPS origins.
 
 If dependencies, migrations, and builds are already ready, use `npm start`.
 
+## Development and shared-hosting ZIP
+
+Use `reader-backend/.env` locally and `reader-backend/.env.prod` for production.
+After the initial `npm install`:
+
+```sh
+npm run dev      # prepare the local database and run both development servers
+npm run package  # build a private deployment ZIP; never run database migrations
+```
+
+Upload/extract the ZIP outside the public web root, then configure `bash start.sh`
+as the server startup command. The ZIP includes production credentials: do not
+publish or share it. See [configuration and deployment instructions](docs/shared-hosting.md).
+
 ## Application routes
 
 `/` is the do100x launcher. Apps live at `/reader`, `/finance` and `/tasks`;

@@ -1410,7 +1410,7 @@ export function registerPageTools(server: McpServer, userId: string) {
 
       const recentVocab = await prisma.vocabulary.findMany({
         where: { userId, createdAt: { gte: sinceDate } },
-        select: { id: true, term: true, pageTitle: true, createdAt: true },
+        select: { id: true, term: true, createdAt: true },
         orderBy: { createdAt: "desc" },
         take: limit,
       });

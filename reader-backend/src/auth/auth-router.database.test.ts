@@ -129,7 +129,8 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("Google-only sign-in, ownershi
     expect((await request(`/backend-api/user-models/${modelId}`, "DELETE", undefined, b.cookie)).status).toBe(404);
     expect((await request("/backend-api/chat", "POST", { userId: a.user.id, modelId: "test", systemPrompt: "Test", userPrompt: "Test", pageId: repaired.homePageId }, b.cookie)).status).toBe(404);
     expect((await request("/backend-api/comments", "POST", { pageId: repaired.homePageId, body: "Private", selectedText: "text" }, b.cookie)).status).toBe(404);
-    expect((await request("/backend-api/vocabulary", "POST", { pageId: repaired.homePageId, term: "Private" }, b.cookie)).status).toBe(404);
+    // Vocabulary accepts personal words only, never a page/owner supplied by a client.
+    expect((await request("/backend-api/vocabulary", "POST", { pageId: repaired.homePageId, term: "Private" }, b.cookie)).status).toBe(400);
     expect(await validateUserToken(a.user.id)).toMatchObject({ id: a.user.id, displayName: "Changed name" });
     expect(await validateUserToken(a.user.email)).toBeNull();
     expect((await request("/backend-api/auth/logout", "POST", {}, a.cookie)).headers.get("set-cookie")).toContain("reader_session=;");

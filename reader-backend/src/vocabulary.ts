@@ -1,118 +1,31 @@
-import { Router } from "express";
-import { prisma } from "./prisma";
+import { Router, type RequestHandler } from "express";
+import { z } from "zod";
 import { readSession, requireSession } from "./session";
-import { canReadPage } from "./page-access";
+import { addVocabulary, deleteVocabulary, listVocabulary, readVocabulary, updateVocabulary, vocabularyQuerySchema, VocabularyError, writeExplanations } from "./vocabulary-service";
 
 const router = Router();
-router.use((req, res, next) => req.method === "GET" ? next() : requireSession(req, res, next));
-
-// GET /vocabulary?pageId=  | /vocabulary?date=YYYY-MM-DD
-// - pageId: list vocabulary for a single page
-// - date: list vocabulary across all pages for one calendar day (daily recap)
-router.get("/", async (req, res) => {
-  const { pageId, date } = req.query as {
-    pageId?: string;
-    date?: string;
-  };
-  const reqUserId = readSession(req);
-
-  // Unauthenticated guests have no personal vocabulary
-  if (!reqUserId) {
-    res.json([]);
-    return;
+router.use(requireSession);
+const handle = (fn: RequestHandler): RequestHandler => async (req, res, next) => {
+  try { await fn(req, res, next); }
+  catch (error) {
+    if (error instanceof z.ZodError) res.status(400).json({ message: error.issues.map(i => i.message).join(" ") });
+    else if (error instanceof VocabularyError) res.status(error.status).json({ message: error.message });
+    else next(error);
   }
-
-  if (!pageId && !date) {
-    res
-      .status(400)
-      .json({ message: "Choose a page or date." });
-    return;
-  }
-
-  const where: Record<string, unknown> = {
-    userId: reqUserId,
-  };
-  if (pageId) where.pageId = pageId;
-
-  if (date) {
-    const parsed = new Date(`${date}T00:00:00.000Z`);
-    if (Number.isNaN(parsed.getTime())) {
-      res.status(400).json({ message: "Enter a valid date in YYYY-MM-DD format." });
-      return;
-    }
-    const next = new Date(parsed.getTime() + 24 * 60 * 60 * 1000);
-    where.createdAt = { gte: parsed, lt: next };
-  }
-
-  const rows = await prisma.vocabulary.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-  });
-
-  res.json(
-    rows.map((v: any) => ({
-      id: v.id,
-      pageId: v.pageId,
-      term: v.term,
-      createdAt: v.createdAt,
-    }))
-  );
-});
-
-// POST /vocabulary
-router.post("/", async (req, res) => {
-  const reqUserId = readSession(req);
-  const { pageId, term } = req.body as {
-    pageId: string;
-    term: string;
-  };
-
-  const finalUserId = reqUserId;
-  if (!finalUserId) {
-    res.status(401).json({ message: "Sign in to save words." });
-    return;
-  }
-
-  if (!pageId || !term || !term.trim()) {
-    res
-      .status(400)
-      .json({ message: "Choose a page and enter a word." });
-    return;
-  }
-
-  if (!await canReadPage(prisma, pageId, finalUserId)) { res.status(404).json({ message: "Page not found" }); return; }
-  const newVocab = await prisma.vocabulary.create({
-    data: {
-      userId: finalUserId,
-      pageId,
-      term: term.trim(),
-      createdAt: new Date(),
-    },
-  });
-
-  res.status(201).json(newVocab.id);
-});
-
-// DELETE /vocabulary/:vocabId
-router.delete("/:vocabId", async (req, res) => {
-  const { vocabId } = req.params;
-  const reqUserId = readSession(req);
-
-  const existing = await prisma.vocabulary.findFirst({
-    where: { id: vocabId, userId: reqUserId },
-  });
-
-  if (!existing) {
-    res.status(404).json({ message: "Vocabulary entry not found" });
-    return;
-  }
-
-
-  await prisma.vocabulary.delete({
-    where: { id: vocabId, userId: reqUserId },
-  });
-
+};
+router.get("/", handle(async (req, res) => {
+  const q: Record<string, unknown> = { ...req.query };
+  for (const key of ["offset", "limit"]) if (q[key] !== undefined) q[key] = z.coerce.number().parse(q[key]);
+  if (q.missingExplanation !== undefined) q.missingExplanation = z.enum(["true", "false"]).parse(q.missingExplanation) === "true";
+  res.json(await listVocabulary(readSession(req)!, vocabularyQuerySchema.parse(q)));
+}));
+router.post("/", handle(async (req, res) => { res.json(await addVocabulary(readSession(req)!, req.body)); }));
+router.post("/read", handle(async (req, res) => { res.json(await readVocabulary(readSession(req)!, req.body)); }));
+router.put("/explanations", handle(async (req, res) => { res.json(await writeExplanations(readSession(req)!, req.body)); }));
+router.patch("/:id", handle(async (req, res) => { res.json(await updateVocabulary(readSession(req)!, req.params.id, req.body)); }));
+router.delete("/:id", handle(async (req, res) => {
+  const { expectedVersion } = z.object({ expectedVersion: z.number().int().positive() }).strict().parse(req.body);
+  await deleteVocabulary(readSession(req)!, req.params.id, expectedVersion);
   res.status(204).send();
-});
-
+}));
 export default router;

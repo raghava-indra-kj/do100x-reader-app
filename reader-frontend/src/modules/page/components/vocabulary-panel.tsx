@@ -1,317 +1,73 @@
 import { observer } from 'mobx-react-lite';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePageStore } from '../store';
-import { useAuthStore } from '@modules/auth/provider/store';
-import {
-    getVocabulary,
-    deleteVocabulary,
-} from '@domain/vocabulary/services/vocabulary-service';
-import { getExplanations } from '@domain/comment/services/comments-service';
-import { getPage } from '@domain/page/services/pages-service';
-import type { Vocabulary } from '@domain/vocabulary/models/vocabulary';
-import type { Comment } from '@domain/comment/models/comment';
-import { DataState } from '@lib/utils/data-state';
-import { Loader } from '@modules/core/ui/primitives/loader/loader';
-import {
-    NotebookPen,
-    Trash2,
-    Sparkles,
-    Calendar,
-    FileText,
-    ShieldCheck,
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { loginPageRoute } from '@boot/routes';
+import { loginPageRoute, vocabularyPageRoute } from '@boot/routes';
+import { getVocabulary } from '@domain/vocabulary/services/vocabulary-service';
+import { getExplanations } from '@domain/comment/services/comments-service';
+import type { VocabularySummary } from '@domain/vocabulary/models/db-vocabulary';
+import type { Comment } from '@domain/comment/models/comment';
+import { useAuthStore } from '@modules/auth/provider/store';
+import { Button } from '@modules/core/ui/primitives/button';
+import { localDay } from '@modules/reader/vocabulary/filters';
+import { usePageStore } from '../store';
 
-function formatRelativeTime(date: Date): string {
-    const now = Date.now();
-    const diff = now - date.getTime();
-    const seconds = Math.floor(diff / 1000);
-    if (seconds < 60) return 'just now';
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return date.toLocaleDateString();
-}
-
-function toIsoDay(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-
-const TODAY = toIsoDay(new Date());
-
+/** Personal words and page explanations are separate collections. */
 export const PageVocabulary = observer(function PageVocabulary() {
-    const store = usePageStore();
-    const authStore = useAuthStore();
-    const mountedRef = useRef(true);
-
+    const store = usePageStore(), auth = useAuthStore();
+    const [words, setWords] = useState<VocabularySummary[]>([]);
+    const [total, setTotal] = useState(0);
+    const [explanations, setExplanations] = useState<Comment[]>([]);
     const [mode, setMode] = useState<'page' | 'day'>('page');
-    const [date, setDate] = useState(TODAY);
-
-    const [vocabState, setVocabState] = useState<DataState<Vocabulary[]>>(DataState.init);
-    const [explState, setExplState] = useState<DataState<Comment[]>>(DataState.init);
-    const [titleCache, setTitleCache] = useState<Record<string, string>>({});
-
-    const vocabVersion = store.vocabVersion;
-    const commentsVersion = store.commentsVersion;
-
-    const load = useCallback(() => {
-        setVocabState(DataState.loading());
-        setExplState(DataState.loading());
-
-        const vocabParams = mode === 'page' ? { pageId: store.pageId } : { date };
-        const explParams = mode === 'page' ? { pageId: store.pageId } : { date };
-
-        getVocabulary(vocabParams).then((result) => {
-            if (!mountedRef.current) return;
-            if (result.ok) {
-                setVocabState(DataState.data(result.data));
-
-                if (mode === 'day') {
-                    const uniquePageIds = Array.from(
-                        new Set(result.data.map((v) => v.pageId))
-                    ).filter((id) => !(id in titleCache));
-                    uniquePageIds.forEach((id) => {
-                        getPage({ pageId: id }).then((r) => {
-                            if (mountedRef.current && r.ok) {
-                                setTitleCache((prev) => ({
-                                    ...prev,
-                                    [id]: r.data.title,
-                                }));
-                            }
-                        });
-                    });
-                }
-            } else {
-                setVocabState(DataState.error(result.error));
-            }
-        });
-
-        getExplanations(explParams).then((result) => {
-            if (!mountedRef.current) return;
-            if (result.ok) {
-                setExplState(DataState.data(result.data));
-            } else {
-                setExplState(DataState.error(result.error));
-            }
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mode, date, store.pageId, vocabVersion, commentsVersion]);
-
+    const [date, setDate] = useState(() => localDay(new Date()));
+    const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [retry, setRetry] = useState(0);
+    const vocabVersion = store.vocabVersion, commentsVersion = store.commentsVersion;
     useEffect(() => {
-        mountedRef.current = true;
-        load();
-        return () => {
-            mountedRef.current = false;
-        };
-    }, [load]);
-
-    const vocab = vocabState.ifLoadedOr({ loaded: (v) => v, or: () => [] as Vocabulary[] });
-    const explanations = explState.ifLoadedOr({ loaded: (e) => e, or: () => [] as Comment[] });
-
-    const handleDeleteVocab = useCallback(
-        async (vocabId: string) => {
-            setVocabState((prev) => {
-                if (prev.isLoaded) {
-                    return DataState.data(prev.value.filter((v) => v.id !== vocabId));
-                }
-                return prev;
-            });
-            const result = await deleteVocabulary({ vocabId });
-            if (result.ok) {
-                store.bumpVocabVersion();
-            } else {
-                load();
-            }
-        },
-        [store, load]
-    );
-
-    const resolvePageTitle = useCallback(
-        (pageId: string) => {
-            if (pageId === store.pageId && store.optCurrentPage) {
-                return store.optCurrentPage.title;
-            }
-            return titleCache[pageId] ?? pageId;
-        },
-        [store, titleCache]
-    );
-
-
-    return (
-        <div className="flex h-full flex-col">
-            {!authStore.isAuthenticated && (
-                <div className="mx-3 mt-3 p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] text-[11px] text-[var(--color-text-muted)] flex items-start gap-2 leading-relaxed">
-                    <ShieldCheck size={14} className="text-emerald-500 shrink-0 mt-0.5" />
-                    <span>
-                        Your vocabulary is private. <Link to={loginPageRoute} className="text-[var(--color-brand)] font-medium underline">Sign in</Link> to save words.
-                    </span>
-                </div>
-            )}
-            <div className="flex flex-col gap-1.5 shrink-0 px-3 pt-3 pb-2 border-b border-[var(--color-border-subtle)]">
-                <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider flex items-center gap-1.5">
-                    Saved words
-                    {(vocab.length + explanations.length) > 0 && (
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-[var(--color-surface-card)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)] font-bold">
-                            {vocab.length + explanations.length}
-                        </span>
-                    )}
-                </span>
-
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => setMode('page')}
-                        className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors cursor-pointer ${
-                            mode === 'page'
-                                ? 'bg-[var(--color-surface-card)] text-[var(--color-brand)]'
-                                : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)]'
-                        }`}
-                        title="Saved words"
-                    >
-                        <FileText size={11} />
-                        <span>This page</span>
-                    </button>
-                    <button
-                        onClick={() => setMode('day')}
-                        className={`flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium transition-colors cursor-pointer ${
-                            mode === 'day'
-                                ? 'bg-[var(--color-surface-card)] text-[var(--color-brand)]'
-                                : 'text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)]'
-                        }`}
-                        title="Words saved on a selected date"
-                    >
-                        <Calendar size={11} />
-                        <span>Day</span>
-                    </button>
-                    {mode === 'day' && (
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value || TODAY)}
-                            className="ml-auto rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] px-1.5 py-0.5 text-[10px] text-[var(--color-text-body)] focus:outline-none focus:border-[var(--color-brand)]"
-                        />
-                    )}
-                </div>
-
-                <div className="flex items-center gap-3 text-[10px] text-[var(--color-text-subtle)] tabular-nums">
-                    <span>{vocab.length} words</span>
-                    <span>·</span>
-                    <span>{explanations.length} explanations</span>
-                </div>
+        if (!auth.isAuthenticated) return;
+        let cancelled = false;
+        setLoading(true); setError(null);
+        void Promise.all([
+            getVocabulary({ limit: 12, sort: 'newest' }),
+            getExplanations(mode === 'page' ? { pageId: store.pageId } : { date }),
+        ]).then(([vocabulary, savedExplanations]) => {
+            if (cancelled) return;
+            setLoading(false);
+            if (vocabulary.ok) { setWords(vocabulary.data.items); setTotal(vocabulary.data.total); }
+            else setError(vocabulary.error.message);
+            if (savedExplanations.ok) setExplanations(savedExplanations.data);
+            else setError(savedExplanations.error.message);
+        });
+        return () => { cancelled = true; };
+    }, [auth.isAuthenticated, store.pageId, vocabVersion, commentsVersion, mode, date, retry]);
+    if (!auth.isAuthenticated) return <p className="p-4 text-xs text-[var(--color-text-muted)]">Your words are private. <Link to={loginPageRoute} className="underline">Sign in</Link> to save and review them.</p>;
+    return <div className="flex h-full flex-col overflow-y-auto text-[var(--color-text-strong)]">
+        <header className="flex items-center justify-between gap-2 border-b border-[var(--color-border-subtle)] p-3">
+            <h2 className="text-xs font-semibold">Saved words <span className="text-[var(--color-text-muted)]">{total}</span></h2>
+            <Link to={vocabularyPageRoute} className="text-xs font-medium text-[var(--color-brand)]">Review words</Link>
+        </header>
+        {error && <div className="p-3"><p role="alert" className="text-xs text-[var(--color-text-error)]">{error}</p><Button variant="ghost" size="sm" onClick={() => setRetry(v => v + 1)}>Retry</Button></div>}
+        {loading && <p role="status" className="p-3 text-xs">Loading…</p>}
+        <section className="grid gap-1 p-3" aria-label="Recently saved words">
+            {!words.length && !loading && <p className="text-xs text-[var(--color-text-muted)]">Select a word and choose “Save word”.</p>}
+            {words.map(word => <Link key={word.id} to={`${vocabularyPageRoute}?word=${encodeURIComponent(word.id)}`} className="flex items-center justify-between gap-2 rounded-md px-2 py-2 text-xs hover:bg-[var(--color-surface-soft)]">
+                <span className="truncate">{word.term}</span><span className="shrink-0 text-[10px] text-[var(--color-text-muted)]">{word.learningStatus === 'learned' ? 'Learned' : 'Learning'}</span>
+            </Link>)}
+        </section>
+        <section className="border-t border-[var(--color-border-subtle)] p-3" aria-label="Saved explanations">
+            <h2 className="mb-2 text-xs font-semibold">Your explanations</h2>
+            <div className="mb-3 flex flex-wrap items-center gap-1">
+                <Button variant={mode === 'page' ? 'secondary' : 'ghost'} size="sm" onClick={() => setMode('page')}>This page</Button>
+                <Button variant={mode === 'day' ? 'secondary' : 'ghost'} size="sm" onClick={() => setMode('day')}>Day</Button>
+                {mode === 'day' && <input aria-label="Explanations saved on date" type="date" value={date} onChange={e => setDate(e.target.value || localDay(new Date()))} className="min-w-0 max-w-full rounded border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] px-2 py-1 text-xs" />}
             </div>
-
-            <div className="flex-1 overflow-y-auto">
-                {vocabState.fold({
-                    pending: () => (
-                        <div className="flex items-center justify-center p-8">
-                            <Loader />
-                        </div>
-                    ),
-                    loaded: () => (
-                        <div className="flex flex-col gap-3 p-3">
-                            {/* Words added */}
-                            <section className="flex flex-col gap-1.5">
-                                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)]">
-                                    <NotebookPen size={12} />
-                                    <span>Saved words</span>
-                                </div>
-                                {vocab.length === 0 ? (
-                                    <p className="text-xs text-[var(--color-text-subtle)] pl-0.5">
-                                        Select a word and choose “Save word”.
-                                    </p>
-                                ) : (
-                                    <div className="flex flex-col gap-1">
-                                        {vocab.map((v) => (
-                                            <div
-                                                key={v.id}
-                                                className="group flex items-center gap-1.5 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] px-2 py-1.5"
-                                            >
-                                                <span className="text-xs text-[var(--color-text-strong)] truncate flex-1 min-w-0">
-                                                    {v.term}
-                                                </span>
-                                                {mode === 'day' && (
-                                                    <span
-                                                        className="text-[10px] text-[var(--color-text-subtle)] truncate max-w-[120px]"
-                                                        title={resolvePageTitle(v.pageId)}
-                                                    >
-                                                        {resolvePageTitle(v.pageId)}
-                                                    </span>
-                                                )}
-                                                <span className="text-[10px] text-[var(--color-text-subtle)] tabular-nums shrink-0">
-                                                    {formatRelativeTime(v.createdAt)}
-                                                </span>
-                                                <button
-                                                    onClick={() => handleDeleteVocab(v.id)}
-                                                    className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                                                    title="Remove word"
-                                                >
-                                                    <Trash2 size={11} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </section>
-
-                            {/* Explanations */}
-                            <section className="flex flex-col gap-1.5">
-                                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)]">
-                                    <Sparkles size={12} />
-                                    <span>Your explanations</span>
-                                </div>
-                                {explanations.length === 0 ? (
-                                    <p className="text-xs text-[var(--color-text-subtle)] pl-0.5">
-                                        Choose “Save to my explanations” when adding a comment.
-                                    </p>
-                                ) : (
-                                    <div className="flex flex-col gap-1.5">
-                                        {explanations.map((c) => (
-                                            <div
-                                                key={c.id}
-                                                className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] px-2 py-1.5"
-                                            >
-                                                <div className="flex items-center gap-1 mb-0.5">
-                                                    {c.sectionTitle && (
-                                                        <span className="text-[10px] font-medium text-[var(--color-text-subtle)] uppercase tracking-wider truncate">
-                                                            {c.sectionTitle}
-                                                        </span>
-                                                    )}
-                                                    {mode === 'day' && (
-                                                        <span
-                                                            className="text-[10px] text-[var(--color-text-subtle)] truncate ml-auto"
-                                                            title={c.pageTitle}
-                                                        >
-                                                            {c.pageTitle}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <div className="rounded bg-[var(--color-surface-soft)] border-l-2 border-[var(--color-brand)] px-2 py-1 text-[11px] text-[var(--color-text-muted)] leading-relaxed whitespace-pre-wrap mb-1">
-                                                    {c.selectedText}
-                                                </div>
-                                                <p className="text-xs text-[var(--color-text-body)] leading-relaxed whitespace-pre-wrap">
-                                                    {c.body}
-                                                </p>
-                                                <span className="text-[10px] text-[var(--color-text-subtle)] tabular-nums">
-                                                    {formatRelativeTime(c.createdAt)}
-                                                </span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </section>
-                        </div>
-                    ),
-                    error: () => (
-                        <div className="p-4 text-sm text-[var(--color-text-error)]">
-                            Couldn’t load vocabulary.
-                        </div>
-                    ),
-                })}
-            </div>
-        </div>
-    );
+            {!explanations.length && !loading && <p className="text-xs text-[var(--color-text-muted)]">Choose “Save to my explanations” when adding a comment.</p>}
+            <div className="grid gap-2">{explanations.map(c => <div key={c.id} className="rounded-md border border-[var(--color-border-subtle)] p-2 text-xs">
+                {c.sectionTitle && <p className="mb-1 text-[10px] text-[var(--color-text-muted)]">{c.sectionTitle}</p>}
+                {mode === 'day' && <p className="mb-1 text-[10px] text-[var(--color-text-muted)]">{c.pageTitle}</p>}
+                <blockquote className="mb-2 whitespace-pre-wrap border-l-2 border-[var(--color-brand)] pl-2 text-[var(--color-text-muted)]">{c.selectedText}</blockquote>
+                <p className="whitespace-pre-wrap leading-relaxed">{c.body}</p>
+            </div>)}</div>
+        </section>
+    </div>;
 });

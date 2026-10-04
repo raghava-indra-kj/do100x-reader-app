@@ -1,5 +1,6 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { prisma } from "../prisma";
+import { listVocabulary } from "../vocabulary-service";
 
 export function registerResources(server: McpServer, userId: string) {
   // 1. All Pages Index
@@ -114,16 +115,11 @@ updatedAt: ${page.updatedAt.toISOString()}
     "all-vocabulary",
     "reader://vocabulary",
     {
-      description: "Complete list of saved vocabulary terms looked up during reading",
+      description: "First 50 personal vocabulary word summaries. Use reader_get_vocabulary and nextOffset for further pages, reader_read_vocabulary for complete lessons.",
       mimeType: "application/json",
     },
     async (uri) => {
-      const items = await prisma.vocabulary.findMany({
-        where: {
-          userId,
-        },
-        orderBy: { createdAt: "desc" },
-      });
+      const items = await listVocabulary(userId, { limit: 50 });
 
       return {
         contents: [

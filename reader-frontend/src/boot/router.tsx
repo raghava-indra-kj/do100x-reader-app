@@ -2,12 +2,13 @@ import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider, AuthGuard } from '@modules/auth/provider';
 import { MotivationPreferencesProvider } from '@modules/core/preferences/motivation-preferences';
-import { financePageRoute, homePageRoute, loginPageRoute, readerPageWithIdRoute, readerPageRoute, settingsPageRoute, tasksPageRoute } from './routes';
+import { financePageRoute, homePageRoute, loginPageRoute, readerPageWithIdRoute, readerPageRoute, vocabularyPageRoute, settingsPageRoute, tasksPageRoute } from './routes';
 
 const HomePage = lazy(() => import('../modules/home/page'));
 const NotFoundPage = lazy(() => import('../modules/home/not-found'));
 const LoginPage = lazy(() => import('../modules/auth/login/page'));
 const ReaderHome = lazy(() => import('../modules/reader/home'));
+const VocabularyPage = lazy(() => import('../modules/reader/vocabulary/page'));
 const PagePage = lazy(() => import('../modules/page/page'));
 const SettingsPage = lazy(() => import('../modules/settings/page'));
 const TasksPage = lazy(() => import('../modules/tasks/page'));
@@ -20,6 +21,7 @@ export function ApplicationRoutes() {
         <Route path={readerPageWithIdRoute} element={<PagePage />} />
         <Route path={loginPageRoute} element={<LoginPage />} />
         <Route path={readerPageRoute} element={<AuthGuard><ReaderHome /></AuthGuard>} />
+        <Route path={vocabularyPageRoute} element={<AuthGuard><VocabularyPage /></AuthGuard>} />
         <Route path={settingsPageRoute} element={<AuthGuard><SettingsPage /></AuthGuard>} />
         <Route path={tasksPageRoute} element={<AuthGuard><TasksPage /></AuthGuard>} />
         <Route path={financePageRoute} element={<AuthGuard><FinancePage /></AuthGuard>} />

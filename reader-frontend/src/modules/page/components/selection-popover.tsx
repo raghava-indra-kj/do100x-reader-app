@@ -228,14 +228,15 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
         if (!trimmedText || isSavingVocab) return;
         setIsSavingVocab(true);
         const result = await createVocabulary({
-            pageId: page.id,
             term: trimmedText,
         });
         setIsSavingVocab(false);
         if (result.ok) {
             setView('menu');
-            toast.success('Word saved');
+            toast.success(result.data.created ? 'Word saved' : 'Already saved');
             store.bumpVocabVersion();
+        } else {
+            toast.error(result.error.message);
         }
     };
 

@@ -1,7 +1,7 @@
 import type { Section } from '@domain/page/models/section';
 import { Page } from '@domain/page/models/page';
 import { getPage, updatePageShareStatus } from '@domain/page/services/pages-service';
-import { getComments, getExplanations } from '@domain/comment/services/comments-service';
+import { getComments } from '@domain/comment/services/comments-service';
 import { getVocabulary } from '@domain/vocabulary/services/vocabulary-service';
 import { DataState } from '@lib/utils/data-state';
 import type { PageHeadingLevel } from './theme/page-heading-level';
@@ -136,14 +136,9 @@ export class PageStore {
     }
 
     async loadVocabCount() {
-        const [vocabRes, explRes] = await Promise.all([
-            getVocabulary({ pageId: this.pageId }),
-            getExplanations({ pageId: this.pageId }),
-        ]);
+        const vocabRes = await getVocabulary({ limit: 1 });
         runInAction(() => {
-            const vCount = vocabRes.ok ? vocabRes.data.length : 0;
-            const eCount = explRes.ok ? explRes.data.length : 0;
-            this.vocabCount = vCount + eCount;
+            this.vocabCount = vocabRes.ok ? vocabRes.data.total : 0;
         });
     }
 

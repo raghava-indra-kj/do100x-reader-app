@@ -115,8 +115,8 @@ export const PageSubpages = observer(function PageSubpages() {
     }, [isGrouped, sorted]);
 
     return (
-        <div className="flex h-full flex-col">
-            <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+        <div className="subpage-sidebar flex h-full flex-col">
+            <div className="flex items-center gap-2 px-2 pt-2 pb-2">
                 <div className="relative flex-1">
                     <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" />
                     <Input
@@ -129,12 +129,12 @@ export const PageSubpages = observer(function PageSubpages() {
                     />
                 </div>
                 {store.isOwner && (
-                    <Button size="sm" iconOnly onClick={() => setUpsertOpen(true)} tooltip="New subpage">
+                    <Button size="sm" iconOnly onClick={() => setUpsertOpen(true)} tooltip="New subpage" aria-label="New subpage">
                         <Plus size={14} />
                     </Button>
                 )}
             </div>
-            <div className="flex items-center gap-2 px-3 pb-2">
+            <div className="flex items-center gap-2 px-2 pb-2">
                 <Select
                     value={uiSettings.subpageSort.id}
                     onValueChange={(id) => {
@@ -197,6 +197,7 @@ export const PageSubpages = observer(function PageSubpages() {
                                                         key={page.id}
                                                         page={page}
                                                         onDeleted={load}
+                                                        onEdited={load}
                                                         parentPageId={store.pageId}
                                                     />
                                                 ))}
@@ -218,12 +219,13 @@ export const PageSubpages = observer(function PageSubpages() {
                                         items={sorted.map((p) => p.id)}
                                         strategy={verticalListSortingStrategy}
                                     >
-                                        <div className="flex flex-col gap-0.5 p-3">
+                                        <div className="flex flex-col gap-0.5 p-2">
                                             {sorted.map((page) => (
                                                 <SubpageItem
                                                     key={page.id}
                                                     page={page}
                                                     onDeleted={load}
+                                                        onEdited={load}
                                                     parentPageId={store.pageId}
                                                 />
                                             ))}
@@ -234,12 +236,13 @@ export const PageSubpages = observer(function PageSubpages() {
                         }
 
                         return (
-                            <div className="flex flex-col gap-0.5 p-3">
+                            <div className="flex flex-col gap-0.5 p-2">
                                 {sorted.map((page) => (
                                     <SubpageItem
                                         key={page.id}
                                         page={page}
                                         onDeleted={load}
+                                                        onEdited={load}
                                         parentPageId={store.pageId}
                                         hideDrag
                                     />
