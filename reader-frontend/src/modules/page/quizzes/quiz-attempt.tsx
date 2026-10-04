@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Dialog } from '@modules/core/ui/primitives/dialog';
+import { ConfirmationDialog } from '@modules/core/ui/components/confirmation-dialog';
 import { QuizMarkdown } from './quiz-markdown';
 import { quizApi, type EvaluationRecord, type QuizAttempt as Attempt } from './quiz-api';
 
@@ -24,6 +25,7 @@ export function QuizAttempt({ quizId, attemptId, onClose, onChanged }: { quizId:
     const [draft, setDraft] = useState<ResponseDraft>({});
     const [saved, setSaved] = useState<ResponseDraft>({});
     const [busy, setBusy] = useState(false);
+    const [confirmDiscard, setConfirmDiscard] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [history, setHistory] = useState<EvaluationRecord[] | null>(null);
     const [confirmSubmit, setConfirmSubmit] = useState(false);
@@ -43,7 +45,11 @@ export function QuizAttempt({ quizId, attemptId, onClose, onChanged }: { quizId:
         return () => window.removeEventListener('beforeunload', protect);
     }, [dirty]);
 
-    const close = () => { if (!busy && (!dirty || window.confirm('Discard your unsaved answers?'))) onClose(); };
+    const close = () => {
+        if (busy) return;
+        if (dirty) setConfirmDiscard(true);
+        else onClose();
+    };
     const save = async (): Promise<boolean> => {
         if (!attempt) return false;
         setBusy(true); setError(null);
@@ -109,5 +115,8 @@ export function QuizAttempt({ quizId, attemptId, onClose, onChanged }: { quizId:
             <span className="text-xs text-[var(--color-text-muted)]">{attempt?.status === 'SUBMITTED' ? 'Submitted answers can’t be edited.' : dirty ? 'Unsaved answers' : 'Answers saved'}</span>
             <div className="flex items-center gap-2">{confirmSubmit && <span className="hidden text-xs text-[var(--color-text-muted)] sm:inline">You can’t change answers after submitting.</span>}<Button variant="outlined" onClick={close}>Close</Button>{attempt?.status === 'IN_PROGRESS' && (confirmSubmit ? <><Button variant="outlined" onClick={() => setConfirmSubmit(false)} disabled={busy}>Keep editing</Button><Button onClick={submit} loading={busy}>Submit answers</Button></> : <><Button variant="outlined" onClick={save} loading={busy} disabled={!dirty}>Save answers</Button><Button onClick={() => setConfirmSubmit(true)} disabled={busy}>Submit answers</Button></>)}</div>
         </footer>
+        <ConfirmationDialog open={confirmDiscard} title="Discard unsaved answers?" description="Your unsaved answer changes will be lost. Previously saved answers will stay."
+            confirmLabel="Discard answers" cancelLabel="Keep editing" pending={busy}
+            onCancel={() => setConfirmDiscard(false)} onConfirm={() => { if (!busy) { setConfirmDiscard(false); onClose(); } }} />
     </Dialog>;
 }

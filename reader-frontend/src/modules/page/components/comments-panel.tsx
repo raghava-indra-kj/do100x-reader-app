@@ -8,6 +8,7 @@ import { DataState } from '@lib/utils/data-state';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Input } from '@modules/core/ui/primitives/input';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
+import { ConfirmationDialog } from '@modules/core/ui/components/confirmation-dialog';
 import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link as LinkIcon, Unlink, NotebookPen, ShieldCheck } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { readerPageWithIdRouteValue, loginPageRoute } from '@boot/routes';
@@ -353,6 +354,10 @@ export const PageComments = observer(function PageComments() {
     }, [allExpanded, comments]);
 
     const [isDeletingAll, setIsDeletingAll] = useState(false);
+    const deletingAllRef = useRef(false);
+    const [deleteAllPageId, setDeleteAllPageId] = useState<string | null>(null);
+    const [deleteAllError, setDeleteAllError] = useState<string | null>(null);
+    useEffect(() => { setDeleteAllPageId(null); setDeleteAllError(null); }, [store.pageId]);
 
     const handleDeleteComment = useCallback((deletedId: string) => {
         setDataState((prev) => {
@@ -365,16 +370,26 @@ export const PageComments = observer(function PageComments() {
     }, [store]);
 
     const handleDeleteAll = useCallback(async () => {
-        if (comments.length === 0 || isDeletingAll) return;
-        if (!window.confirm('Delete all comments on this page?')) return;
+        if (deletingAllRef.current || !deleteAllPageId || deleteAllPageId !== store.pageId) return;
+        const pageId = deleteAllPageId;
+        deletingAllRef.current = true;
         setIsDeletingAll(true);
-        const result = await deleteAllComments({ pageId: store.pageId });
-        setIsDeletingAll(false);
-        if (result.ok) {
-            setDataState(DataState.data([]));
-            store.bumpCommentsVersion();
+        setDeleteAllError(null);
+        try {
+            const result = await deleteAllComments({ pageId });
+            if (!mountedRef.current || pageId !== store.pageId) return;
+            if (result.ok) {
+                setDataState(DataState.data([]));
+                setDeleteAllPageId(null);
+                store.bumpCommentsVersion();
+            } else setDeleteAllError(result.error.message);
+        } catch {
+            if (mountedRef.current && pageId === store.pageId) setDeleteAllError('Couldn’t delete comments. Try again.');
+        } finally {
+            deletingAllRef.current = false;
+            if (mountedRef.current) setIsDeletingAll(false);
         }
-    }, [comments.length, isDeletingAll, store]);
+    }, [deleteAllPageId, isDeletingAll, store]);
 
     const handleCopyAll = useCallback(() => {
         if (comments.length === 0) return;
@@ -427,7 +442,8 @@ export const PageComments = observer(function PageComments() {
                         </Tooltip>
                         <Tooltip content="Delete all comments">
                             <button
-                                onClick={handleDeleteAll}
+                                onClick={() => { setDeleteAllError(null); setDeleteAllPageId(store.pageId); }}
+                                aria-label="Delete all comments"
                                 disabled={isDeletingAll}
                                 className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] transition-colors cursor-pointer rounded disabled:opacity-50"
                             >
@@ -477,6 +493,10 @@ export const PageComments = observer(function PageComments() {
                     ),
                 })}
             </div>
+            <ConfirmationDialog open={deleteAllPageId !== null && deleteAllPageId === store.pageId}
+                title="Delete all comments?" description="All your comments on this page will be deleted. This can’t be undone."
+                confirmLabel="Delete comments" pending={isDeletingAll} error={deleteAllError}
+                onCancel={() => { setDeleteAllPageId(null); setDeleteAllError(null); }} onConfirm={() => void handleDeleteAll()} />
         </div>
     );
 });

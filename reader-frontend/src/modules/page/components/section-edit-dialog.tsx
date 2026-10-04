@@ -7,6 +7,7 @@ import type { Page } from '@domain/page/models/page';
 import type { SectionEditSnapshot } from '@domain/page/models/section-edit';
 import { getSectionEditSnapshot, saveSectionBody } from '@domain/page/services/pages-service';
 import { Dialog } from '@modules/core/ui/primitives/dialog';
+import { ConfirmationDialog } from '@modules/core/ui/components/confirmation-dialog';
 import { Button } from '@modules/core/ui/primitives/button';
 import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
@@ -29,6 +30,7 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
     const [snapshot, setSnapshot] = useState<TargetSnapshot | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
+    const [confirmDiscard, setConfirmDiscard] = useState(false);
     const [tab, setTab] = useState<'preview' | 'compare'>('preview');
     const [copied, setCopied] = useState(false);
     const dirty = draft !== original;
@@ -64,7 +66,8 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
 
     const close = () => {
         if (saving) return;
-        if (!dirty || window.confirm('Discard your unsaved changes?')) onClose();
+        if (dirty) setConfirmDiscard(true);
+        else onClose();
     };
     const save = async () => {
         if (!snapshot || !dirty || saving || validationError) return;
@@ -117,6 +120,9 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
                 <span className="text-xs text-[var(--color-text-muted)]">{error ? 'Your draft is kept here. Copy it before closing or reloading.' : !snapshot ? 'Checking the latest page…' : null}</span>
                 <div className="flex gap-3"><Button variant="outlined" onClick={close} disabled={saving}>Cancel</Button><Button onClick={save} loading={saving} disabled={!snapshot || !dirty || Boolean(validationError)}>Save section</Button></div>
             </footer>
+            <ConfirmationDialog open={confirmDiscard} title="Discard changes?" description="Your unsaved section changes will be lost."
+                confirmLabel="Discard changes" cancelLabel="Keep editing" pending={saving}
+                onCancel={() => setConfirmDiscard(false)} onConfirm={() => { if (!saving) { setConfirmDiscard(false); onClose(); } }} />
         </Dialog>
     );
 });

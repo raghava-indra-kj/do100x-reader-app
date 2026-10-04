@@ -258,14 +258,12 @@ export const PageAppbar = observer(function PageAppbar() {
                             <Button 
                                 variant={store.isPublic ? 'secondary' : 'outlined'}
                                 size="sm" 
+                                iconOnly
+                                aria-label={store.isPublic ? 'Manage page sharing' : 'Share page and subpages'}
                                 onClick={() => setShareOpen(true)} 
                                 tooltip="Share page and subpages"
-                                className="flex items-center gap-1.5 px-2.5 text-xs"
                             >
-                                <Share2 size={14} className={store.isPublic ? 'text-emerald-500' : ''} />
-                                <span className="hidden sm:inline font-medium">
-                                    {store.isPublic ? 'Shared' : 'Share'}
-                                </span>
+                                <Share2 size={16} aria-hidden="true" className={store.isPublic ? 'text-emerald-500' : ''} />
                             </Button>
                         );
                     }}

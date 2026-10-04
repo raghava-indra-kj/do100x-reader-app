@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { ArrowDown, ArrowUp, Plus, Trash2, X } from 'lucide-react';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Dialog } from '@modules/core/ui/primitives/dialog';
+import { ConfirmationDialog } from '@modules/core/ui/components/confirmation-dialog';
 import { QuizMarkdown } from './quiz-markdown';
 import { quizApi, type QuestionInput, type QuizRevision } from './quiz-api';
 import { blankQuestion, buildQuizChanges, draftFromRevision, validateQuizDraft, type DraftQuestion, type QuizDraft } from './quiz-draft';
@@ -16,6 +17,7 @@ export function QuizEditor({ pageId, quizId, onClose, onSaved }: { pageId: strin
     const [draft, setDraft] = useState<QuizDraft>(emptyDraft);
     const [loading, setLoading] = useState(Boolean(quizId));
     const [saving, setSaving] = useState(false);
+    const [confirmDiscard, setConfirmDiscard] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [history, setHistory] = useState<QuizRevision | null>(null);
     const dirty = base ? buildQuizChanges(base, draft).length > 0 : draft.title !== '' || draft.questions.some((question) => question.value.promptMarkdown !== '');
@@ -45,7 +47,11 @@ export function QuizEditor({ pageId, quizId, onClose, onSaved }: { pageId: strin
         [questions[index], questions[target]] = [questions[target], questions[index]];
         return { ...current, questions };
     });
-    const close = () => { if (!saving && (!dirty || window.confirm('Discard unsaved quiz changes?'))) onClose(); };
+    const close = () => {
+        if (saving) return;
+        if (dirty) setConfirmDiscard(true);
+        else onClose();
+    };
     const save = async () => {
         const invalid = validateQuizDraft(draft);
         if (invalid) { setError(invalid); return; }
@@ -92,6 +98,9 @@ export function QuizEditor({ pageId, quizId, onClose, onSaved }: { pageId: strin
         <footer className="flex shrink-0 items-center justify-end gap-3 border-t border-[var(--color-border-default)] bg-[var(--color-surface-raised)] px-5 py-3 sm:justify-between">
             <div className="flex shrink-0 gap-2 whitespace-nowrap"><Button variant="outlined" onClick={close}>Cancel</Button><Button onClick={save} loading={saving} disabled={loading || Boolean(quizId && !base)}>Save quiz</Button></div>
         </footer>
+        <ConfirmationDialog open={confirmDiscard} title="Discard quiz changes?" description="Your unsaved quiz changes will be lost."
+            confirmLabel="Discard changes" cancelLabel="Keep editing" pending={saving}
+            onCancel={() => setConfirmDiscard(false)} onConfirm={() => { if (!saving) { setConfirmDiscard(false); onClose(); } }} />
     </Dialog>;
 }
 
