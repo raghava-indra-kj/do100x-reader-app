@@ -20,8 +20,8 @@ export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
 }
 export function Select(props: SelectHTMLAttributes<HTMLSelectElement>) { return <select {...props} className={`finance-input ${props.className ?? ''}`} />; }
 export function Textarea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) { return <textarea {...props} className={`finance-input ${props.className ?? ''}`} />; }
-export function Check({ label, checked, onChange, disabled }: { label: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean }) {
-  return <label className="finance-check"><input type="checkbox" checked={checked} disabled={disabled} onChange={event => onChange(event.target.checked)} /><span>{label}</span></label>;
+export function Check({ label, checked, onChange, disabled, compact = false }: { label: string; checked: boolean; onChange: (value: boolean) => void; disabled?: boolean; compact?: boolean }) {
+  return <label className={`finance-check ${compact ? 'finance-check-compact' : ''}`}><input type="checkbox" checked={checked} disabled={disabled} onChange={event => onChange(event.target.checked)} /><span className={compact ? 'finance-sr-only' : undefined}>{label}</span></label>;
 }
 export function Money({ value, book, color = false }: { value: string | bigint; book: Book; color?: boolean }) {
   const amount = BigInt(value);
@@ -38,6 +38,16 @@ export function Empty({ title, description, action }: { title: string; descripti
 }
 export function Alert({ children, error = false }: { children: ReactNode; error?: boolean }) {
   return <div className={`finance-alert ${error ? 'finance-alert-error' : ''}`} role={error ? 'alert' : 'note'}><AlertCircle size={17} aria-hidden="true" /><div>{children}</div></div>;
+}
+export function AmountRange({ low, expected, high, book }: { low: string; expected: string; high: string; book: Book }) {
+  const fixed = BigInt(low) === BigInt(expected) && BigInt(expected) === BigInt(high);
+  return <div className="finance-amount-range"><strong><Money value={expected} book={book} /></strong>{!fixed && <small>Expected · Min <Money value={low} book={book} /> · Max <Money value={high} book={book} /></small>}</div>;
+}
+export function Help({ title, children }: { title: string; children: ReactNode }) {
+  return <details className="finance-help"><summary>{title}</summary><div className="finance-help-body">{children}</div></details>;
+}
+export function ViewTabs<T extends string>({ label, items, value, onChange }: { label: string; items: readonly { id: T; label: string }[]; value: T; onChange: (value: T) => void }) {
+  return <nav className="finance-view-tabs" aria-label={label}>{items.map(item => <button type="button" key={item.id} aria-current={value === item.id ? 'page' : undefined} onClick={() => onChange(item.id)}>{item.label}</button>)}</nav>;
 }
 export const FormDialog = observer(function FormDialog({ store, title, description, children, onClose, onSave, saveLabel = 'Save', wide = false }: { store: FinanceStore; title: string; description?: string; children: ReactNode; onClose: () => void; onSave: () => Promise<boolean>; saveLabel?: string; wide?: boolean }) {
   const titleId = useId(), descriptionId = useId();
@@ -57,5 +67,5 @@ export const FormDialog = observer(function FormDialog({ store, title, descripti
 });
 export function PeriodForm({ from, to, onApply }: { from: string; to: string; onApply: (from: string, to: string) => void }) {
   const [start, setStart] = useState(from), [end, setEnd] = useState(to);
-  return <form className="finance-period" onSubmit={event => { event.preventDefault(); onApply(start, end); }}><Field label="From"><Input type="date" required value={start} onChange={event => setStart(event.target.value)} /></Field><Field label="Through"><Input type="date" required min={start} value={end} onChange={event => setEnd(event.target.value)} /></Field><Button type="submit" variant="outlined" size="sm">Apply</Button></form>;
+  return <form className="finance-period" onSubmit={event => { event.preventDefault(); onApply(start, end); }}><Field label="From"><Input type="date" required value={start} onChange={event => setStart(event.target.value)} /></Field><Field label="To"><Input type="date" required min={start} value={end} onChange={event => setEnd(event.target.value)} /></Field><Button type="submit" variant="outlined" size="sm">Show period</Button></form>;
 }

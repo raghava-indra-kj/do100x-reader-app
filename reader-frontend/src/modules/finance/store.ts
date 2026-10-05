@@ -110,8 +110,8 @@ export class FinanceStore {
   }
   private async loadTab(epoch: number, bookId: string, tab: FinanceTab) {
     if (tab === 'overview' || tab === 'reports') {
-      const [report, forecast] = await Promise.all([this.repo.report(bookId, this.reportFrom, this.reportTo), this.repo.forecast(bookId, this.forecastTo)]);
-      if (this.current(epoch)) runInAction(() => { this.report = unwrap(report); this.forecast = forecast.ok ? forecast.data : null; this.forecastError = forecast.ok ? null : forecast.error.message; });
+      const [report, forecast, occurrences] = await Promise.all([this.repo.report(bookId, this.reportFrom, this.reportTo), this.repo.forecast(bookId, this.forecastTo), tab === 'overview' ? this.repo.occurrences(bookId, this.today, this.forecastTo) : Promise.resolve(null)]);
+      if (this.current(epoch)) runInAction(() => { this.report = unwrap(report); this.forecast = forecast.ok ? forecast.data : null; this.forecastError = forecast.ok ? null : forecast.error.message; if (occurrences) this.occurrences = unwrap(occurrences); });
     } else if (tab === 'transactions') {
       const result = unwrap(await this.repo.transactions(bookId, this.transactionQuery));
       if (this.current(epoch)) runInAction(() => { this.transactions = result; });
@@ -119,8 +119,9 @@ export class FinanceStore {
       const [plans, occurrences, suggestions] = await Promise.all([this.repo.plans(bookId), this.repo.occurrences(bookId, this.reportFrom, this.forecastTo), this.repo.suggestions(bookId)]);
       if (this.current(epoch)) runInAction(() => { this.plans = unwrap(plans); this.occurrences = unwrap(occurrences); this.suggestions = unwrap(suggestions); });
     } else if (tab === 'imports') {
-      const result = unwrap(await this.repo.imports(bookId));
-      if (this.current(epoch)) runInAction(() => { this.imports = result; });
+      const selectedId = this.selectedImport?.id;
+      const [result, detail] = await Promise.all([this.repo.imports(bookId), selectedId ? this.repo.importBatch(bookId, selectedId) : Promise.resolve(null)]);
+      if (this.current(epoch)) runInAction(() => { this.imports = unwrap(result); if (detail && this.selectedImport?.id === selectedId) this.selectedImport = unwrap(detail); });
     } else if (tab === 'manage') {
       const [plans, rules] = await Promise.all([this.repo.plans(bookId), this.repo.rules(bookId)]);
       if (this.current(epoch)) runInAction(() => { this.plans = unwrap(plans); this.rules = unwrap(rules); });

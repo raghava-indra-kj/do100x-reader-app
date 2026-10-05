@@ -11,6 +11,15 @@ export function moneyLabel(value: string | bigint, book: Pick<Book, 'currency' |
 }
 export function transactionNet(transaction: Transaction) { return sumMoney(transaction.movements.map(movement => BigInt(movement.amountMinor))); }
 export function shortDate(value: string) { return value.slice(0, 10); }
+// Date-only accounting values are calendar dates, not local-time instants.
+export function displayDate(value: string) {
+  const date = new Date(`${shortDate(value)}T00:00:00Z`);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(date);
+}
+export function displayTimestamp(value: string, timezone: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone: timezone }).format(date);
+}
 export function titleCase(value: string) { return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase(); }
 
 // Presentation labels only. Stored values and import mappings remain unchanged.
@@ -24,7 +33,7 @@ export const importStatusLabels: Record<ImportBatch['status'], string> = {
 export const importDecisionLabels: Record<ImportRow['decision'], string> = {
   UNRESOLVED: 'Needs review', NEW: 'Add', MATCH: 'Match', SKIP: 'Skip',
 };
-export const amountRangeLabels = { low: 'Low estimate', expected: 'Expected estimate', high: 'High estimate' };
+export const amountRangeLabels = { low: 'Minimum', expected: 'Expected', high: 'Maximum' };
 export const csvColumnLabels: Record<string, string> = {
   date: 'Date column', description: 'Description column', amount: 'Amount column',
   credit: 'Credit column', debit: 'Debit column', externalId: 'Bank transaction ID column (optional)',
