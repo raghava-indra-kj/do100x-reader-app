@@ -78,6 +78,8 @@ try {
   }
   copyFile('reader-backend/dist/index.js');
   copyFile('reader-backend/dist/index.js.map');
+  copyFile('reader-backend/dist/repair-task-lists.js');
+  copyFile('reader-backend/dist/repair-task-lists.js.map');
   copyDirectory('reader-frontend/dist');
   copyFile('reader-backend/prisma/schema.prisma');
   copyDirectory('reader-backend/prisma/migrations');

@@ -250,6 +250,7 @@ export const TaskDetailPane = observer(({ store }: Props) => {
             onClick={() => store.selectTask(null)}
             className="p-1.5 rounded-lg hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)] transition cursor-pointer text-[var(--color-text-muted)] border border-[var(--color-border-subtle)]"
             title="Close details"
+            aria-label="Close details"
           >
             <X className="w-4 h-4" />
           </button>
@@ -447,20 +448,32 @@ export const TaskDetailPane = observer(({ store }: Props) => {
 
             {/* List Picker */}
             <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsListMenuOpen(!isListMenuOpen);
-                  setIsPriorityMenuOpen(false);
-                  setIsDateMenuOpen(false);
-                }}
-                className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer shadow-2xs"
-              >
-                <Layers className="w-3.5 h-3.5 text-[var(--color-brand)]" />
-                <span>{detail.list ? detail.list.name : 'Inbox'}</span>
-              </button>
+              {detail.parentId ? (
+                <span
+                  title="Inherited from parent task"
+                  aria-label={`Task list: ${detail.list?.name ?? 'Inbox'}, inherited from parent task`}
+                  className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]"
+                >
+                  <Layers className="w-3.5 h-3.5 text-[var(--color-brand)]" />
+                  <span>{detail.list?.name ?? 'Inbox'}</span>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  aria-label="Change task list"
+                  onClick={() => {
+                    setIsListMenuOpen(!isListMenuOpen);
+                    setIsPriorityMenuOpen(false);
+                    setIsDateMenuOpen(false);
+                  }}
+                  className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer shadow-2xs"
+                >
+                  <Layers className="w-3.5 h-3.5 text-[var(--color-brand)]" />
+                  <span>{detail.list ? detail.list.name : 'Inbox'}</span>
+                </button>
+              )}
 
-              {isListMenuOpen && (
+              {!detail.parentId && isListMenuOpen && (
                 <div
                   className="absolute left-0 top-full mt-1 z-40 w-44 bg-[var(--color-surface-raised)] rounded-lg border border-[var(--color-border-default)] shadow-xl p-1 text-xs space-y-0.5 animate-in fade-in duration-100"
                   onMouseLeave={() => setIsListMenuOpen(false)}

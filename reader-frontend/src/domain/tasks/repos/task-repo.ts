@@ -22,6 +22,9 @@ export interface ITaskRepo {
     search?: string;
     parentId?: string;
     includeSubtasks?: boolean;
+    matrixDate?: 'today' | 'tomorrow' | 'all';
+    timeZone?: string;
+    includeOverdue?: boolean;
   }): AsyncResult<TaskData[], AppError>;
 
   getTask(id: string): AsyncResult<TaskData & { subtasks: TaskData[]; timeSessions: TimeSessionData[]; isActiveTimerRunning: boolean }, AppError>;

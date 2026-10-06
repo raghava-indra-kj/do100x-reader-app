@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "./prisma";
 import { requireSession } from "./session";
+import { createHierarchyTask, updateHierarchyTask, taskHierarchyTransaction, taskHierarchyErrorHandler } from "./task-hierarchy";
+import { filterMatrixTasks, matrixOptions, tomorrowDueFilter } from "./task-matrix";
 
 const router = Router();
 router.use(requireSession);
@@ -9,7 +11,8 @@ router.use(requireSession);
 // GET /backend-api/tasks - List tasks with smart filters
 router.get("/", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
-  const { listId, status, priority, due, search, parentId, includeSubtasks } = req.query;
+  const { listId, status, priority, due, search, parentId, includeSubtasks, matrixDate, timeZone, includeOverdue } = req.query;
+  const matrix = matrixOptions(matrixDate, status, timeZone, includeOverdue);
 
   const where: Record<string, unknown> = {
     userId,
@@ -50,6 +53,8 @@ router.get("/", async (req: Request, res: Response) => {
 
     if (due === "today") {
       where.dueDate = { gte: todayStart, lte: todayEnd };
+    } else if (due === "tomorrow") {
+      where.dueDate = tomorrowDueFilter(now);
     } else if (due === "next7") {
       const next7End = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
       where.dueDate = { gte: todayStart, lte: next7End };
@@ -67,7 +72,7 @@ router.get("/", async (req: Request, res: Response) => {
     ];
   }
 
-  const tasks = await prisma.task.findMany({
+  const loadedTasks = await prisma.task.findMany({
     where,
     orderBy: [
       { status: "asc" },
@@ -75,6 +80,10 @@ router.get("/", async (req: Request, res: Response) => {
       { createdAt: "desc" },
     ],
   });
+  const tasks = matrix ? filterMatrixTasks(loadedTasks, matrix) : loadedTasks;
+  const parentIds = [...new Set(tasks.map(task => task.parentId).filter((id): id is string => !!id))];
+  const parents = matrix && parentIds.length ? await prisma.task.findMany({ where: { id: { in: parentIds }, userId, deletedAt: null }, select: { id: true, title: true } }) : [];
+  const parentTitles = new Map(parents.map(parent => [parent.id, parent.title]));
 
   // Also fetch subtask counts and list info
   const taskIds = tasks.map((t) => t.id);
@@ -105,6 +114,7 @@ router.get("/", async (req: Request, res: Response) => {
     listId: t.listId,
     list: t.listId ? listMap.get(t.listId) ?? null : null,
     parentId: t.parentId,
+    parentTitle: t.parentId ? parentTitles.get(t.parentId) ?? null : null,
     title: t.title,
     description: t.description,
     status: t.status,
@@ -224,32 +234,7 @@ router.post("/", async (req: Request, res: Response) => {
     return;
   }
 
-  // Validate parentId if provided
-  let validParentId: string | null = null;
-  if (parentId) {
-    const parent = await prisma.task.findFirst({
-      where: { id: parentId, userId, deletedAt: null },
-    });
-    if (!parent) { res.status(404).json({ error: "Parent task not found" }); return; }
-    validParentId = parent.id;
-  }
-
-  // Validate listId if provided
-  let validListId: string | null = null;
-  if (listId && listId !== "null" && listId !== "inbox") {
-    const list = await prisma.task_list.findFirst({
-      where: { id: listId, userId, deletedAt: null },
-    });
-    if (!list) { res.status(404).json({ error: "List not found" }); return; }
-    validListId = list.id;
-  }
-
   const now = new Date();
-  const maxSort = await prisma.task.aggregate({
-    where: { userId, parentId: validParentId, deletedAt: null },
-    _max: { sortOrder: true },
-  });
-  const sortOrder = (maxSort._max.sortOrder ?? 0) + 1;
 
   let parsedDueDate: Date | null = null;
   if (dueDate) {
@@ -257,23 +242,19 @@ router.post("/", async (req: Request, res: Response) => {
     if (!Number.isNaN(d.getTime())) parsedDueDate = d;
   }
 
-  const newTask = await prisma.task.create({
-    data: {
-      userId,
-      listId: validListId,
-      parentId: validParentId,
-      title: title.trim(),
-      description: description ?? null,
-      status: status || "todo",
-      priority: priority !== undefined ? Math.max(1, Math.min(4, parseInt(priority, 10))) : 4,
-      dueDate: parsedDueDate,
-      dueTime: dueTime || null,
-      sortOrder,
-      totalTimeSeconds: 0,
-      createdAt: now,
-      updatedAt: now,
-    },
-  });
+  const newTask = await taskHierarchyTransaction(prisma, tx => createHierarchyTask(tx, userId, {
+    listId,
+    parentId,
+    title: title.trim(),
+    description: description ?? null,
+    status: status || "todo",
+    priority: priority !== undefined ? Math.max(1, Math.min(4, parseInt(priority, 10))) : 4,
+    dueDate: parsedDueDate,
+    dueTime: dueTime || null,
+    totalTimeSeconds: 0,
+    createdAt: now,
+    updatedAt: now,
+  }));
 
   res.json({
     id: newTask.id,
@@ -353,49 +334,14 @@ router.patch("/:id", async (req: Request, res: Response) => {
     updateData.dueTime = dueTime || null;
   }
 
-  if (listId !== undefined) {
-    if (listId && listId !== "null" && listId !== "inbox" && !await prisma.task_list.findFirst({ where: { id: listId, userId, deletedAt: null } })) { res.status(404).json({ error: "List not found" }); return; }
-    updateData.listId = listId === null || listId === "null" || listId === "inbox" ? null : listId;
-  }
-
-  if (parentId !== undefined) {
-    const targetParentId = parentId === null || parentId === "null" ? null : parentId;
-    if (targetParentId === id) {
-      res.status(400).json({ error: "A task can’t be its own subtask." });
-      return;
-    }
-    if (targetParentId) {
-      if (!await prisma.task.findFirst({ where: { id: targetParentId, userId, deletedAt: null } })) { res.status(404).json({ error: "Parent task not found" }); return; }
-      // Prevent cyclic nesting: check if targetParentId is a descendant of id
-      let curr: string | null = targetParentId;
-      let isCycle = false;
-      while (curr) {
-        if (curr === id) {
-          isCycle = true;
-          break;
-        }
-        const parentTask: { parentId: string | null } | null = await prisma.task.findFirst({
-          where: { id: curr, userId, deletedAt: null },
-          select: { parentId: true },
-        });
-        curr = parentTask ? parentTask.parentId : null;
-      }
-      if (isCycle) {
-        res.status(400).json({ error: "A task can’t move inside one of its own subtasks." });
-        return;
-      }
-    }
-    updateData.parentId = targetParentId;
-  }
+  if (listId !== undefined) updateData.listId = listId;
+  if (parentId !== undefined) updateData.parentId = parentId;
 
   if (sortOrder !== undefined) {
     updateData.sortOrder = sortOrder;
   }
 
-  const updated = await prisma.task.update({
-    where: { id },
-    data: updateData,
-  });
+  const updated = await taskHierarchyTransaction(prisma, tx => updateHierarchyTask(tx, userId, id, updateData));
 
   res.json({
     id: updated.id,
@@ -488,4 +434,5 @@ router.post("/reorder", async (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
+router.use(taskHierarchyErrorHandler);
 export default router;

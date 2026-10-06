@@ -56,6 +56,9 @@ export class TaskRepoApi implements ITaskRepo {
     search?: string;
     parentId?: string;
     includeSubtasks?: boolean;
+    matrixDate?: 'today' | 'tomorrow' | 'all';
+    timeZone?: string;
+    includeOverdue?: boolean;
   }): AsyncResult<TaskData[], AppError> {
     try {
       const { data } = await apiClient.get('/tasks', { params });

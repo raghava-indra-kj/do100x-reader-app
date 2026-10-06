@@ -79,7 +79,7 @@ export default observer(function TasksPage() {
         )} />
 
       {/* Main Workspace (3-Column Layout) */}
-      <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="relative flex-1 flex overflow-hidden min-h-0">
         {/* 1. Sidebar */}
         <TasksSidebar store={store} />
 
@@ -93,7 +93,11 @@ export default observer(function TasksPage() {
         )}
 
         {/* 3. Task Detail / Timer Panel */}
-        <TaskDetailPane store={store} />
+        {store.currentView === 'matrix' ? store.selectedTaskId && (
+          <aside aria-label="Selected task details" className="absolute inset-y-0 right-0 z-20 flex w-full max-w-[640px] border-l border-[var(--color-border-subtle)] shadow-lg xl:static xl:w-[45%] xl:max-w-[720px] xl:shadow-none shrink-0">
+            <TaskDetailPane store={store} />
+          </aside>
+        ) : <TaskDetailPane store={store} />}
       </div>
 
       {/* Dialogs */}

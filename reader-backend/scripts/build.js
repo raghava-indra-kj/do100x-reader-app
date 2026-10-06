@@ -5,8 +5,11 @@ const { dependencies } = require("../package.json");
 // Bundle the shared ESM Markdown parser into the CommonJS backend. Keep runtime
 // packages (notably Prisma) external so their native assets resolve normally.
 build({
-  entryPoints: [path.resolve(__dirname, "../src/index.ts")],
-  outfile: path.resolve(__dirname, "../dist/index.js"),
+  entryPoints: {
+    index: path.resolve(__dirname, "../src/index.ts"),
+    "repair-task-lists": path.resolve(__dirname, "../src/repair-task-lists.ts"),
+  },
+  outdir: path.resolve(__dirname, "../dist"),
   bundle: true,
   platform: "node",
   format: "cjs",

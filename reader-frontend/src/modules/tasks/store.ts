@@ -5,6 +5,7 @@ import type { TaskList } from '@domain/tasks/models/task-list';
 import type { TimeSession } from '@domain/tasks/models/time-session';
 import type { ActiveTimer } from '@domain/tasks/models/active-timer';
 import type { TimeAnalytics } from '@domain/tasks/models/time-analytics';
+import { readMatrixSettings, saveMatrixSettings, matrixCreationDate, localCalendarDate, type MatrixSettings } from './matrix-settings';
 import {
   getTaskLists,
   createTaskList,
@@ -35,6 +36,11 @@ export class TasksStore {
   // Navigation & View
   currentView: TaskViewMode = 'inbox';
   searchQuery: string = '';
+  matrixSettings: MatrixSettings = readMatrixSettings();
+  matrixQuickListId: string = 'inbox';
+  tasksError: string | null = null;
+  private taskRequestId = 0;
+  private calendarDay = localCalendarDate();
 
   // Data
   lists: TaskList[] = [];
@@ -104,6 +110,9 @@ export class TasksStore {
     makeObservable(this, {
       currentView: observable,
       searchQuery: observable,
+      matrixSettings: observable,
+      matrixQuickListId: observable,
+      tasksError: observable,
       lists: observable,
       inboxCounts: observable,
       tasks: observable,
@@ -152,10 +161,14 @@ export class TasksStore {
       matrixQ2Tasks: computed,
       matrixQ3Tasks: computed,
       matrixQ4Tasks: computed,
+      matrixTasks: computed,
 
       // Actions
       setCurrentView: action,
       setSearchQuery: action,
+      setMatrixSettings: action,
+      setMatrixQuickList: action,
+      createMatrixTask: action,
       setQuickTaskTitle: action,
       setQuickTaskPriority: action,
       setQuickTaskDueDate: action,
@@ -274,23 +287,44 @@ export class TasksStore {
   }
 
   get matrixQ1Tasks(): Task[] {
-    // Urgent & Important (P1)
-    return this.tasks.filter((t) => t.priority === 1 && !t.isDone);
+    return this.matrixTasks.filter((t) => t.priority === 1);
   }
 
   get matrixQ2Tasks(): Task[] {
-    // High / Schedule (P2)
-    return this.tasks.filter((t) => t.priority === 2 && !t.isDone);
+    return this.matrixTasks.filter((t) => t.priority === 2);
   }
 
   get matrixQ3Tasks(): Task[] {
-    // Medium / Delegate (P3)
-    return this.tasks.filter((t) => t.priority === 3 && !t.isDone);
+    return this.matrixTasks.filter((t) => t.priority === 3);
   }
 
   get matrixQ4Tasks(): Task[] {
-    // Low / Backlog (P4)
-    return this.tasks.filter((t) => t.priority === 4 && !t.isDone);
+    return this.matrixTasks.filter((t) => t.priority === 4);
+  }
+
+  get matrixTasks(): Task[] {
+    return this.filteredTasks.filter(task => task.status !== 'cancelled' &&
+      (this.matrixSettings.status === 'all' || (this.matrixSettings.status === 'completed' ? task.isDone : !task.isDone)))
+      .sort((a, b) => Number(a.isDone) - Number(b.isDone) ||
+        (a.isDone ? (b.completedAt ?? '').localeCompare(a.completedAt ?? '') : (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999')) || a.sortOrder - b.sortOrder);
+  }
+
+  setMatrixSettings(updates: Partial<MatrixSettings>) {
+    this.matrixSettings = { ...this.matrixSettings, ...updates };
+    saveMatrixSettings(this.matrixSettings);
+    if (this.currentView === 'matrix') void this.loadTasks();
+  }
+
+  setMatrixQuickList(listId: string) { this.matrixQuickListId = listId; }
+
+  async createMatrixTask(title: string, priority: number): Promise<boolean> {
+    if (!title.trim()) return false;
+    const listId = this.matrixQuickListId === 'inbox' ? null : this.matrixQuickListId;
+    const res = await createTask({ title: title.trim(), priority, listId, dueDate: matrixCreationDate(this.matrixSettings.date) });
+    if (!res.ok) { toast.error(res.error.message); return false; }
+    toast.success('Task added');
+    await Promise.all([this.loadTasks(), this.loadLists()]);
+    return true;
   }
 
   // ==========================================
@@ -494,8 +528,10 @@ export class TasksStore {
   // ==========================================
 
   async loadTasks() {
+    const requestId = ++this.taskRequestId;
     runInAction(() => {
       this.isLoadingTasks = true;
+      this.tasksError = null;
     });
 
     const params: Record<string, unknown> = {};
@@ -510,8 +546,11 @@ export class TasksStore {
       params.due = 'next7';
       params.status = 'active';
     } else if (this.currentView === 'matrix') {
-      params.status = 'active';
-      params.includeSubtasks = false;
+      params.status = this.matrixSettings.status === 'completed' ? 'done' : this.matrixSettings.status;
+      params.includeSubtasks = true;
+      params.matrixDate = this.matrixSettings.date;
+      params.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      params.includeOverdue = this.matrixSettings.date === 'today' && this.matrixSettings.status !== 'completed' && this.matrixSettings.includeOverdue;
     } else if (this.currentView === 'completed') {
       params.status = 'done';
     } else if (this.currentView.startsWith('list:')) {
@@ -521,10 +560,13 @@ export class TasksStore {
 
     const res = await getTasks(params as any);
     runInAction(() => {
+      if (requestId !== this.taskRequestId) return;
       this.isLoadingTasks = false;
       if (res.ok) {
         this.tasks = res.data;
       } else {
+        this.tasksError = res.error.message;
+        if (this.currentView === 'matrix') this.tasks = [];
         toast.error(res.error.message);
       }
     });
@@ -536,6 +578,7 @@ export class TasksStore {
         this.selectedTaskId = null;
         this.selectedTaskDetail = null;
         this.taskBreadcrumbs = [];
+        this.isLoadingDetail = false;
       });
       return;
     }
@@ -547,6 +590,7 @@ export class TasksStore {
 
     const res = await getTask(taskId);
     runInAction(() => {
+      if (this.selectedTaskId !== taskId) return;
       this.isLoadingDetail = false;
       if (res.ok) {
         this.selectedTaskDetail = res.data;
@@ -634,73 +678,37 @@ export class TasksStore {
   }
 
   async toggleTaskStatus(task: Task) {
-    const newStatus = task.status === 'done' ? 'todo' : 'done';
-    const oldStatus = task.status;
-
-    // 1. Instant optimistic update
-    runInAction(() => {
-      task.status = newStatus;
-      if (this.selectedTaskDetail) {
-        if (this.selectedTaskDetail.id === task.id) {
-          this.selectedTaskDetail.status = newStatus;
-        }
-        const sub = this.selectedTaskDetail.subtasks.find((s) => s.id === task.id);
-        if (sub) {
-          sub.status = newStatus;
-        }
-      }
-      const topTask = this.tasks.find((t) => t.id === task.id);
-      if (topTask) {
-        topTask.status = newStatus;
-      }
-    });
-
-    // 2. Persist to API
-    const res = await updateTask(task.id, { status: newStatus });
-    if (res.ok) {
-      await Promise.all([this.loadTasks(), this.loadLists()]);
-      if (this.selectedTaskId) {
-        const detailRes = await getTask(this.selectedTaskId);
-        if (detailRes.ok) {
-          runInAction(() => {
-            this.selectedTaskDetail = detailRes.data;
-          });
-        }
-      }
-    } else {
-      // Rollback on failure
-      runInAction(() => {
-        task.status = oldStatus;
-        if (this.selectedTaskDetail) {
-          if (this.selectedTaskDetail.id === task.id) {
-            this.selectedTaskDetail.status = oldStatus;
-          }
-          const sub = this.selectedTaskDetail.subtasks.find((s) => s.id === task.id);
-          if (sub) {
-            sub.status = oldStatus;
-          }
-        }
-      });
-      toast.error(res.error.message);
-    }
+    await this.updateTaskProperties(task.id, { status: task.isDone ? 'todo' : 'done' });
   }
 
   async updateTaskProperties(taskId: string, updates: Parameters<typeof updateTask>[1]) {
+    const optimistic = updates.status === undefined ? updates : {
+      ...updates, completedAt: updates.status === 'done' ? new Date().toISOString() : null,
+    };
+    const targets = new Set<Task>([
+      ...this.tasks.filter(task => task.id === taskId),
+      ...(this.selectedTaskDetail?.id === taskId ? [this.selectedTaskDetail] : []),
+      ...(this.selectedTaskDetail?.subtasks.filter(task => task.id === taskId) ?? []),
+    ]);
+    const previous = [...targets].map(task => ({ task, values: Object.fromEntries(Object.keys(optimistic).map(key => [key, (task as unknown as Record<string, unknown>)[key]])) }));
     // 1. Instant optimistic update
     runInAction(() => {
       if (this.selectedTaskDetail) {
         if (this.selectedTaskDetail.id === taskId) {
-          Object.assign(this.selectedTaskDetail, updates);
+          Object.assign(this.selectedTaskDetail, optimistic);
         }
         const sub = this.selectedTaskDetail.subtasks.find((s) => s.id === taskId);
         if (sub) {
-          Object.assign(sub, updates);
+          Object.assign(sub, optimistic);
         }
       }
       const task = this.tasks.find((t) => t.id === taskId);
       if (task) {
-        Object.assign(task, updates);
+        Object.assign(task, optimistic);
       }
+      // Task model instances are not observable; invalidate matrix groups now,
+      // rather than waiting for the network refresh to move/complete a row.
+      this.tasks = [...this.tasks];
     });
 
     // 2. Persist to API
@@ -708,14 +716,25 @@ export class TasksStore {
     if (res.ok) {
       await Promise.all([this.loadTasks(), this.loadLists()]);
       if (this.selectedTaskId) {
-        const detailRes = await getTask(this.selectedTaskId);
-        if (detailRes.ok) {
+        const selectedId = this.selectedTaskId;
+        const detailRes = await getTask(selectedId);
+        if (detailRes.ok && this.selectedTaskId === selectedId) {
           runInAction(() => {
             this.selectedTaskDetail = detailRes.data;
           });
         }
       }
     } else {
+      runInAction(() => {
+        for (const { task, values } of previous) {
+          for (const [key, value] of Object.entries(values)) {
+            const row = task as unknown as Record<string, unknown>;
+            // A failed older save must not overwrite a newer local edit.
+            if (row[key] === (optimistic as Record<string, unknown>)[key]) row[key] = value;
+          }
+        }
+        this.tasks = [...this.tasks];
+      });
       toast.error(res.error.message);
     }
   }
@@ -792,6 +811,11 @@ export class TasksStore {
   private startTimerTicker() {
     if (this.timerInterval) clearInterval(this.timerInterval);
     this.timerInterval = setInterval(() => {
+      const day = localCalendarDate();
+      if (day !== this.calendarDay) {
+        this.calendarDay = day;
+        if (this.currentView === 'matrix') void this.loadTasks();
+      }
       if (this.activeTimer && !this.activeTimer.isPaused) {
         const now = new Date();
         const start = new Date(this.activeTimer.startTime);

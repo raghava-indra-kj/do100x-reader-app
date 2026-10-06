@@ -65,6 +65,9 @@ export async function getTasks(params: {
   search?: string;
   parentId?: string;
   includeSubtasks?: boolean;
+  matrixDate?: 'today' | 'tomorrow' | 'all';
+  timeZone?: string;
+  includeOverdue?: boolean;
 }): AsyncResult<Task[], AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
   const res = await repo.getTasks(params);

@@ -14,6 +14,7 @@ export const TaskSchema = z.object({
   listId: z.string().nullable().optional(),
   list: TaskListSummarySchema.nullable().optional(),
   parentId: z.string().nullable().optional(),
+  parentTitle: z.string().nullable().optional(),
   title: z.string(),
   description: z.string().nullable().optional(),
   status: z.enum(['todo', 'in_progress', 'done', 'cancelled']).default('todo'),
@@ -36,6 +37,7 @@ export class Task {
   listId?: string | null;
   list?: TaskListSummary | null;
   parentId?: string | null;
+  parentTitle?: string | null;
   title: string;
   description?: string | null;
   status: 'todo' | 'in_progress' | 'done' | 'cancelled';
@@ -55,6 +57,7 @@ export class Task {
     this.listId = data.listId;
     this.list = data.list;
     this.parentId = data.parentId;
+    this.parentTitle = data.parentTitle;
     this.title = data.title;
     this.description = data.description;
     this.status = data.status;

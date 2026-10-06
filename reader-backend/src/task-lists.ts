@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "./prisma";
 import { requireSession } from "./session";
+import { taskHierarchyTransaction, taskHierarchyErrorHandler, taskSubtreeIds, TaskHierarchyError } from "./task-hierarchy";
 
 const router = Router();
 router.use(requireSession);
@@ -149,39 +150,29 @@ router.delete("/:id", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const { id } = req.params;
   const deleteTasks = req.query.deleteTasks === "true";
+  await taskHierarchyTransaction(prisma, async tx => {
+    const existing = await tx.task_list.findFirst({
+      where: { id, userId, deletedAt: null },
+    });
 
-  const existing = await prisma.task_list.findFirst({
-    where: { id, userId, deletedAt: null },
-  });
-
-  if (!existing) {
-    res.status(404).json({ error: "List not found" });
-    return;
-  }
-
-  const now = new Date();
-
-  // Soft delete list
-  await prisma.task_list.update({
-    where: { id },
-    data: { deletedAt: now, updatedAt: now },
-  });
-
-  if (deleteTasks) {
-    // Soft delete associated tasks
-    await prisma.task.updateMany({
-      where: { listId: id, userId, deletedAt: null },
+    if (!existing) throw new TaskHierarchyError(404, "List not found");
+    const now = new Date();
+    const tasks = await tx.task.findMany({ where: { listId: id, userId, deletedAt: null }, select: { id: true } });
+    const taskIds = await taskSubtreeIds(tx, userId, tasks.map(task => task.id));
+    // Delete the list and move/delete its task trees together. Concurrent
+    // hierarchy writes cannot validate a list that is being removed.
+    await tx.task_list.update({
+      where: { id, userId, deletedAt: null },
       data: { deletedAt: now, updatedAt: now },
     });
-  } else {
-    // Move tasks to Inbox (listId = null)
-    await prisma.task.updateMany({
-      where: { listId: id, userId, deletedAt: null },
-      data: { listId: null, updatedAt: now },
+    await tx.task.updateMany({
+      where: { id: { in: taskIds }, userId, deletedAt: null },
+      data: deleteTasks ? { deletedAt: now, updatedAt: now } : { listId: null, updatedAt: now },
     });
-  }
+  });
 
   res.json({ success: true, deletedListId: id });
 });
 
+router.use(taskHierarchyErrorHandler);
 export default router;

@@ -1,6 +1,18 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
+import type { Prisma } from "@prisma/client";
+import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { createHierarchyTask, updateHierarchyTask, updateHierarchyTasks, taskHierarchyTransaction, TaskHierarchyError } from "../../task-hierarchy";
+import { filterMatrixTasks, matrixOptions, tomorrowDueFilter } from "../../task-matrix";
+
+async function hierarchyTool(action: () => Promise<CallToolResult>): Promise<CallToolResult> {
+  try { return await action(); }
+  catch (error) {
+    if (!(error instanceof TaskHierarchyError)) throw error;
+    return { isError: true, content: [{ type: "text", text: error.message }] };
+  }
+}
 
 export function registerTaskTools(server: McpServer, userId: string) {
   // 1. List tasks
@@ -10,12 +22,16 @@ export function registerTaskTools(server: McpServer, userId: string) {
     {
       listId: z.string().optional().describe("Filter by list ID (or 'inbox' / 'null' for Inbox, omit for all)"),
       status: z.enum(["all", "active", "uncompleted", "todo", "in_progress", "done", "cancelled"]).optional().describe("Filter by status (default: 'active')"),
-      priority: z.number().min(1).max(4).optional().describe("Filter by priority (1=P1 Urgent/Important, 2=P2 High, 3=P3 Medium, 4=P4 Low)"),
-      due: z.enum(["all", "today", "next7", "overdue"]).optional().describe("Smart due date filter"),
+      priority: z.number().min(1).max(4).optional().describe("Filter by priority (1=P1 Urgent, 2=P2 High, 3=P3 Medium, 4=P4 Low)"),
+      due: z.enum(["all", "today", "tomorrow", "next7", "overdue"]).optional().describe("Smart due date filter"),
+      matrixDate: z.enum(["today", "tomorrow", "all"]).optional().describe("Matrix date filter: unfinished tasks use due dates; done tasks use completion dates. Use status active, done or all."),
+      timeZone: z.string().optional().describe("IANA time zone for matrix calendar dates, e.g. Asia/Kolkata. Defaults to UTC."),
+      includeOverdue: z.boolean().optional().describe("Include overdue unfinished tasks when matrixDate is today"),
       search: z.string().optional().describe("Search term matching task title or description"),
       includeSubtasks: z.boolean().optional().describe("Whether to include subtasks in the flat list (default: false, returns top-level)"),
     },
-    async ({ listId, status = "active", priority, due, search, includeSubtasks = false }) => {
+    async ({ listId, status = "active", priority, due, search, includeSubtasks = false, matrixDate, timeZone, includeOverdue }) => hierarchyTool(async () => {
+      const matrix = matrixOptions(matrixDate, status, timeZone, includeOverdue);
       const where: Record<string, unknown> = {
         userId,
         deletedAt: null,
@@ -48,6 +64,8 @@ export function registerTaskTools(server: McpServer, userId: string) {
 
         if (due === "today") {
           where.dueDate = { gte: todayStart, lte: todayEnd };
+        } else if (due === "tomorrow") {
+          where.dueDate = tomorrowDueFilter(now);
         } else if (due === "next7") {
           const next7End = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
           where.dueDate = { gte: todayStart, lte: next7End };
@@ -64,10 +82,14 @@ export function registerTaskTools(server: McpServer, userId: string) {
         ];
       }
 
-      const tasks = await prisma.task.findMany({
+      const loadedTasks = await prisma.task.findMany({
         where,
         orderBy: [{ status: "asc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
       });
+      const tasks = matrix ? filterMatrixTasks(loadedTasks, matrix) : loadedTasks;
+      const parentIds = [...new Set(tasks.map(task => task.parentId).filter((id): id is string => !!id))];
+      const parents = matrix && parentIds.length ? await prisma.task.findMany({ where: { id: { in: parentIds }, userId, deletedAt: null }, select: { id: true, title: true } }) : [];
+      const parentTitles = new Map(parents.map(parent => [parent.id, parent.title]));
 
       const lists = await prisma.task_list.findMany({
         where: { userId, deletedAt: null },
@@ -91,6 +113,8 @@ export function registerTaskTools(server: McpServer, userId: string) {
                   listId: t.listId,
                   listName: t.listId ? listMap.get(t.listId) || "Unknown List" : "Inbox",
                   parentId: t.parentId,
+                  parentTitle: t.parentId ? parentTitles.get(t.parentId) ?? null : null,
+                  completedAt: t.completedAt?.toISOString() ?? null,
                   dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : null,
                   dueTime: t.dueTime,
                   totalTimeSeconds: t.totalTimeSeconds,
@@ -104,7 +128,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
           },
         ],
       };
-    }
+    })
   );
 
   // 2. Get task detail with full subtask hierarchy & logged time sessions
@@ -191,39 +215,17 @@ export function registerTaskTools(server: McpServer, userId: string) {
   // 3. Create task or subtask
   server.tool(
     "reader_create_task",
-    "Create a new task or nested subtask with priority (1=Urgent/Important to 4=Low), due date, list, and markdown description",
+    "Create a task or nested subtask with priority, due date and Markdown notes. Subtasks inherit their parent’s list; omit listId for subtasks.",
     {
       title: z.string().describe("Task title / summary"),
       description: z.string().optional().describe("Optional rich markdown description or notes"),
       priority: z.number().min(1).max(4).optional().describe("Priority: 1=P1 (Urgent/Important), 2=P2 (High), 3=P3 (Medium), 4=P4 (Low/None)"),
       dueDate: z.string().optional().describe("Due date in YYYY-MM-DD format"),
       dueTime: z.string().optional().describe("Due time in HH:mm format (e.g. '14:30')"),
-      listId: z.string().optional().describe("List ID to place task in (omit or 'inbox' for Inbox)"),
+      listId: z.string().optional().describe("Top-level task list (omit or 'inbox' for Inbox). Subtasks inherit the parent list; omit this field for subtasks."),
       parentTaskId: z.string().optional().describe("Parent task ID if creating a nested subtask"),
     },
-    async ({ title, description, priority = 4, dueDate, dueTime, listId, parentTaskId }) => {
-      let validParentId: string | null = null;
-      if (parentTaskId) {
-        const parent = await prisma.task.findFirst({
-          where: { id: parentTaskId, userId, deletedAt: null },
-          select: { id: true, listId: true },
-        });
-        if (!parent) {
-          return { isError: true, content: [{ type: "text", text: `Parent task not found: ${parentTaskId}` }] };
-        }
-        validParentId = parent.id;
-        if (!listId && parent.listId) listId = parent.listId;
-      }
-
-      let validListId: string | null = null;
-      if (listId && listId !== "inbox" && listId !== "null") {
-        const list = await prisma.task_list.findFirst({
-          where: { id: listId, userId, deletedAt: null },
-          select: { id: true },
-        });
-        if (list) validListId = list.id;
-      }
-
+    async ({ title, description, priority = 4, dueDate, dueTime, listId, parentTaskId }) => hierarchyTool(async () => {
       const now = new Date();
       let parsedDueDate: Date | null = null;
       if (dueDate) {
@@ -231,29 +233,19 @@ export function registerTaskTools(server: McpServer, userId: string) {
         if (!Number.isNaN(d.getTime())) parsedDueDate = d;
       }
 
-      const maxSort = await prisma.task.aggregate({
-        where: { userId, parentId: validParentId, deletedAt: null },
-        _max: { sortOrder: true },
-      });
-      const sortOrder = (maxSort._max.sortOrder ?? 0) + 1;
-
-      const created = await prisma.task.create({
-        data: {
-          userId,
-          parentId: validParentId,
-          listId: validListId,
-          title: title.trim(),
-          description: description || null,
-          priority: Math.max(1, Math.min(4, priority)),
-          status: "todo",
-          dueDate: parsedDueDate,
-          dueTime: dueTime || null,
-          sortOrder,
-          totalTimeSeconds: 0,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
+      const created = await taskHierarchyTransaction(prisma, tx => createHierarchyTask(tx, userId, {
+        parentId: parentTaskId,
+        listId,
+        title: title.trim(),
+        description: description || null,
+        priority: Math.max(1, Math.min(4, priority)),
+        status: "todo",
+        dueDate: parsedDueDate,
+        dueTime: dueTime || null,
+        totalTimeSeconds: 0,
+        createdAt: now,
+        updatedAt: now,
+      }));
 
       return {
         content: [
@@ -274,13 +266,13 @@ export function registerTaskTools(server: McpServer, userId: string) {
           },
         ],
       };
-    }
+    })
   );
 
   // 4. Update task
   server.tool(
     "reader_update_task",
-    "Update a task's title, description, status ('todo', 'in_progress', 'done', 'cancelled'), priority, due date, or move to another list/parent",
+    "Update a task’s properties or parent. Moving a top-level task to a list moves its entire subtree. Subtasks inherit their parent’s list; detach first to move independently.",
     {
       taskId: z.string().describe("UUID of task to update"),
       title: z.string().optional().describe("New title"),
@@ -292,7 +284,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
       listId: z.string().nullable().optional().describe("New list ID (or null/'inbox' to move to Inbox)"),
       parentTaskId: z.string().nullable().optional().describe("New parent task ID (or null to make top-level)"),
     },
-    async ({ taskId, title, description, status, priority, dueDate, dueTime, listId, parentTaskId }) => {
+    async ({ taskId, title, description, status, priority, dueDate, dueTime, listId, parentTaskId }) => hierarchyTool(async () => {
       const existing = await prisma.task.findFirst({
         where: { id: taskId, userId, deletedAt: null },
       });
@@ -330,36 +322,8 @@ export function registerTaskTools(server: McpServer, userId: string) {
         updateData.listId = listId === "null" || listId === "inbox" || !listId ? null : listId;
       }
 
-      if (parentTaskId !== undefined) {
-        const targetParentId = parentTaskId === "null" || !parentTaskId ? null : parentTaskId;
-        if (targetParentId === taskId) {
-          return { isError: true, content: [{ type: "text", text: "Cannot make a task a subtask of itself" }] };
-        }
-        if (targetParentId) {
-          let curr: string | null = targetParentId;
-          let isCycle = false;
-          while (curr) {
-            if (curr === taskId) {
-              isCycle = true;
-              break;
-            }
-            const parentTask: { parentId: string | null } | null = await prisma.task.findFirst({
-              where: { id: curr, userId, deletedAt: null },
-              select: { parentId: true },
-            });
-            curr = parentTask ? parentTask.parentId : null;
-          }
-          if (isCycle) {
-            return { isError: true, content: [{ type: "text", text: "Cannot move task into its own descendant subtask" }] };
-          }
-        }
-        updateData.parentId = targetParentId;
-      }
-
-      const updated = await prisma.task.update({
-        where: { id: taskId },
-        data: updateData,
-      });
+      if (parentTaskId !== undefined) updateData.parentId = parentTaskId;
+      const updated = await taskHierarchyTransaction(prisma, tx => updateHierarchyTask(tx, userId, taskId, updateData));
 
       return {
         content: [
@@ -381,7 +345,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
           },
         ],
       };
-    }
+    })
   );
 
   // 5. Delete task
@@ -1064,7 +1028,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
         )
         .describe("List of tasks to create"),
     },
-    async ({ tasks }) => {
+    async ({ tasks }) => hierarchyTool(() => taskHierarchyTransaction(prisma, async tx => {
       const createdSummary: Array<{
         id: string;
         title: string;
@@ -1074,7 +1038,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
       }> = [];
 
       const listCache = new Map<string, string>();
-      const existingLists = await prisma.task_list.findMany({
+      const existingLists = await tx.task_list.findMany({
         where: { userId, deletedAt: null },
       });
       for (const l of existingLists) {
@@ -1087,13 +1051,13 @@ export function registerTaskTools(server: McpServer, userId: string) {
 
         if (item.listId && item.listId !== "inbox" && item.listId !== "null") {
           targetListId = item.listId;
-        } else if (item.listName && item.listName.trim() && item.listName.toLowerCase() !== "inbox") {
+        } else if (item.listId === undefined && item.listName && item.listName.trim() && item.listName.toLowerCase() !== "inbox") {
           const normName = item.listName.toLowerCase().trim();
           if (listCache.has(normName)) {
             targetListId = listCache.get(normName)!;
           } else {
             const now = new Date();
-            const newList = await prisma.task_list.create({
+            const newList = await tx.task_list.create({
               data: {
                 userId,
                 name: item.listName.trim(),
@@ -1111,28 +1075,24 @@ export function registerTaskTools(server: McpServer, userId: string) {
 
         const now = new Date();
         const dueDate = parseSmartDueDate(item.dueDate);
-        const parentTask = await prisma.task.create({
-          data: {
-            userId,
-            listId: targetListId,
-            parentId: null,
-            title: item.title.trim(),
-            description: item.description || null,
-            priority: Math.max(1, Math.min(4, item.priority || 4)),
-            status: item.status || "todo",
-            dueDate,
-            dueTime: item.dueTime || null,
-            sortOrder: i + 1,
-            totalTimeSeconds: 0,
-            completedAt: item.status === "done" ? now : null,
-            createdAt: now,
-            updatedAt: now,
-          },
+        const parentTask = await createHierarchyTask(tx, userId, {
+          listId: targetListId,
+          parentId: null,
+          title: item.title.trim(),
+          description: item.description || null,
+          priority: Math.max(1, Math.min(4, item.priority || 4)),
+          status: item.status || "todo",
+          dueDate,
+          dueTime: item.dueTime || null,
+          totalTimeSeconds: 0,
+          completedAt: item.status === "done" ? now : null,
+          createdAt: now,
+          updatedAt: now,
         });
 
         let subtaskCount = 0;
         if (item.subtasks && item.subtasks.length > 0) {
-          const createdSubs = await createRecursiveSubtasks(item.subtasks, parentTask.id, targetListId, userId);
+          const createdSubs = await createRecursiveSubtasks(tx, item.subtasks, parentTask.id, userId);
           subtaskCount = createdSubs.length;
         }
 
@@ -1140,7 +1100,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
           id: parentTask.id,
           title: parentTask.title,
           priority: `P${parentTask.priority}`,
-          listName: item.listName || "Inbox",
+          listName: targetListId ? (await tx.task_list.findFirst({ where: { id: targetListId, userId, deletedAt: null } }))!.name : "Inbox",
           subtasksCount: subtaskCount,
         });
       }
@@ -1161,13 +1121,13 @@ export function registerTaskTools(server: McpServer, userId: string) {
           },
         ],
       };
-    }
+    }))
   );
 
   // 16. Batch update tasks
   server.tool(
     "reader_batch_update_tasks",
-    "Update multiple tasks or subtasks simultaneously (e.g., mark a set of tasks as done, change priorities, reschedule due dates, or move to a list)",
+    "Update multiple tasks atomically. List moves include descendants; select the top-level parent to move a subtask tree. Every selected task must belong to this account.",
     {
       taskIds: z.array(z.string()).describe("Array of task UUIDs to update"),
       status: z.enum(["todo", "in_progress", "done", "cancelled"]).optional().describe("New status to apply"),
@@ -1175,7 +1135,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
       listId: z.string().optional().describe("Target list UUID (or 'inbox' / 'null')"),
       dueDate: z.string().optional().describe("New due date (YYYY-MM-DD, 'today', 'tomorrow', or 'null' to clear)"),
     },
-    async ({ taskIds, status, priority, listId, dueDate }) => {
+    async ({ taskIds, status, priority, listId, dueDate }) => hierarchyTool(async () => {
       const now = new Date();
       const updateData: Record<string, unknown> = { updatedAt: now };
 
@@ -1193,10 +1153,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
         updateData.dueDate = parseSmartDueDate(dueDate);
       }
 
-      const res = await prisma.task.updateMany({
-        where: { id: { in: taskIds }, userId, deletedAt: null },
-        data: updateData,
-      });
+      const res = await taskHierarchyTransaction(prisma, tx => updateHierarchyTasks(tx, userId, taskIds, updateData));
 
       return {
         content: [
@@ -1214,7 +1171,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
           },
         ],
       };
-    }
+    })
   );
 
   // 17. Batch delete tasks
@@ -1300,6 +1257,7 @@ function parseSmartDueDate(dateStr?: string | null): Date | null {
 }
 
 async function createRecursiveSubtasks(
+  tx: Prisma.TransactionClient,
   items: Array<{
     title: string;
     description?: string;
@@ -1310,7 +1268,6 @@ async function createRecursiveSubtasks(
     subtasks?: any[];
   }>,
   parentId: string,
-  listId: string | null,
   userId: string
 ): Promise<Array<{ id: string; title: string }>> {
   const results: Array<{ id: string; title: string }> = [];
@@ -1319,29 +1276,25 @@ async function createRecursiveSubtasks(
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
     const dueDate = parseSmartDueDate(item.dueDate);
-    const created = await prisma.task.create({
-      data: {
-        userId,
-        parentId,
-        listId,
-        title: item.title.trim(),
-        description: item.description || null,
-        priority: Math.max(1, Math.min(4, item.priority || 4)),
-        status: item.status || "todo",
-        dueDate,
-        dueTime: item.dueTime || null,
-        sortOrder: i + 1,
-        totalTimeSeconds: 0,
-        completedAt: item.status === "done" ? now : null,
-        createdAt: now,
-        updatedAt: now,
-      },
+    const created = await createHierarchyTask(tx, userId, {
+      parentId,
+      title: item.title.trim(),
+      description: item.description || null,
+      priority: Math.max(1, Math.min(4, item.priority || 4)),
+      status: item.status || "todo",
+      dueDate,
+      dueTime: item.dueTime || null,
+      sortOrder: i + 1,
+      totalTimeSeconds: 0,
+      completedAt: item.status === "done" ? now : null,
+      createdAt: now,
+      updatedAt: now,
     });
 
     results.push({ id: created.id, title: created.title });
 
     if (item.subtasks && item.subtasks.length > 0) {
-      const nested = await createRecursiveSubtasks(item.subtasks, created.id, listId, userId);
+      const nested = await createRecursiveSubtasks(tx, item.subtasks, created.id, userId);
       results.push(...nested);
     }
   }
