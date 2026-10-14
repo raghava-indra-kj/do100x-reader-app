@@ -28,13 +28,32 @@ describe('Finance exact display and drafts', () => {
     expect(importStatusLabels.COMMITTED).toBe('Imported');
     expect(importDecisionLabels.UNRESOLVED).toBe('Needs review');
     expect(importDecisionLabels.NEW).toBe('Add');
-    expect(amountRangeLabels.expected).toBe('Expected estimate');
+    expect(amountRangeLabels.expected).toBe('Expected');
     expect(csvColumnLabels.externalId).toBe('Bank transaction ID column (optional)');
     expect(csvColumnLabels.paymentMethod).toBe('Payment method column (optional)');
     expect(auditActionLabels.STAGE).toBe('Prepared import');
   });
 });
 describe('Finance page state lifecycle', () => {
+  it('loads bills for their own month without changing report or forecast periods', async () => {
+    const { repo, store } = fixture();
+    Object.assign(repo, { plans: vi.fn(async () => ok({ schedules: [], budgets: [], estimates: [] })), occurrences: vi.fn(async () => ok([])), suggestions: vi.fn(async () => ok({ recurring: [], estimates: [], warnings: [] })) });
+    store.start(); await vi.waitFor(() => expect(store.catalog).not.toBeNull());
+    const reportFrom = store.reportFrom, reportTo = store.reportTo, forecastTo = store.forecastTo;
+    expect(store.billsFrom.slice(0, 7)).toBe(store.today.slice(0, 7));
+    expect(store.billsTo.slice(0, 7)).toBe(store.today.slice(0, 7));
+    store.setTab('plans');
+    store.setBillsPeriod('2026-12-01', '2026-12-31');
+    await vi.waitFor(() => expect(store.loading).toBe(false));
+    expect((repo as unknown as IFinanceRepo).occurrences).toHaveBeenLastCalledWith('A', '2026-12-01', '2026-12-31');
+    expect([store.reportFrom, store.reportTo, store.forecastTo]).toEqual([reportFrom, reportTo, forecastTo]);
+    store.openBillsPeriod('2026-09-01', '2026-12-31');
+    await vi.waitFor(() => expect(store.loading).toBe(false));
+    expect((repo as unknown as IFinanceRepo).occurrences).toHaveBeenLastCalledWith('A', '2026-09-01', '2026-12-31');
+    await store.selectBook('B');
+    expect(store.billsFrom.slice(0, 7)).toBe(store.today.slice(0, 7));
+    store.destroy();
+  });
   it('ignores a stale book response after a switch', async () => {
     const { repo, store } = fixture(); store.start(); await vi.waitFor(() => expect(store.catalog?.book.id).toBe('A'));
     const old = deferred<ReturnType<typeof ok<Catalog>>>(); repo.catalog.mockImplementationOnce(() => old.promise);

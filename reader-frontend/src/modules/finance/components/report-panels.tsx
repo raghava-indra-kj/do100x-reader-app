@@ -5,7 +5,9 @@ import { observer } from 'mobx-react-lite';
 import { Button } from '@modules/core/ui/primitives/button';
 import type { FinanceStore } from '../store';
 import { Alert, Empty, FinanceHeader, Field, Help, Input, Money, PeriodForm, Section } from './common';
-import { displayDate, downloadExport, occurrenceLabel, shortDate } from '../format';
+import { CategoryBreakdown } from './category-breakdown';
+import { billStatus, billStatusLabels } from '../plan-view';
+import { displayDate, downloadExport, shortDate } from '../format';
 
 // These two informational notes are explained in the disclosure below.
 // Operational warnings (including any new server warnings) stay visible.
@@ -25,7 +27,7 @@ export const ReportsPanel = observer(function ReportsPanel({ store, overview = f
   const upcoming = [...new Map([...(store.forecast?.overdue ?? []), ...store.occurrences].map(o => [`${o.scheduleId}/${shortDate(o.date)}`, o])).values()].filter(o => o.state !== 'SKIPPED' && o.kind === 'EXPENSE' && BigInt(o.remainingHighMinor) > 0n).sort((a, b) => a.date.localeCompare(b.date));
   return <>
     <FinanceHeader title={overview ? 'Overview' : 'Reports'} subtitle={overview ? 'Your cash, spending and what’s coming next.' : 'See where your money went.'} store={store} actions={<Popover open={exportOpen} onOpenChange={setExportOpen} align="end" content={<div className="finance-export-menu"><Button variant="ghost" size="sm" disabled={store.busy} onClick={() => { setExportOpen(false); void exportFile('CSV'); }}>Transactions for this period (CSV)</Button><Button variant="ghost" size="sm" disabled={store.busy} onClick={() => { setExportOpen(false); void exportFile('JSON'); }}>Full book, including deleted records (JSON)</Button></div>}><Button variant="outlined" size="sm" disabled={store.busy}><Download size={14} aria-hidden="true" /> Export</Button></Popover>} />
-    <PeriodForm key={`${store.reportFrom}/${store.reportTo}`} from={store.reportFrom} to={store.reportTo} onApply={store.setPeriod} />
+    <PeriodForm key={`${store.reportFrom}/${store.reportTo}`} from={store.reportFrom} to={store.reportTo} today={store.today} onApply={store.setPeriod} />
     {report && <>
       <div className="finance-stats">
         {overview && <div className="finance-stat finance-stat-featured"><div className="finance-stat-label">Cash balance</div><div className="finance-stat-value"><Money book={book} value={cash} color /></div><small>Posted cash through {displayDate(report.to)}</small></div>}
@@ -39,8 +41,8 @@ export const ReportsPanel = observer(function ReportsPanel({ store, overview = f
       <Help title="How these totals are calculated"><p>Only recorded, posted transactions count. Income and spending use transaction dates; cash movement uses each account entry’s effective date. Transfers and balance corrections aren’t income or spending.</p><p>Cash balance includes accounts marked for cash forecasts, including archived accounts with remaining cash. Debt isn’t income. Missing records can affect every total.</p></Help>
       {report.warnings.filter(warning => !reportNotes.has(warning)).map(warning => <Alert key={warning}>{warning}</Alert>)}
       {overview && <div className="finance-grid">
-        <Section title="Upcoming bills" subtitle={`Unpaid plans through ${displayDate(store.forecastTo)}`} actions={<Button size="sm" variant="ghost" onClick={() => store.setTab('plans')}>View all <ArrowRight size={14} /></Button>}>
-          {upcoming.slice(0, 5).map(item => <div className="finance-row" key={`${item.scheduleId}/${item.date}`}><div><strong>{item.title}</strong><p>{displayDate(item.date)} · {occurrenceLabel(item, store.today)}</p></div><div className="finance-amount-range"><strong><Money book={book} value={item.remainingExpectedMinor} /></strong><small>Expected remaining</small></div></div>)}
+        <Section title="Upcoming bills" subtitle={`Unpaid plans through ${displayDate(store.forecastTo)}`} actions={<Button size="sm" variant="ghost" onClick={() => store.openBillsPeriod(shortDate(upcoming[0]?.date ?? store.today), store.forecastTo)}>View all <ArrowRight size={14} /></Button>}>
+          {upcoming.slice(0, 5).map(item => <div className="finance-row" key={`${item.scheduleId}/${item.date}`}><div><strong>{item.title}</strong><p>{displayDate(item.date)} · <span className={`finance-badge finance-status-${billStatus(item, store.today)}`}>{billStatusLabels[billStatus(item, store.today)]}</span></p></div><div className="finance-amount-range"><strong><Money book={book} value={item.remainingExpectedMinor} /></strong><small>Expected remaining</small></div></div>)}
           {!upcoming.length && <Empty title="No unpaid bills in this period" description="Add recurring bills and one-off expenses in Plans and bills." />}
         </Section>
         <Section title="Account balances" subtitle={`Posted through ${displayDate(report.to)}`} actions={<Button size="sm" variant="ghost" onClick={() => store.setTab('accounts')}>Accounts <ArrowRight size={14} /></Button>}>
@@ -50,9 +52,8 @@ export const ReportsPanel = observer(function ReportsPanel({ store, overview = f
       </div>}
       {overview && <ForecastPanel store={store} />}
       <div className="finance-grid">
-        <Section title="Spending and income by category" subtitle="Parent totals include their subcategories; don’t add both together.">
-          {report.categories.filter(c => BigInt(c.rollupMinor) !== 0n).map(item => <div className="finance-row" key={item.id}><div><strong>{item.name}</strong><p>{item.kind === 'INCOME' ? 'Income' : 'Spending after refunds'}{item.parentId ? ' · Subcategory' : ''}</p></div><Money book={book} value={item.rollupMinor} /></div>)}
-          <div className="finance-row"><span>Uncategorized spending</span><Money book={book} value={report.unclassifiedExpenseMinor} /></div><div className="finance-row"><span>Uncategorized income</span><Money book={book} value={report.unclassifiedIncomeMinor} /></div>
+        <Section title="Spending and income by category" subtitle="Largest categories first. Expand a group to see its included subcategories.">
+          <CategoryBreakdown report={report} book={book} />
         </Section>
         <Section title="Budget progress" subtitle="Targets, not forecast expenses. Actual spending includes refunds.">
           {report.budgetStatus.length ? report.budgetStatus.map(item => <div className="finance-row" key={item.id}><div><strong>{item.categoryName}</strong><p>{item.month.slice(0, 7)} · {item.partialMonth ? 'Partial month' : 'Full month'}</p><p>Spent <Money book={book} value={item.spentMinor} /> of <Money book={book} value={item.amountMinor} /></p></div><div className="finance-amount-range"><strong><Money book={book} value={item.remainingMinor} color /></strong><small>{BigInt(item.remainingMinor) < 0n ? 'Over budget' : 'Remaining'}</small></div></div>) : <Empty title="No budgets for this period" description="Set a monthly spending target by category." action={<Button size="sm" variant="outlined" onClick={() => store.setTab('manage')}>Manage budgets</Button>} />}

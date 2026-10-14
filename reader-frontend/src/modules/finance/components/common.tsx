@@ -1,11 +1,12 @@
 import { cloneElement, isValidElement, useId, useState, type FormEvent, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { observer } from 'mobx-react-lite';
-import { AlertCircle, Wallet, X, RefreshCw } from 'lucide-react';
+import { AlertCircle, Wallet, X, RefreshCw, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react';
+import { addMonths, monthBounds } from '@reader/finance-core';
 import { Dialog } from '@modules/core/ui/primitives/dialog';
 import { Button } from '@modules/core/ui/primitives/button';
 import type { Book } from '@domain/finance/models/finance';
 import type { FinanceStore } from '../store';
-import { moneyLabel } from '../format';
+import { displayDate, moneyLabel } from '../format';
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   const generatedId = useId(), hintId = `${generatedId}-hint`;
@@ -65,7 +66,21 @@ export const FormDialog = observer(function FormDialog({ store, title, descripti
     </form>
   </Dialog>;
 });
-export function PeriodForm({ from, to, onApply }: { from: string; to: string; onApply: (from: string, to: string) => void }) {
+export function PeriodForm({ from, to, today, mode = 'reports', onApply }: { from: string; to: string; today?: string; mode?: 'reports' | 'bills'; onApply: (from: string, to: string) => void }) {
   const [start, setStart] = useState(from), [end, setEnd] = useState(to);
-  return <form className="finance-period" onSubmit={event => { event.preventDefault(); onApply(start, end); }}><Field label="From"><Input type="date" required value={start} onChange={event => setStart(event.target.value)} /></Field><Field label="To"><Input type="date" required min={start} value={end} onChange={event => setEnd(event.target.value)} /></Field><Button type="submit" variant="outlined" size="sm">Show period</Button></form>;
+  const [custom, setCustom] = useState(false);
+  const month = (date: string) => { const bounds = monthBounds(date); onApply(bounds.from, bounds.to); };
+  const thisMonth = today ? monthBounds(today) : null;
+  const presets = today && thisMonth ? [
+    { label: mode === 'bills' ? 'This month' : 'Month to date', from: thisMonth.from, to: mode === 'bills' ? thisMonth.to : today },
+    { label: mode === 'bills' ? 'Next month' : 'Last month', ...monthBounds(addMonths(thisMonth.from, mode === 'bills' ? 1 : -1)) },
+    { label: mode === 'bills' ? 'Next 3 months' : 'Year to date', from: mode === 'bills' ? thisMonth.from : `${today.slice(0, 4)}-01-01`, to: mode === 'bills' ? monthBounds(addMonths(thisMonth.from, 2)).to : today },
+  ] : [];
+  return <div className="finance-period-panel"><div className="finance-period-heading"><div>
+    {mode === 'bills' && <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Show previous month" onClick={() => month(addMonths(`${from.slice(0, 7)}-01`, -1))}><ChevronLeft size={16} /></Button>}
+    <CalendarDays size={17} aria-hidden="true" /><strong>{displayDate(from)} – {displayDate(to)}</strong>
+    {mode === 'bills' && <Button type="button" variant="ghost" size="sm" iconOnly aria-label="Show following month" onClick={() => month(addMonths(`${from.slice(0, 7)}-01`, 1))}><ChevronRight size={16} /></Button>}
+    </div><div className="finance-filter-chips" aria-label="Quick periods">{presets.map(p => <button type="button" key={p.label} aria-pressed={from === p.from && to === p.to} onClick={() => onApply(p.from, p.to)}>{p.label}</button>)}<button type="button" aria-expanded={custom} onClick={() => setCustom(!custom)}>Custom dates</button></div></div>
+    {custom && <form className="finance-period" onSubmit={event => { event.preventDefault(); if (start && end && start <= end) onApply(start, end); }}><Field label="From"><Input type="date" required value={start} onChange={event => setStart(event.target.value)} /></Field><Field label="To"><Input type="date" required min={start} value={end} onChange={event => setEnd(event.target.value)} /></Field><Button type="submit" variant="outlined" size="sm">Show period</Button></form>}
+  </div>;
 }

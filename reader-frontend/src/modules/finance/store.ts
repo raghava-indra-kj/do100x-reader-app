@@ -25,6 +25,8 @@ export class FinanceStore {
   reportFrom = '';
   reportTo = '';
   forecastTo = '';
+  billsFrom = '';
+  billsTo = '';
   report: F.Report | null = null;
   forecast: F.Forecast | null = null;
   forecastError: string | null = null;
@@ -72,14 +74,17 @@ export class FinanceStore {
       this.notice = null; this.error = null;
       this.bookId = id; this.catalog = null; this.balances = []; this.report = null; this.forecast = null; this.forecastError = null;
       this.reportFrom = ''; this.reportTo = ''; this.forecastTo = ''; this.transactionQuery = {}; this.transactions = { items: [], nextCursor: null };
+      this.billsFrom = ''; this.billsTo = '';
       this.plans = { schedules: [], budgets: [], estimates: [] }; this.occurrences = []; this.imports = { items: [], nextCursor: null }; this.selectedImport = null;
       this.rules = []; this.changes = { items: [], nextCursor: null }; this.reconciliations = []; this.suggestions = null;
     }
     await this.refresh();
   }
-  setTab(tab: FinanceTab) { this.tab = tab; void this.refresh(); }
+  setTab(tab: FinanceTab) { if (tab === 'plans' && this.tab !== 'plans') this.occurrences = []; this.tab = tab; void this.refresh(); }
   setPeriod(from: string, to: string) { this.reportFrom = from; this.reportTo = to; this.report = null; void this.refresh(); }
   setForecastTo(to: string) { this.forecastTo = to; void this.refresh(); }
+  setBillsPeriod(from: string, to: string) { this.billsFrom = from; this.billsTo = to; this.occurrences = []; void this.refresh(); }
+  openBillsPeriod(from: string, to: string) { this.billsFrom = from; this.billsTo = to; this.setTab('plans'); }
   setTransactionQuery(query: F.TransactionQuery) { this.transactionQuery = query; void this.refresh(); }
   clearError() { this.error = null; }
   async loadSuggestions() {
@@ -100,6 +105,7 @@ export class FinanceStore {
         if (!this.reportFrom) {
           const today = this.today;
           this.reportFrom = monthBounds(today).from; this.reportTo = today;
+          this.billsFrom = monthBounds(today).from; this.billsTo = monthBounds(today).to;
           this.forecastTo = monthBounds(addMonths(this.reportFrom, 2)).to;
           this.transactionQuery = { from: this.reportFrom, to: today };
         }
@@ -116,7 +122,7 @@ export class FinanceStore {
       const result = unwrap(await this.repo.transactions(bookId, this.transactionQuery));
       if (this.current(epoch)) runInAction(() => { this.transactions = result; });
     } else if (tab === 'plans') {
-      const [plans, occurrences, suggestions] = await Promise.all([this.repo.plans(bookId), this.repo.occurrences(bookId, this.reportFrom, this.forecastTo), this.repo.suggestions(bookId)]);
+      const [plans, occurrences, suggestions] = await Promise.all([this.repo.plans(bookId), this.repo.occurrences(bookId, this.billsFrom, this.billsTo), this.repo.suggestions(bookId)]);
       if (this.current(epoch)) runInAction(() => { this.plans = unwrap(plans); this.occurrences = unwrap(occurrences); this.suggestions = unwrap(suggestions); });
     } else if (tab === 'imports') {
       const selectedId = this.selectedImport?.id;
