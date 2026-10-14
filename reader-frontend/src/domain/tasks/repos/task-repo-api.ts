@@ -103,6 +103,7 @@ export class TaskRepoApi implements ITaskRepo {
   }
 
   async updateTask(id: string, params: {
+    expectedVersion?: number;
     title?: string;
     description?: string | null;
     status?: string;
@@ -130,9 +131,9 @@ export class TaskRepoApi implements ITaskRepo {
     }
   }
 
-  async reorderTasks(orderedIds: string[]): AsyncResult<void, AppError> {
+  async reorderTasks(orderedIds: string[], expectedVersions?: Record<string, number>): AsyncResult<void, AppError> {
     try {
-      await apiClient.post('/tasks/reorder', { orderedIds });
+      await apiClient.post('/tasks/reorder', { orderedIds, expectedVersions });
       return ok(undefined);
     } catch (error) {
       return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t reorder tasks. Try again.'), cause: error }));
@@ -152,36 +153,36 @@ export class TaskRepoApi implements ITaskRepo {
     }
   }
 
-  async startTimer(taskId: string, notes?: string): AsyncResult<ActiveTimerData, AppError> {
+  async startTimer(taskId: string, notes?: string, expectedTimerId?: string | null): AsyncResult<ActiveTimerData, AppError> {
     try {
-      const { data } = await apiClient.post('/timer/start', { taskId, notes });
+      const { data } = await apiClient.post('/timer/start', { taskId, notes, expectedTimerId });
       return ok(ActiveTimerSchema.parse(data.timer));
     } catch (error) {
       return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t start the timer. Try again.'), cause: error }));
     }
   }
 
-  async pauseTimer(): AsyncResult<ActiveTimerData, AppError> {
+  async pauseTimer(expectedTimerId?: string | null): AsyncResult<ActiveTimerData, AppError> {
     try {
-      const { data } = await apiClient.post('/timer/pause');
+      const { data } = await apiClient.post('/timer/pause', { expectedTimerId });
       return ok(ActiveTimerSchema.parse(data.timer));
     } catch (error) {
       return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t pause the timer. Try again.'), cause: error }));
     }
   }
 
-  async resumeTimer(): AsyncResult<ActiveTimerData, AppError> {
+  async resumeTimer(expectedTimerId?: string | null): AsyncResult<ActiveTimerData, AppError> {
     try {
-      const { data } = await apiClient.post('/timer/resume');
+      const { data } = await apiClient.post('/timer/resume', { expectedTimerId });
       return ok(ActiveTimerSchema.parse(data.timer));
     } catch (error) {
       return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t resume the timer. Try again.'), cause: error }));
     }
   }
 
-  async stopTimer(notes?: string, durationSeconds?: number): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError> {
+  async stopTimer(notes?: string, durationSeconds?: number, expectedTimerId?: string | null): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError> {
     try {
-      const { data } = await apiClient.post('/timer/stop', { notes, durationSeconds });
+      const { data } = await apiClient.post('/timer/stop', { notes, durationSeconds, expectedTimerId });
       return ok({
         session: TimeSessionSchema.parse(data.session),
         taskTotalTimeSeconds: data.taskTotalTimeSeconds,
@@ -191,9 +192,9 @@ export class TaskRepoApi implements ITaskRepo {
     }
   }
 
-  async discardTimer(): AsyncResult<void, AppError> {
+  async discardTimer(expectedTimerId?: string | null): AsyncResult<void, AppError> {
     try {
-      await apiClient.post('/timer/discard');
+      await apiClient.post('/timer/discard', { expectedTimerId });
       return ok(undefined);
     } catch (error) {
       return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t discard the timer. Try again.'), cause: error }));
@@ -210,7 +211,7 @@ export class TaskRepoApi implements ITaskRepo {
     }
   }
 
-  async addSession(taskId: string, params: { startTime: string; endTime?: string; durationSeconds: number; notes?: string }): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError> {
+  async addSession(taskId: string, params: { startTime: string; endTime?: string; durationSeconds: number; notes?: string; requestKey?: string }): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError> {
     try {
       const { data } = await apiClient.post(`/timer/tasks/${taskId}/sessions`, params);
       return ok({
@@ -222,7 +223,7 @@ export class TaskRepoApi implements ITaskRepo {
     }
   }
 
-  async updateSession(sessionId: string, params: { startTime?: string; endTime?: string; durationSeconds?: number; notes?: string }): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError> {
+  async updateSession(sessionId: string, params: { startTime?: string; endTime?: string; durationSeconds?: number; notes?: string; expectedUpdatedAt?: string }): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError> {
     try {
       const { data } = await apiClient.patch(`/timer/sessions/${sessionId}`, params);
       return ok({
@@ -234,9 +235,9 @@ export class TaskRepoApi implements ITaskRepo {
     }
   }
 
-  async deleteSession(sessionId: string): AsyncResult<{ taskTotalTimeSeconds: number }, AppError> {
+  async deleteSession(sessionId: string, expectedUpdatedAt?: string): AsyncResult<{ taskTotalTimeSeconds: number }, AppError> {
     try {
-      const { data } = await apiClient.delete(`/timer/sessions/${sessionId}`);
+      const { data } = await apiClient.delete(`/timer/sessions/${sessionId}`, { data: { expectedUpdatedAt } });
       return ok({ taskTotalTimeSeconds: data.taskTotalTimeSeconds });
     } catch (error) {
       return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t delete the time entry. Try again.'), cause: error }));
@@ -262,7 +263,7 @@ export class TaskRepoApi implements ITaskRepo {
     taskId?: string;
   }): AsyncResult<TimeAnalyticsData, AppError> {
     try {
-      const { data } = await apiClient.get('/timer/analytics', { params });
+      const { data } = await apiClient.get('/timer/analytics', { params: { ...params, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone } });
       return ok(TimeAnalyticsSchema.parse(data));
     } catch (error) {
       return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load time reports. Try again.'), cause: error }));

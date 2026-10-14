@@ -1,9 +1,11 @@
 import { Prisma, PrismaClient, task } from "@prisma/client";
 import type { ErrorRequestHandler } from "express";
-
-export class TaskHierarchyError extends Error {
-  constructor(public status: number, message: string) { super(message); }
-}
+import { TaskHierarchyError } from './task-errors';
+import { applyTaskCalendarChanges } from './calendar/task-calendar';
+import { parseTaskInput, taskFields } from './task-contract';
+import { lockAccount } from './account-transaction';
+import { elapsedSeconds, finishTimer } from './timer-service';
+export { TaskHierarchyError } from './task-errors';
 
 export const taskHierarchyErrorHandler: ErrorRequestHandler = (error, _req, res, next) => {
   if (error instanceof TaskHierarchyError) res.status(error.status).json({ error: error.message });
@@ -27,6 +29,7 @@ const normalizeList = (id: string | null | undefined) => !id || id === "inbox" |
 const normalizeParent = (id: string | null | undefined) => !id || id === "null" ? null : id;
 
 async function ownTask(tx: Prisma.TransactionClient, userId: string, id: string): Promise<task> {
+  await lockAccount(tx, userId);
   const row = await tx.task.findFirst({ where: { id, userId, deletedAt: null } });
   if (!row) throw new TaskHierarchyError(404, "Task or parent task not found.");
   return row;
@@ -62,6 +65,18 @@ export async function taskSubtreeIds(tx: Prisma.TransactionClient, userId: strin
   return [...found];
 }
 
+export async function softDeleteHierarchyTasks(tx: Prisma.TransactionClient, userId: string, taskIds: string[]) {
+  const roots = [...new Set(taskIds)];
+  if (!roots.length || roots.length > 5000) throw new TaskHierarchyError(400, 'Choose between 1 and 5,000 tasks.');
+  for (const id of roots) await ownTask(tx, userId, id);
+  const ids = await taskSubtreeIds(tx, userId, roots), now = new Date();
+  const timer = await tx.active_timer.findUnique({ where: { userId } });
+  if (timer && ids.includes(timer.taskId) && elapsedSeconds(timer, now) >= 1) await finishTimer(tx, userId, timer, {}, now);
+  await tx.task.updateMany({ where: { id: { in: ids }, userId, deletedAt: null }, data: { deletedAt: now, updatedAt: now, version: { increment: 1 } } });
+  await tx.active_timer.deleteMany({ where: { userId, taskId: { in: ids } } });
+  return ids;
+}
+
 function assertInheritedList(requested: string | null | undefined, inherited: string | null) {
   if (requested !== undefined && normalizeList(requested) !== inherited) {
     throw new TaskHierarchyError(400, "Subtasks use their parent’s list. Move the parent task or detach the subtask first.");
@@ -70,7 +85,22 @@ function assertInheritedList(requested: string | null | undefined, inherited: st
 
 type NewTask = Omit<Prisma.taskUncheckedCreateInput, "userId" | "listId" | "parentId"> & { listId?: string | null; parentId?: string | null };
 
+function validateMetadata(changes: Record<string, unknown>, existing?: task) {
+  const raw: Record<string, unknown> = {};
+  for (const key of Object.keys(taskFields.shape)) if (changes[key] !== undefined) raw[key] = changes[key];
+  if (raw.dueDate instanceof Date) {
+    if (!Number.isFinite(raw.dueDate.getTime())) throw new TaskHierarchyError(400, 'Choose a valid task date.');
+    raw.dueDate = raw.dueDate.toISOString();
+  }
+  const fields = parseTaskInput(taskFields.partial(), raw);
+  if (fields.dueDate === null) fields.dueTime = null;
+  if (fields.dueTime && !(fields.dueDate === undefined ? existing?.dueDate : fields.dueDate)) throw new TaskHierarchyError(400, 'Choose a date before setting a time.');
+  return { ...changes, ...fields };
+}
+
 export async function createHierarchyTask(tx: Prisma.TransactionClient, userId: string, input: NewTask) {
+  await lockAccount(tx, userId);
+  input = validateMetadata(input) as NewTask;
   if (typeof input.title !== "string" || !input.title.trim()) throw new TaskHierarchyError(400, "Enter a task title.");
   const parentId = normalizeParent(input.parentId);
   let listId = normalizeList(input.listId);
@@ -88,6 +118,9 @@ type TaskChanges = Record<string, unknown> & { listId?: string | null; parentId?
 
 export async function updateHierarchyTask(tx: Prisma.TransactionClient, userId: string, id: string, changes: TaskChanges) {
   const existing = await ownTask(tx, userId, id);
+  changes = validateMetadata(changes, existing);
+  if (changes.expectedVersion !== undefined && changes.expectedVersion !== existing.version) throw new TaskHierarchyError(409, 'This task changed in another tab. Reload before saving.');
+  const { expectedVersion: _version, ...metadata } = changes;
   const parentId = changes.parentId === undefined ? existing.parentId : normalizeParent(changes.parentId);
   let listId = changes.listId === undefined ? existing.listId : normalizeList(changes.listId);
   if (parentId) {
@@ -99,19 +132,21 @@ export async function updateHierarchyTask(tx: Prisma.TransactionClient, userId: 
     listId = (await rootTask(tx, userId, existing.parentId, id)).listId;
   }
   await validateList(tx, userId, listId);
-  const data = { ...changes, parentId, listId, updatedAt: changes.updatedAt ?? new Date() } as Prisma.taskUncheckedUpdateInput;
+  const data = { ...metadata, parentId, listId, version: { increment: 1 }, updatedAt: changes.updatedAt ?? new Date() } as Prisma.taskUncheckedUpdateInput;
   if (changes.status === "done" && existing.status !== "done") data.completedAt = new Date();
   else if (changes.status !== undefined && changes.status !== "done") data.completedAt = null;
-  const updated = await tx.task.update({ where: { id, userId, deletedAt: null }, data });
+  await tx.task.update({ where: { id, userId, deletedAt: null }, data });
   if (changes.listId !== undefined || changes.parentId !== undefined || existing.listId !== listId) {
     const ids = await taskSubtreeIds(tx, userId, [id]);
-    await tx.task.updateMany({ where: { id: { in: ids }, userId, deletedAt: null }, data: { listId, updatedAt: data.updatedAt } });
+    await tx.task.updateMany({ where: { id: { in: ids.filter(child => child !== id) }, userId, deletedAt: null }, data: { listId, version: { increment: 1 }, updatedAt: data.updatedAt } });
   }
-  return updated;
+  await applyTaskCalendarChanges(tx, userId, existing, metadata);
+  return ownTask(tx, userId, id);
 }
 
 export async function updateHierarchyTasks(tx: Prisma.TransactionClient, userId: string, taskIds: string[], changes: TaskChanges) {
   const ids = [...new Set(taskIds)];
+  if (!ids.length || ids.length > 5000) throw new TaskHierarchyError(400, 'Choose between 1 and 5,000 tasks.');
   const rows = await Promise.all(ids.map(id => ownTask(tx, userId, id)));
   if (changes.listId !== undefined) {
     const listId = normalizeList(changes.listId);

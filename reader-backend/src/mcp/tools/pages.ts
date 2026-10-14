@@ -1,3 +1,4 @@
+import { registerTool } from '../register-tool';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
@@ -13,7 +14,7 @@ import { FORMAT_LLM_MD_CONTENT } from "../constants/format-guide";
 
 export function registerPageTools(server: McpServer, userId: string) {
   // 0. Get Format Guide
-  server.tool(
+  registerTool(server,
     "reader_get_format_guide",
     "Get the official Reader Markdown formatting guidelines (format.llm.md) covering frontmatter rules, headings, callouts, details blocks, Mermaid & D2 diagrams, and math equations",
     {},
@@ -29,7 +30,7 @@ export function registerPageTools(server: McpServer, userId: string) {
     }
   );
   // 1. List pages
-  server.tool(
+  registerTool(server,
     "reader_list_pages",
     "List reader pages with optional parent filter, category filter, and search query",
     {
@@ -99,7 +100,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 2. Get single page (with raw markdown and line count)
-  server.tool(
+  registerTool(server,
     "reader_get_page",
     "Fetch full content, line-numbered markdown, and metadata of a reader page by ID",
     {
@@ -158,7 +159,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 3. Get Page Sections (Deterministic Index-based structure)
-  server.tool(
+  registerTool(server,
     "reader_get_page_sections",
     "Get a structured list of all sections in a page with numeric indices, headings, line ranges, and previews",
     {
@@ -203,7 +204,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 4. Update Section by Numeric Index (100% immune to duplicate titles or double quotes)
-  server.tool(
+  registerTool(server,
     "reader_update_section",
     "Update one section body using its index and contentVersion from reader_get_page_sections. Nested sections are untouched; stale writes and structural body changes are rejected.",
     {
@@ -278,7 +279,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 5. Replace Line Range (Surgical Line-by-Line editing)
-  server.tool(
+  registerTool(server,
     "reader_replace_lines",
     "Replace a specific line range [startLine, endLine] with new content. Includes optional safety check against expectedContent.",
     {
@@ -348,7 +349,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 6. Insert Section (Append or insert after specific section index)
-  server.tool(
+  registerTool(server,
     "reader_insert_section",
     "Insert a new section and heading at a specific position (e.g. after section index 2 or at the end)",
     {
@@ -410,7 +411,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 7. Create page
-  server.tool(
+  registerTool(server,
     "reader_create_page",
     "Create a new top-level page or nested subpage in Reader",
     {
@@ -477,7 +478,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 8. Update page metadata / entire content
-  server.tool(
+  registerTool(server,
     "reader_update_page",
     "Update an existing page's title, full markdown content, category, or AI prompts",
     {
@@ -542,7 +543,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 9. Delete page
-  server.tool(
+  registerTool(server,
     "reader_delete_page",
     "Soft-delete a reader page and its descendants",
     {
@@ -597,7 +598,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 10. Get page tree
-  server.tool(
+  registerTool(server,
     "reader_get_page_tree",
     "Retrieve the full hierarchical tree of pages and subpages",
     {
@@ -658,7 +659,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 11. Full-Text Knowledge Search
-  server.tool(
+  registerTool(server,
     "reader_search",
     "Search for text across all page titles and markdown contents with excerpt snippets and line numbers",
     {
@@ -739,7 +740,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 12. Lightweight Outline / Table of Contents
-  server.tool(
+  registerTool(server,
     "reader_get_outline",
     "Get a lightweight Table of Contents (headings with line numbers and section indices) for a page and its subpages without pulling full body text",
     {
@@ -787,7 +788,7 @@ export function registerPageTools(server: McpServer, userId: string) {
         childrenMap.get(parent)!.push(p);
       }
 
-      function buildOutline(p: typeof rootPage): PageOutline {
+      function buildOutline(p: NonNullable<typeof rootPage>): PageOutline {
         const children = includeSubpages ? (childrenMap.get(p.id) ?? []) : [];
         return {
           id: p.id,
@@ -811,7 +812,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 13. Fast Append Content
-  server.tool(
+  registerTool(server,
     "reader_append_content",
     "Append markdown content to the end of a page, or to the end of a specific section by index",
     {
@@ -884,7 +885,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 14. Batch Create Pages
-  server.tool(
+  registerTool(server,
     "reader_batch_create_pages",
     "Create multiple pages and subpages at once with automated parent-child ID resolution",
     {
@@ -959,7 +960,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 15. Move / Reorganize Page
-  server.tool(
+  registerTool(server,
     "reader_move_page",
     "Move a page to a new parent (or to root) and optionally update its sort order",
     {
@@ -984,7 +985,7 @@ export function registerPageTools(server: McpServer, userId: string) {
         }
         let checkId: string | null = targetParentId;
         while (checkId) {
-          const parent = await prisma.page.findFirst({
+          const parent: { parentId: string | null } | null = await prisma.page.findFirst({
             where: { id: checkId, userId, deletedAt: null },
             select: { parentId: true },
           });
@@ -1041,7 +1042,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 16. Duplicate Page
-  server.tool(
+  registerTool(server,
     "reader_duplicate_page",
     "Duplicate an existing page and optionally all of its nested subpages",
     {
@@ -1074,7 +1075,7 @@ export function registerPageTools(server: McpServer, userId: string) {
         parentId = source.parentId;
       }
 
-      async function clonePageRecursive(srcPage: typeof source, pId: string | null, customTitle?: string): Promise<any> {
+      async function clonePageRecursive(srcPage: NonNullable<typeof source>, pId: string | null, customTitle?: string): Promise<NonNullable<typeof source>> {
         const cloned = await prisma.page.create({
           data: {
             userId,
@@ -1129,7 +1130,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 17. Compile / Export Bundle
-  server.tool(
+  registerTool(server,
     "reader_compile_bundle",
     "Compile a parent page and all its nested subpages into a single, cohesive Markdown document with an automated Table of Contents",
     {
@@ -1157,7 +1158,7 @@ export function registerPageTools(server: McpServer, userId: string) {
       }
 
       const orderedList: Array<{ page: typeof rootPage; depth: number }> = [];
-      function collect(p: typeof rootPage, depth: number) {
+      function collect(p: NonNullable<typeof rootPage>, depth: number) {
         orderedList.push({ page: p, depth });
         const children = childrenMap.get(p.id) ?? [];
         for (const child of children) {
@@ -1196,7 +1197,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 18. Find and Replace across a page or multiple pages
-  server.tool(
+  registerTool(server,
     "reader_find_and_replace",
     "Find and replace text across a specific page, a category, or the entire knowledge base",
     {
@@ -1269,7 +1270,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 19. Get Knowledge Base & Reading Analytics
-  server.tool(
+  registerTool(server,
     "reader_get_stats",
     "Get overall reading statistics, page counts, word counts, vocabulary count, and category breakdown",
     {
@@ -1327,7 +1328,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 20. Daily Note / Journal Manager
-  server.tool(
+  registerTool(server,
     "reader_get_or_create_daily_note",
     "Get or automatically create today's daily journal/note page for thoughts, logs, and reading reflections",
     {
@@ -1390,7 +1391,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 21. Recent Activity Feed
-  server.tool(
+  registerTool(server,
     "reader_get_recent_activity",
     "Retrieve recent activity across pages, vocabulary lookups, and annotations over recent days",
     {
@@ -1439,7 +1440,7 @@ export function registerPageTools(server: McpServer, userId: string) {
   );
 
   // 22. Lint & Format Page Markdown (conforming to format.llm.md)
-  server.tool(
+  registerTool(server,
     "reader_lint_format_page",
     "Inspect and auto-correct page markdown according to format.llm.md rules (e.g. blank lines inside callouts/details, YAML frontmatter quoting)",
     {

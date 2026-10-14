@@ -1,10 +1,11 @@
+import { registerPrompt } from './register-tool';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../prisma";
 
 export function registerPrompts(server: McpServer, userId: string) {
   // 1. Study Guide
-  server.prompt(
+  registerPrompt(server,
     "reader_study_guide",
     "Generate a structured study guide with key takeaways, definitions, and questions for a page and its subpages",
     {
@@ -49,7 +50,7 @@ ${contentBlock}`,
   );
 
   // 2. Explain Section
-  server.prompt(
+  registerPrompt(server,
     "reader_explain_section",
     "Deep-dive explanation and analogies for a specific excerpt or section from a page",
     {
@@ -78,7 +79,7 @@ Context:\n${page?.content ?? ""}\n\nCan you explain the following concept/sectio
   );
 
   // 3. Vocabulary Quiz
-  server.prompt(
+  registerPrompt(server,
     "reader_vocabulary_quiz",
     "Create an interactive vocabulary quiz based on personal learning words",
     {
@@ -114,7 +115,7 @@ Format:
   );
 
   // 4. Create Page with Format Guide
-  server.prompt(
+  registerPrompt(server,
     "reader_create_page_with_format_guide",
     "Generate a new Reader page adhering strictly to the official format.llm.md guidelines (frontmatter, callouts, diagrams)",
     {
@@ -152,7 +153,7 @@ Ensure:
   );
 
   // 5. Eisenhower Task Prioritizer
-  server.prompt(
+  registerPrompt(server,
     "reader_task_prioritizer",
     "Analyze open tasks and organize them into an Eisenhower Priority Matrix (P1-P4) with an actionable daily execution plan",
     {},
@@ -191,7 +192,7 @@ Please analyze these tasks and provide:
   );
 
   // 6. Time Audit & Productivity Review
-  server.prompt(
+  registerPrompt(server,
     "reader_time_audit",
     "Audit logged time sessions over past days to highlight focus bottlenecks and recommend scheduling optimizations",
     {

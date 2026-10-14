@@ -32,7 +32,7 @@ describe("task list inheritance", () => {
     const before = { ...row("grandchild") };
     await run(tx => updateHierarchyTask(tx, "owner", "root", { listId: "list-b", priority: 1 }));
     expect([row("root").listId, row("child").listId, row("grandchild").listId]).toEqual(["list-b", "list-b", "list-b"]);
-    expect(row("grandchild")).toEqual({ ...before, listId: "list-b", updatedAt: expect.any(Date) });
+    expect(row("grandchild")).toEqual({ ...before, listId: "list-b", version: before.version + 1, updatedAt: expect.any(Date) });
     expect(row("foreign").listId).toBe("list-x");
   });
   it("reparenting moves descendants; detaching retains the inherited list", async () => {

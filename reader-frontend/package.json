@@ -30,7 +30,7 @@
         "highlight.js": "^11.11.1",
         "inversify": "^8.1.0",
         "js-yaml": "^4.2.0",
-        "katex": "^0.17.0",
+        "katex": "0.18.2",
         "lucide-react": "^1.18.0",
         "mdast-util-to-string": "^4.0.0",
         "mermaid": "^11.15.0",
@@ -57,7 +57,8 @@
         "tailwind-merge": "^3.6.0",
         "uuid": "^14.0.0",
         "zod": "^4.4.3",
-        "@reader/habit-core": "*"
+        "@reader/habit-core": "*",
+        "@reader/calendar-core": "*"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",

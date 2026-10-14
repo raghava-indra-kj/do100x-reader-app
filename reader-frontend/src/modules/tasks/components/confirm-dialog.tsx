@@ -1,87 +1,24 @@
+import { useId, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { AlertTriangle, Info, Trash2, X } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { Dialog } from '@modules/core/ui/primitives/dialog';
+import { Button } from '@modules/core/ui/primitives/button';
 import type { TasksStore } from '../store';
-
-interface Props {
-  store: TasksStore;
-}
-
-export const ConfirmDialog = observer(({ store }: Props) => {
+export const ConfirmDialog = observer(({ store }: { store: TasksStore }) => {
+  const title = useId(), description = useId(), lock = useRef(false);
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
   const modal = store.confirmationModal;
-  if (!modal || !modal.isOpen) return null;
-
-  const isDanger = modal.confirmVariant === 'danger';
-  const isWarning = modal.confirmVariant === 'warning';
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-sm bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-lg shadow-xl overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="p-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div
-              className={`w-7 h-7 rounded-md flex items-center justify-center ${
-                isDanger
-                  ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
-                  : isWarning
-                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                  : 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)]'
-              }`}
-            >
-              {isDanger ? (
-                <Trash2 className="w-3.5 h-3.5" />
-              ) : isWarning ? (
-                <AlertTriangle className="w-3.5 h-3.5" />
-              ) : (
-                <Info className="w-3.5 h-3.5" />
-              )}
-            </div>
-            <div>
-              <h2 className="text-xs font-bold text-[var(--color-text-strong)]">{modal.title}</h2>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => store.closeConfirmation()}
-            className="p-1 rounded-md hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Message */}
-        <div className="p-4 text-xs text-[var(--color-text-body)] leading-relaxed">
-          {modal.message}
-        </div>
-
-        {/* Actions */}
-        <div className="p-3 border-t border-[var(--color-border-subtle)] flex items-center justify-end space-x-2 bg-[var(--color-surface-soft)]/20">
-          <button
-            type="button"
-            onClick={() => store.closeConfirmation()}
-            className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={async () => {
-              const action = modal.onConfirm;
-              store.closeConfirmation();
-              if (action) await action();
-            }}
-            className={`px-3.5 py-1.5 text-white text-xs font-semibold rounded-md shadow-xs transition cursor-pointer ${
-              isDanger
-                ? 'bg-rose-600 hover:bg-rose-700'
-                : isWarning
-                ? 'bg-amber-600 hover:bg-amber-700'
-                : 'bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)]'
-            }`}
-          >
-            {modal.confirmLabel || 'Confirm'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  if (!modal?.isOpen) return null;
+  const close = () => { if (!lock.current) { setError(''); store.closeConfirmation(); } };
+  return <Dialog open stacked={store.isStopTimerDialogOpen} onOpenChange={open => { if (!open) close(); }} labelledBy={title} describedBy={description} className="max-w-sm p-5">
+    <h2 id={title} className="flex items-center gap-2 text-base font-semibold"><AlertTriangle size={18} />{modal.title}</h2>
+    <p id={description} className="my-4 text-sm text-[var(--color-text-muted)]">{modal.message}</p>
+    {error && <p role="alert" className="mb-3 text-sm text-red-600">{error}</p>}
+    <div className="flex justify-end gap-2"><Button variant="outlined" disabled={busy} onClick={close}>Cancel</Button><Button disabled={busy} loading={busy} className={modal.confirmVariant === 'danger' ? 'bg-rose-600' : ''} onClick={async () => {
+      if (lock.current) return; lock.current = true; setBusy(true); setError('');
+      try { const saved = await modal.onConfirm(); if (saved === false) setError('The change was not saved. Please try again.'); else if (store.confirmationModal === modal) store.closeConfirmation(); }
+      catch (cause) { setError(cause instanceof Error ? cause.message : 'Couldn’t save this change. Please try again.'); }
+      finally { lock.current = false; setBusy(false); }
+    }}>{modal.confirmLabel || 'Confirm'}</Button></div>
+  </Dialog>;
 });

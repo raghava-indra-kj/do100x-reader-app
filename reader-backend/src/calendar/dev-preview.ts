@@ -1,0 +1,56 @@
+// Isolated local browser verification only. Never imported by the application build.
+import express from 'express';
+import path from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { prisma as db } from '../prisma';
+import { attachSession, issueSession } from '../session';
+import tasksRouter from '../tasks';
+import listsRouter from '../task-lists';
+import timerRouter from '../timer';
+import { createHabitsRouter } from '../habits/habit-router';
+import { createHabit, recordHabit } from '../habits/habit-service';
+import { createCalendarRouter } from './calendar-router';
+import { createCalendarEvent } from './calendar-service';
+import { saveCalendarPreferences, defaultCalendarPreferences } from './calendar-query';
+import { addDays, wallAt, weekStart } from '@reader/calendar-core';
+
+async function start() {
+  const url = new URL(process.env.DATABASE_URL ?? '');
+  if (process.env.NODE_ENV !== 'test' || !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname) || !/^\/do100x_calendar_test_[a-f0-9]{12}$/.test(url.pathname)) throw new Error('Preview requires a dedicated local Calendar test database.');
+  const user = await db.appuser.create({ data: { displayName: 'Calendar preview', email: `calendar-${randomUUID()}@example.test`, identities: { create: { provider: 'GOOGLE', providerSubject: randomUUID() } } } });
+  const timeZone = 'Asia/Kolkata', today = wallAt(new Date(), timeZone).slice(0, 10), monday = weekStart(today);
+  const work = await db.task_list.create({ data: { userId: user.id, name: 'Work', color: '#2563eb', icon: 'Briefcase', createdAt: new Date(), updatedAt: new Date() } });
+  const personal = await db.task_list.create({ data: { userId: user.id, name: 'Personal', color: '#168454', icon: 'Home', createdAt: new Date(), updatedAt: new Date() } });
+  const task = (title: string, listId: string | null = work.id, dueDate: string | null = null, dueTime: string | null = null) => db.task.create({ data: { userId: user.id, title, listId, dueDate: dueDate ? new Date(`${dueDate}T00:00:00Z`) : null, dueTime, priority: 2, createdAt: new Date(), updatedAt: new Date() } });
+  const proposal = await task('Finish the design proposal'), chapter = await task('Read the next chapter', personal.id);
+  await task('Review the monthly budget', personal.id); await task('Plan next week’s priorities'); await task('Reply to project feedback');
+  await task('Submit expense report', work.id, today, '17:00'); await task('Book a weekend trip', personal.id, addDays(today, 1));
+  const habit = await createHabit(db, user.id, { requestKey: randomUUID(), name: 'Read a little', description: 'A few pages each day.', icon: 'book', color: 'green', section: 'Learning', timezone: timeZone, plan: { startDate: addDays(today, -14), endDate: null, frequency: 'DAILY', weekdays: [1, 3, 5], intervalDays: 2, weeklyTarget: 3, goalType: 'COUNT', target: 10, unit: 'pages', step: 1, reminders: [] } });
+  await recordHabit(db, user.id, habit.id, today, { habitVersion: 1, expectedVersion: 0, status: 'RECORDED', value: 4, note: 'Continue after dinner', mood: 4 });
+  const event = (title: string, day: string, start: string, end: string, extra: Record<string, unknown> = {}) => createCalendarEvent(db, user.id, { requestKey: randomUUID(), title, description: '', location: '', color: 'orange', start: `${day}T${start}`, end: `${day}T${end}`, allDay: false, timeZone, repeat: null, taskId: null, habitId: null, reminders: [], ...extra });
+  await event('Morning planning', monday, '08:30', '09:00', { color: 'teal', repeat: { frequency: 'WEEKLY', interval: 1, weekdays: [1, 2, 3, 4, 5], monthlyMode: 'DATE', count: null, until: addDays(monday, 60) } });
+  await event('Finish the design proposal', today, '09:30', '11:30', { taskId: proposal.id, color: 'blue', description: 'Shape the first draft, then review the open questions.' });
+  await event('Project check-in', today, '10:30', '11:00', { color: 'rose', location: 'Video call' });
+  await event('Lunch & a walk', today, '12:30', '13:30', { color: 'green' });
+  await event('Read a little', today, '19:00', '19:30', { habitId: habit.id, color: 'green' });
+  await event('Read the next chapter', addDays(today, 1), '17:00', '17:45', { taskId: chapter.id, color: 'violet' });
+  await event('Weekend reset', addDays(monday, 5), '10:00', '11:00', { color: 'teal' });
+  await createCalendarEvent(db, user.id, { requestKey: randomUUID(), title: 'A day to recharge', description: '', location: '', color: 'orange', start: `${addDays(monday, 6)}T00:00`, end: `${addDays(monday, 7)}T00:00`, allDay: true, timeZone, repeat: null, taskId: null, habitId: null, reminders: [] });
+  const startTime = new Date(`${today}T08:30:00+05:30`);
+  await db.time_session.create({ data: { userId: user.id, taskId: proposal.id, startTime, endTime: new Date(startTime.getTime() + 25 * 60000), durationSeconds: 1500, notes: 'Outlined the proposal', createdAt: new Date(), updatedAt: new Date() } });
+  await db.task.update({ where: { id: proposal.id }, data: { totalTimeSeconds: 1500 } });
+  await saveCalendarPreferences(db, user.id, { preferences: defaultCalendarPreferences(timeZone), expectedVersion: 0 });
+  const app = express(); app.use(express.json({ limit: '10mb' }));
+  app.get('/backend-api/auth/session', (_req, res) => { issueSession(res, user.id); res.json({ id: user.id, displayName: user.displayName, email: user.email, avatarUrl: null }); });
+  app.get('/backend-api/user-preferences', (_req, res) => res.json({ motivationsEnabled: false }));
+  app.use('/backend-api', attachSession(db));
+  app.use('/backend-api/calendar', createCalendarRouter(db)); app.use('/backend-api/habits', createHabitsRouter(db));
+  app.use('/backend-api/tasks', tasksRouter); app.use('/backend-api/task-lists', listsRouter); app.use('/backend-api/timer', timerRouter);
+  app.use('/backend-api', (_req, res) => res.status(404).json({ message: 'This isolated preview provides Calendar, Tasks and Habits only.' }));
+  app.use(express.static(path.resolve(process.cwd(), 'reader-frontend/dist')));
+  app.get('*splat', (_req, res) => res.sendFile(path.resolve(process.cwd(), 'reader-frontend/dist/index.html')));
+  const server = app.listen(5184, '127.0.0.1', () => console.log('Calendar local database preview: http://127.0.0.1:5184/calendar'));
+  const stop = () => server.close(() => { void db.$disconnect().then(() => process.exit(0)); });
+  process.once('SIGINT', stop); process.once('SIGTERM', stop);
+}
+void start().catch(error => { console.error('Calendar preview failed:', error instanceof Error ? error.message : 'Unknown error'); process.exitCode = 1; });

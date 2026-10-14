@@ -1,3 +1,7 @@
+import { z } from 'zod';
+import { readJson } from '../test-support/read-json';
+const userSchema = z.object({ id: z.string(), email: z.string(), displayName: z.string().nullable(), avatarUrl: z.string().nullable() }).passthrough();
+const homeSchema = z.object({ homePageId: z.string() });
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import { createHash, createHmac, randomUUID } from "node:crypto";
@@ -50,7 +54,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("Google-only sign-in, ownershi
     challengeHashes.push(hash(cookie.split("=")[1]));
     expect(response.headers.get("set-cookie")).toContain("HttpOnly");
     expect(response.headers.get("set-cookie")).toContain("SameSite=Strict");
-    return { cookie, nonce: (await response.json()).nonce as string };
+    return { cookie, nonce: (await readJson(response, z.object({ nonce: z.string() }))).nonce };
   };
   const signIn = async (subject = randomUUID(), email = `${randomUUID()}@example.com`, displayName = "Reader") => {
     if (!subjects.includes(subject)) subjects.push(subject);
@@ -58,7 +62,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("Google-only sign-in, ownershi
     tokens.set(credential, { subject, email, displayName, avatarUrl: null, nonce: c.nonce });
     const response = await request("/backend-api/auth/google", "POST", { credential }, c.cookie, { "x-login-csrf": c.nonce });
     expect(response.status).toBe(200);
-    const user = await response.json();
+    const user = await readJson(response, userSchema);
     createdUserIds.add(user.id);
     const cookie = response.headers.getSetCookie().find(value => value.startsWith("reader_session="))!.split(";")[0];
     return { user, cookie, c, credential, subject };
@@ -85,7 +89,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("Google-only sign-in, ownershi
     expect((await request("/backend-api/auth/google", "POST", { credential: a.credential }, a.c.cookie, { "x-login-csrf": a.c.nonce })).status).toBe(403);
     const again = await signIn(a.subject, sharedEmail, "Changed name");
     expect(again.user.id).toBe(a.user.id); expect(again.user.displayName).toBe("Changed name");
-    expect((await (await request("/backend-api/auth/session", "GET", undefined, a.cookie)).json()).email).toBe(sharedEmail);
+    expect((await readJson(request("/backend-api/auth/session", "GET", undefined, a.cookie), userSchema)).email).toBe(sharedEmail);
     const b = await signIn(undefined, sharedEmail);
     expect(b.user.id).not.toBe(a.user.id); // No email-based linking.
     const concurrentSubject = randomUUID();
@@ -103,21 +107,22 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("Google-only sign-in, ownershi
     }
 
     const homes = await Promise.all([request("/backend-api/reader/home", "POST", {}, a.cookie), request("/backend-api/reader/home", "POST", {}, a.cookie)]);
-    const ids = await Promise.all(homes.map(response => response.json()));
+    const ids = await Promise.all(homes.map(response => readJson(response, homeSchema)));
     expect(ids[0].homePageId).toBe(ids[1].homePageId);
     expect(await db.page.count({ where: { userId: a.user.id } })).toBe(1);
     expect((await request("/backend-api/reader/preferences", "PATCH", { homePageId: ids[0].homePageId }, b.cookie)).status).toBe(404);
     await db.page.update({ where: { id: ids[0].homePageId }, data: { deletedAt: new Date() } });
     expect(await (await request("/backend-api/reader/preferences", "GET", undefined, a.cookie)).json()).toEqual({ homePageId: null });
-    const repaired = await (await request("/backend-api/reader/home", "POST", {}, a.cookie)).json();
+    const repaired = await readJson(request("/backend-api/reader/home", "POST", {}, a.cookie), homeSchema);
     expect(repaired.homePageId).not.toBe(ids[0].homePageId);
 
-    expect((await request("/backend-api/task-lists", "POST", { name: "Owner list", userId: b.user.id }, a.cookie)).status).toBe(200);
+    expect((await request("/backend-api/task-lists", "POST", { name: "Owner list", userId: b.user.id }, a.cookie)).status).toBe(400);
+    expect((await request("/backend-api/task-lists", "POST", { name: "Owner list" }, a.cookie)).status).toBe(200);
     const ownerList = await db.task_list.findFirstOrThrow({ where: { userId: a.user.id } });
     expect(ownerList.name).toBe("Owner list");
     expect(await db.task_list.count({ where: { userId: b.user.id } })).toBe(0);
     expect((await request("/backend-api/tasks", "POST", { title: "Wrong list", listId: ownerList.id }, b.cookie)).status).toBe(404);
-    const task = await (await request("/backend-api/tasks", "POST", { title: "Owner task" }, a.cookie)).json();
+    const task = await readJson(request("/backend-api/tasks", "POST", { title: "Owner task" }, a.cookie), z.object({ id: z.string() }));
     expect((await request(`/backend-api/tasks/${task.id}`, "PATCH", { title: "Stolen" }, b.cookie)).status).toBe(404);
     expect((await request(`/backend-api/tasks/${task.id}`, "GET", undefined, b.cookie)).status).toBe(404);
     expect((await request("/backend-api/tasks", "POST", { title: "Wrong parent", parentId: task.id }, b.cookie)).status).toBe(404);

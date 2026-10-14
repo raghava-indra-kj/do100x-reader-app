@@ -1,10 +1,12 @@
 import { z } from 'zod';
+import { formatTrackedDuration } from './duration';
 
 export const TaskTimeAnalyticsSchema = z.object({
   taskId: z.string(),
   title: z.string(),
   listName: z.string().default('Inbox'),
   seconds: z.number().default(0),
+  deleted: z.boolean().default(false),
 });
 
 export const ListTimeAnalyticsSchema = z.object({
@@ -35,7 +37,7 @@ export class TimeAnalytics {
   readonly periodDays: number;
   readonly totalSeconds: number;
   readonly sessionsCount: number;
-  readonly byTask: Array<{ taskId: string; title: string; listName: string; seconds: number }>;
+  readonly byTask: Array<{ taskId: string; title: string; listName: string; seconds: number; deleted: boolean }>;
   readonly byList: Array<{ listId?: string | null; name: string; color: string; seconds: number }>;
   readonly dailyTimeline: Record<string, number>;
 
@@ -52,9 +54,6 @@ export class TimeAnalytics {
   }
 
   get totalFormatted(): string {
-    const hours = Math.floor(this.totalSeconds / 3600);
-    const minutes = Math.floor((this.totalSeconds % 3600) / 60);
-    if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    return `${minutes}m`;
+    return formatTrackedDuration(this.totalSeconds);
   }
 }

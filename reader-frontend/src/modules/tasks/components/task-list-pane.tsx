@@ -1,4 +1,4 @@
-import { observer } from 'mobx-react-lite';
+import { observer } from "mobx-react-lite";
 import {
   Search,
   Play,
@@ -10,392 +10,454 @@ import {
   GitBranch,
   Flag,
   Plus,
-} from 'lucide-react';
-import { Loader } from '@modules/core/ui/primitives/loader/loader';
-import type { TasksStore } from '../store';
-import { useState } from 'react';
-
-interface Props {
-  store: TasksStore;
-}
-
-const PRIORITY_META: Record<number, { bg: string; text: string; border: string; label: string; flagColor: string }> = {
-  1: { bg: 'bg-red-500/10', text: 'text-red-500', border: 'border-red-500/25', label: 'P1 Urgent', flagColor: '#ef4444' },
-  2: { bg: 'bg-amber-500/10', text: 'text-amber-500', border: 'border-amber-500/25', label: 'P2 High', flagColor: '#f59e0b' },
-  3: { bg: 'bg-blue-500/10', text: 'text-blue-500', border: 'border-blue-500/25', label: 'P3 Medium', flagColor: '#3b82f6' },
-  4: { bg: 'bg-[var(--color-surface-soft)]', text: 'text-[var(--color-text-muted)]', border: 'border-[var(--color-border-subtle)]', label: 'P4 Low', flagColor: '#9ca3af' },
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+} from "lucide-react";
+import { useState } from "react";
+import { Popover } from "@base-ui/react/popover";
+import { Loader } from "@modules/core/ui/primitives/loader/loader";
+import { Button } from "@modules/core/ui/primitives/button";
+import { Select } from "@modules/core/ui/primitives/select";
+import { Tooltip } from "@modules/core/ui/primitives/tooltip";
+import type { TasksStore } from "../store";
+import { localCalendarDate } from "../matrix-settings";
+import { addDays } from "@reader/calendar-core";
+const priorities = {
+  "1": "P1 · Urgent",
+  "2": "P2 · High",
+  "3": "P3 · Medium",
+  "4": "P4 · Low",
 };
-
-export const TaskListPane = observer(({ store }: Props) => {
-  const activeTimerTaskId = store.activeTimer?.taskId;
-
-  const [isPriorityMenuOpen, setIsPriorityMenuOpen] = useState(false);
-  const [isDateMenuOpen, setIsDateMenuOpen] = useState(false);
-
-  const currentPriorityMeta = PRIORITY_META[store.quickTaskPriority] || PRIORITY_META[4];
-
+const priorityColors: Record<number, string> = {
+  1: "#ef4444",
+  2: "#f59e0b",
+  3: "#3b82f6",
+  4: "#9ca3af",
+};
+const dateLabel = (date: string) =>
+  new Date(`${date.slice(0, 10)}T00:00:00Z`).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+export const TaskListPane = observer(({ store }: { store: TasksStore }) => {
+  const [dateOpen, setDateOpen] = useState(false);
+  const [rearranging, setRearranging] = useState(false);
+  const setDate = (date: string) => {
+    store.setQuickTaskDueDate(date);
+    setDateOpen(false);
+  };
   return (
-    <div
-      className={`flex flex-col h-full bg-[var(--color-surface-canvas)] min-w-0 border-r border-[var(--color-border-subtle)] transition-all ${
-        store.selectedTaskId ? 'w-80 flex-shrink-0' : 'flex-1'
-      }`}
+    <section
+      aria-label="Task list"
+      className="flex-1 flex flex-col h-full min-w-0 bg-[var(--color-surface-canvas)]"
     >
-      {/* Pane Header */}
-      <div className="p-4 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)]/40 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-base font-bold tracking-tight text-[var(--color-text-strong)] truncate">
+      <header className="p-4 border-b border-[var(--color-border-subtle)] space-y-3">
+        <div className="flex flex-wrap gap-3 items-center justify-between">
+          <div className="min-w-0">
+            <h1 className="text-base font-semibold break-words">
               {store.activeListName}
             </h1>
             <p className="text-xs text-[var(--color-text-muted)]">
-              {store.filteredTasks.filter((t) => !t.isDone).length} pending · {store.filteredTasks.filter((t) => t.isDone).length} completed
+              {store.filteredTasks.filter((task) => !task.isDone).length}{" "}
+              pending ·{" "}
+              {store.filteredTasks.filter((task) => task.isDone).length}{" "}
+              completed
             </p>
           </div>
-
-          {/* Search bar */}
-          <div className="relative w-40 sm:w-48 shrink-0">
-            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+          <label className="flex items-center gap-2 rounded-md border border-[var(--color-border-subtle)] px-2 py-1.5 w-40 sm:w-48">
+            <Search
+              size={14}
+              className="shrink-0 text-[var(--color-text-muted)]"
+            />
             <input
-              type="text"
+              aria-label="Search tasks"
               placeholder="Search tasks…"
               value={store.searchQuery}
-              onChange={(e) => store.setSearchQuery(e.target.value)}
-              className="w-full pl-7 pr-2.5 py-1 text-xs rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)] transition"
+              onChange={(event) => store.setSearchQuery(event.target.value)}
+              className="min-w-0 w-full text-xs outline-none bg-transparent"
             />
-          </div>
+          </label>
         </div>
-
-        {/* Quick Add Task Bar */}
-        <div className="flex items-center space-x-2 bg-[var(--color-surface-raised)] px-2.5 py-1.5 rounded-lg border border-[var(--color-border-default)] shadow-xs transition-all focus-within:border-[var(--color-brand)]">
-          <div className="text-[var(--color-brand)] shrink-0">
-            <Plus className="w-4 h-4" />
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void store.createQuickTask();
+          }}
+          className="space-y-2"
+        >
+          <div className="flex gap-2 items-center rounded-md border border-[var(--color-border-default)] p-2 focus-within:border-[var(--color-brand)]">
+            <Plus size={17} className="text-[var(--color-brand)] shrink-0" />
+            <input
+              aria-label="New task title"
+              maxLength={1000}
+              disabled={store.isCreatingTask}
+              value={store.quickTaskTitle}
+              onChange={(event) => store.setQuickTaskTitle(event.target.value)}
+              placeholder="Add a task…"
+              className="min-w-0 flex-1 bg-transparent outline-none text-sm"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!store.quickTaskTitle.trim() || store.isCreatingTask}
+              loading={store.isCreatingTask}
+            >
+              Add
+            </Button>
           </div>
-
-          <input
-            type="text"
-            placeholder={`Add a task…`}
-            value={store.quickTaskTitle}
-            onChange={(e) => store.setQuickTaskTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && store.quickTaskTitle.trim()) {
-                store.createQuickTask();
+          <div className="flex items-center gap-2">
+            <Select
+              ariaLabel="New task priority"
+              tooltip="Priority"
+              value={String(store.quickTaskPriority)}
+              items={priorities}
+              disabled={store.isCreatingTask}
+              onValueChange={(value) => {
+                if (value) store.setQuickTaskPriority(Number(value));
+              }}
+              className="py-1.5 px-2 text-xs"
+            />
+            <Popover.Root open={dateOpen} onOpenChange={setDateOpen}>
+              <Popover.Trigger
+                render={
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={store.isCreatingTask}
+                    aria-label="New task due date"
+                    tooltip="Due date"
+                    startIcon={<Calendar size={14} />}
+                  />
+                }
+              >
+                {store.quickTaskDueDate
+                  ? dateLabel(store.quickTaskDueDate)
+                  : "No date"}
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Positioner sideOffset={5} className="z-40">
+                  <Popover.Popup className="w-56 rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] shadow-lg p-3 space-y-2 outline-none">
+                    <Popover.Title className="text-sm font-semibold">
+                      Due date
+                    </Popover.Title>
+                    {[
+                      ["Today", 0],
+                      ["Tomorrow", 1],
+                      ["Next week", 7],
+                    ].map(([label, days]) => (
+                      <button
+                        key={label}
+                        type="button"
+                        className="flex w-full justify-between rounded px-2 py-2 text-sm hover:bg-[var(--color-surface-soft)]"
+                        onClick={() =>
+                          setDate(addDays(localCalendarDate(), Number(days)))
+                        }
+                      >
+                        <span>{label}</span>
+                        <span className="text-xs text-[var(--color-text-muted)]">
+                          {dateLabel(
+                            addDays(localCalendarDate(), Number(days)),
+                          )}
+                        </span>
+                      </button>
+                    ))}
+                    <label className="block text-xs border-t border-[var(--color-border-subtle)] pt-2">
+                      Choose a date
+                      <input
+                        aria-label="Choose a due date"
+                        type="date"
+                        min="1900-01-01"
+                        max="9998-12-31"
+                        value={store.quickTaskDueDate}
+                        onInput={(event) =>
+                          store.setQuickTaskDueDate(event.currentTarget.value)
+                        }
+                        className="mt-2 block w-full rounded border border-[var(--color-border-subtle)] p-2 bg-[var(--color-surface-canvas)] text-sm"
+                      />
+                    </label>
+                    <div className="flex justify-between">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDate("")}
+                      >
+                        Clear date
+                      </Button>
+                      <Popover.Close
+                        render={
+                          <Button type="button" size="sm" variant="outlined" />
+                        }
+                      >
+                        Done
+                      </Popover.Close>
+                    </div>
+                  </Popover.Popup>
+                </Popover.Positioner>
+              </Popover.Portal>
+            </Popover.Root>
+          </div>
+        </form>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            ariaLabel="Task order"
+            value={store.taskSort ?? "manual"}
+            items={{
+              manual: "Manual order",
+              priority: "Priority",
+              due: "Due date",
+              title: "Title",
+            }}
+            onValueChange={(value) => {
+              if (value) {
+                store.setTaskSort(value);
+                setRearranging(false);
               }
             }}
-            className="flex-1 min-w-0 bg-transparent text-xs px-1 py-1 border-none ring-0 outline-none focus:outline-none focus:ring-0 focus-visible:outline-none text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)]"
+            disabled={store.isReorderingTasks}
+            className="text-xs py-1.5"
           />
-
-          {/* Priority Pill */}
-          <div className="relative shrink-0">
-            <button
+          {(store.currentView === "inbox" ||
+            store.currentView.startsWith("list:")) && (
+            <Button
               type="button"
-              onClick={() => {
-                setIsPriorityMenuOpen(!isPriorityMenuOpen);
-                setIsDateMenuOpen(false);
-              }}
-              className={`flex items-center space-x-1 px-1.5 py-1 rounded-md text-[11px] font-semibold border transition cursor-pointer ${currentPriorityMeta.bg} ${currentPriorityMeta.text} ${currentPriorityMeta.border}`}
+              size="sm"
+              variant="ghost"
+              aria-pressed={rearranging && store.canReorderTasks}
+              disabled={
+                !store.canReorderTasks ||
+                store.isReorderingTasks ||
+                store.filteredTasks.length < 2
+              }
+              startIcon={<ArrowUpDown size={14} />}
+              onClick={() => setRearranging((value) => !value)}
             >
-              <Flag className="w-3 h-3" style={{ color: currentPriorityMeta.flagColor }} />
-              <span className="hidden sm:inline">{currentPriorityMeta.label}</span>
-            </button>
-
-            {isPriorityMenuOpen && (
-              <div
-                className="absolute right-0 top-full mt-1 z-40 w-36 bg-[var(--color-surface-raised)] rounded-lg border border-[var(--color-border-default)] shadow-xl p-1 text-xs space-y-0.5 animate-in fade-in duration-100"
-                onMouseLeave={() => setIsPriorityMenuOpen(false)}
-              >
-                {[1, 2, 3, 4].map((p) => {
-                  const m = PRIORITY_META[p];
-                  return (
-                    <button
-                      key={p}
-                      type="button"
-                      onClick={() => {
-                        store.setQuickTaskPriority(p);
-                        setIsPriorityMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center space-x-2 px-2.5 py-1.5 rounded-md text-left font-medium transition cursor-pointer ${
-                        store.quickTaskPriority === p
-                          ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-bold'
-                          : 'hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)]'
-                      }`}
-                    >
-                      <Flag className="w-3.5 h-3.5" style={{ color: m.flagColor }} />
-                      <span>{m.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Due Date Dropdown Popover */}
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => {
-                setIsDateMenuOpen(!isDateMenuOpen);
-                setIsPriorityMenuOpen(false);
-              }}
-              className={`flex items-center space-x-1 px-1.5 py-1 rounded-md text-[11px] font-medium border transition cursor-pointer ${
-                store.quickTaskDueDate
-                  ? 'bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] border-[var(--color-brand)]/40 font-bold'
-                  : 'bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] border-[var(--color-border-subtle)]'
-              }`}
+              {rearranging && store.canReorderTasks
+                ? "Done arranging"
+                : "Rearrange"}
+            </Button>
+          )}
+          {store.isReorderingTasks && (
+            <span
+              role="status"
+              className="text-xs text-[var(--color-text-muted)]"
             >
-              <Calendar className="w-3 h-3" />
-              <span className="hidden sm:inline">
-                {store.quickTaskDueDate
-                  ? store.quickTaskDueDate === new Date().toISOString().slice(0, 10)
-                    ? 'Today'
-                    : store.quickTaskDueDate === new Date(Date.now() + 86400000).toISOString().slice(0, 10)
-                    ? 'Tomorrow'
-                    : store.quickTaskDueDate
-                  : 'Due'}
-              </span>
-            </button>
-
-            {isDateMenuOpen && (
-              <div
-                className="absolute right-0 top-full mt-1 z-40 w-44 bg-[var(--color-surface-raised)] rounded-lg border border-[var(--color-border-default)] shadow-xl p-2 text-xs space-y-1 animate-in fade-in duration-100"
-                onMouseLeave={() => setIsDateMenuOpen(false)}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    store.setQuickTaskDueDate(new Date().toISOString().slice(0, 10));
-                    setIsDateMenuOpen(false);
-                  }}
-                  className="w-full text-left px-2 py-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)] flex items-center justify-between cursor-pointer"
-                >
-                  <span>Today</span>
-                  <span className="text-[10px] text-[var(--color-text-muted)]">
-                    {new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const d = new Date(Date.now() + 86400000);
-                    store.setQuickTaskDueDate(d.toISOString().slice(0, 10));
-                    setIsDateMenuOpen(false);
-                  }}
-                  className="w-full text-left px-2 py-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)] flex items-center justify-between cursor-pointer"
-                >
-                  <span>Tomorrow</span>
-                  <span className="text-[10px] text-[var(--color-text-muted)]">
-                    {new Date(Date.now() + 86400000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const d = new Date(Date.now() + 7 * 86400000);
-                    store.setQuickTaskDueDate(d.toISOString().slice(0, 10));
-                    setIsDateMenuOpen(false);
-                  }}
-                  className="w-full text-left px-2 py-1 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-text-body)] flex items-center justify-between cursor-pointer"
-                >
-                  <span>Next week</span>
-                  <span className="text-[10px] text-[var(--color-text-muted)]">
-                    {new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                  </span>
-                </button>
-
-                <div className="pt-1 border-t border-[var(--color-border-subtle)]">
-                  <input
-                    type="date"
-                    value={store.quickTaskDueDate}
-                    onChange={(e) => {
-                      store.setQuickTaskDueDate(e.target.value);
-                      setIsDateMenuOpen(false);
-                    }}
-                    className="w-full text-xs p-1 rounded border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)]"
-                  />
-                </div>
-
-                {store.quickTaskDueDate && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      store.setQuickTaskDueDate('');
-                      setIsDateMenuOpen(false);
-                    }}
-                    className="w-full py-1 text-center text-[11px] text-[var(--color-error)] hover:underline font-medium cursor-pointer"
-                  >
-                    Clear date
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Add Button */}
-          <button
-            type="button"
-            onClick={() => store.createQuickTask()}
-            disabled={!store.quickTaskTitle.trim()}
-            className="px-2.5 py-1 bg-[var(--color-brand)] text-white text-xs font-semibold rounded-md hover:bg-[var(--color-brand-hover)] disabled:opacity-35 transition cursor-pointer shrink-0"
-          >
-            Add
-          </button>
+              Saving order…
+            </span>
+          )}
         </div>
-      </div>
-
-      {/* Task List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-1">
+      </header>
+      <div className="flex-1 overflow-y-auto p-2">
         {store.isLoadingTasks ? (
-          <div className="py-16 flex flex-col items-center justify-center space-y-2 text-[var(--color-text-muted)] select-none">
-            <Loader size={22} className="text-[var(--color-brand)]" />
-            <span className="text-xs font-medium">Loading tasks…</span>
+          <div
+            role="status"
+            className="py-12 flex items-center justify-center gap-2 text-sm text-[var(--color-text-muted)]"
+          >
+            <Loader size={18} />
+            Loading tasks…
           </div>
-        ) : store.filteredTasks.length === 0 ? (
-          <div className="py-20 text-center text-[var(--color-text-muted)]">
-            <div className="w-10 h-10 rounded-lg bg-[var(--color-surface-soft)] flex items-center justify-center mx-auto mb-2 text-[var(--color-text-muted)]">
-              <Check className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <p className="text-xs font-bold text-[var(--color-text-strong)]">No tasks here.</p>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-0.5">
-              Add a task above.
-            </p>
+        ) : store.tasksError ? (
+          <div role="alert" className="p-4 text-sm">
+            <p>{store.tasksError}</p>
+            <Button
+              variant="outlined"
+              size="sm"
+              className="mt-3"
+              onClick={() => void store.loadTasks()}
+            >
+              Retry tasks
+            </Button>
           </div>
+        ) : !store.filteredTasks.length ? (
+          <p className="p-6 text-center text-sm text-[var(--color-text-muted)]">
+            {store.searchQuery
+              ? "No tasks match your search."
+              : store.currentView === "completed"
+                ? "Completed tasks will appear here."
+                : "No tasks here. Add a task above."}
+          </p>
         ) : (
-          store.filteredTasks.map((task) => {
-            const isSelected = store.selectedTaskId === task.id;
-            const isTimerActiveForThis = activeTimerTaskId === task.id;
-            const pConfig = PRIORITY_META[task.priority] || PRIORITY_META[4];
-
-            return (
-              <div
-                key={task.id}
-                onClick={() => store.selectTask(task.id)}
-                className={`group relative flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer select-none ${
-                  isSelected
-                    ? 'bg-[var(--color-surface-raised)] border-[var(--color-brand)] shadow-xs ring-1 ring-[var(--color-brand)]/20'
-                    : 'bg-[var(--color-surface-raised)]/70 border-[var(--color-border-subtle)] hover:border-[var(--color-border-default)] hover:bg-[var(--color-surface-raised)]'
-                }`}
-              >
-                {/* Left: Checkbox + Title + Chips */}
-                <div className="flex items-center space-x-2.5 min-w-0 flex-1">
-                  {/* Completion Checkbox */}
+          <ul className="divide-y divide-[var(--color-border-subtle)]">
+            {store.filteredTasks.map((task, index) => {
+              const active = store.activeTimer?.taskId === task.id;
+              const timerLabel = active
+                ? store.isTimerRunning
+                  ? "Pause timer"
+                  : "Resume timer"
+                : "Start timer";
+              const statusLabel = task.isDone
+                ? `Reopen ${task.title}`
+                : `Complete ${task.title}`;
+              return (
+                <li
+                  key={task.id}
+                  className={`flex items-start gap-2 p-2 rounded-md ${store.selectedTaskId === task.id ? "bg-[var(--color-brand-soft)]" : "hover:bg-[var(--color-surface-soft)]"}`}
+                >
+                  {rearranging && store.canReorderTasks && (
+                    <div className="flex flex-col shrink-0">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        aria-label={`Move ${task.title} up`}
+                        tooltip="Move up"
+                        disabled={index === 0 || store.isReorderingTasks}
+                        onClick={() => void store.moveTaskOrder(index, "up")}
+                      >
+                        <ArrowUp size={13} />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        aria-label={`Move ${task.title} down`}
+                        tooltip="Move down"
+                        disabled={
+                          index === store.filteredTasks.length - 1 ||
+                          store.isReorderingTasks
+                        }
+                        onClick={() => void store.moveTaskOrder(index, "down")}
+                      >
+                        <ArrowDown size={13} />
+                      </Button>
+                    </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    role="checkbox"
+                    aria-checked={task.isDone}
+                    aria-label={statusLabel}
+                    disabled={store.savingTaskIds?.has(task.id)}
+                    tooltip={task.isDone ? "Reopen task" : "Complete task"}
+                    onClick={() => void store.toggleTaskStatus(task)}
+                  >
+                    <span
+                      className={`w-4 h-4 border rounded flex items-center justify-center ${task.isDone ? "bg-[var(--color-brand)] border-[var(--color-brand)] text-white" : "border-[var(--color-border-strong)]"}`}
+                    >
+                      {task.isDone && <Check size={13} />}
+                    </span>
+                  </Button>
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      store.toggleTaskStatus(task);
-                    }}
-                    className={`w-4 h-4 rounded-[4px] border flex items-center justify-center transition-all shrink-0 cursor-pointer ${
-                      task.isDone
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
-                        : 'border-[var(--color-border-strong)] hover:border-emerald-500'
-                    }`}
+                    aria-label={`Open ${task.title}`}
+                    onClick={() => void store.selectTask(task.id)}
+                    className="text-left min-w-0 flex-1 py-1.5"
                   >
-                    {task.isDone && <Check className="w-3 h-3 stroke-[3]" />}
-                  </button>
-
-                  {/* Title & Metadata chips */}
-                  <div className="min-w-0 flex-1 flex items-center space-x-2">
                     <span
-                      className={`text-xs truncate font-medium ${
-                        task.isDone
-                          ? 'line-through text-[var(--color-text-muted)]'
-                          : 'text-[var(--color-text-strong)]'
-                      }`}
+                      className={`block text-sm break-words ${task.isDone ? "line-through text-[var(--color-text-muted)]" : "text-[var(--color-text-strong)]"}`}
                     >
                       {task.title}
                     </span>
-
-                    {/* Due Date Chip */}
-                    {task.dueDate && (
-                      <span className="flex items-center space-x-1 text-[10px] text-[var(--color-text-muted)] bg-[var(--color-surface-soft)] px-1.5 py-0.5 rounded font-medium shrink-0">
-                        <Calendar className="w-2.5 h-2.5" />
-                        <span>{new Date(task.dueDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
-                      </span>
-                    )}
-
-                    {/* Subtasks Count Pill */}
-                    {task.subtaskCount > 0 && (
-                      <span className="flex items-center space-x-1 text-[10px] font-semibold text-[var(--color-brand)] bg-[var(--color-brand-soft)] px-1.5 py-0.5 rounded shrink-0">
-                        <GitBranch className="w-2.5 h-2.5" />
-                        <span>
-                          {task.completedSubtaskCount}/{task.subtaskCount}
+                    <span className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[var(--color-text-muted)]">
+                      {task.dueDate && (
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar size={11} />
+                          {dateLabel(task.dueDate)}
+                          {task.dueTime ? ` · ${task.dueTime}` : ""}
                         </span>
-                      </span>
-                    )}
-
-                    {/* Total Focus Badge */}
-                    {task.totalTimeFormatted && (
-                      <span className="flex items-center space-x-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded font-mono shrink-0">
-                        <Clock className="w-2.5 h-2.5" />
-                        <span>{task.totalTimeFormatted}</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right Actions: Priority Flag, Timer Button & Delete */}
-                <div className="flex items-center space-x-1 pl-2 shrink-0">
-                  <Flag className="w-3 h-3" style={{ color: pConfig.flagColor }} />
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (isTimerActiveForThis) {
-                        if (store.isTimerRunning) {
-                          store.pauseActiveTimer();
-                        } else {
-                          store.resumeActiveTimer();
-                        }
-                      } else {
-                        store.startTimerForTask(task.id);
+                      )}
+                      {task.parentTitle && (
+                        <span className="inline-flex items-center gap-1">
+                          <GitBranch size={11} />
+                          {task.parentTitle}
+                        </span>
+                      )}
+                      {task.subtaskCount > 0 && (
+                        <span className="inline-flex items-center gap-1">
+                          <GitBranch size={11} />
+                          {task.completedSubtaskCount}/{task.subtaskCount}{" "}
+                          subtasks
+                        </span>
+                      )}
+                      {task.totalTimeFormatted && (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock size={11} />
+                          {task.totalTimeFormatted}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                  <div className="flex items-center shrink-0 gap-0.5">
+                    <Tooltip
+                      content={
+                        priorities[
+                          String(task.priority) as keyof typeof priorities
+                        ] ?? "Priority"
                       }
-                    }}
-                    title={isTimerActiveForThis ? 'Pause or resume timer' : 'Start timer'}
-                    className={`px-2 py-0.5 rounded text-xs font-bold flex items-center space-x-1 transition cursor-pointer ${
-                      isTimerActiveForThis
-                        ? 'bg-rose-500 text-white animate-pulse'
-                        : 'opacity-0 group-hover:opacity-100 hover:bg-[var(--color-brand)] hover:text-white text-[var(--color-text-muted)]'
-                    }`}
-                  >
-                    {isTimerActiveForThis ? (
-                      store.isTimerRunning ? (
-                        <>
-                          <Pause className="w-3 h-3" />
-                          <span className="font-mono text-[11px]">{store.formattedTimerElapsed}</span>
-                        </>
+                    >
+                      <span
+                        className="px-1"
+                        tabIndex={0}
+                        aria-label={
+                          priorities[
+                            String(task.priority) as keyof typeof priorities
+                          ]
+                        }
+                      >
+                        <Flag
+                          size={12}
+                          style={{ color: priorityColors[task.priority] }}
+                        />
+                      </span>
+                    </Tooltip>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      iconOnly
+                      aria-label={`${timerLabel} for ${task.title}`}
+                      tooltip={
+                        active
+                          ? `${timerLabel} · ${store.formattedTimerElapsed}`
+                          : timerLabel
+                      }
+                      disabled={store.isTimerBusy}
+                      className={active ? "text-[var(--color-brand)]" : ""}
+                      onClick={() => {
+                        if (active) {
+                          if (store.isTimerRunning)
+                            void store.pauseActiveTimer();
+                          else void store.resumeActiveTimer();
+                        } else void store.startTimerForTask(task.id);
+                      }}
+                    >
+                      {active && store.isTimerRunning ? (
+                        <Pause size={14} />
                       ) : (
-                        <>
-                          <Play className="w-3 h-3" />
-                          <span className="font-mono text-[11px]">{store.formattedTimerElapsed}</span>
-                        </>
-                      )
-                    ) : (
-                      <Play className="w-3 h-3" />
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      store.requestConfirmation({
-                        title: 'Delete task',
-                        message: `Delete “${task.title}”?`,
-                        confirmLabel: 'Delete task',
-                        confirmVariant: 'danger',
-                        onConfirm: () => store.deleteTask(task.id),
-                      });
-                    }}
-                    className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--color-error-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-error)] transition cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })
+                        <Play size={14} />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      iconOnly
+                      aria-label={`Delete ${task.title}`}
+                      tooltip="Delete task"
+                      onClick={() =>
+                        store.requestConfirmation({
+                          title: "Delete task",
+                          message: `Delete “${task.title}”${task.subtaskCount ? " and its subtasks" : ""}? Logged time will be kept in reports.`,
+                          confirmLabel: "Delete task",
+                          confirmVariant: "danger",
+                          onConfirm: () => store.deleteTask(task.id),
+                        })
+                      }
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </div>
-    </div>
+    </section>
   );
 });

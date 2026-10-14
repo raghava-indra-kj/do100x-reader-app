@@ -105,6 +105,7 @@ export async function createTask(params: {
 }
 
 export async function updateTask(id: string, params: {
+  expectedVersion?: number;
   title?: string;
   description?: string | null;
   status?: string;
@@ -126,9 +127,9 @@ export async function deleteTask(id: string): AsyncResult<void, AppError> {
   return repo.deleteTask(id);
 }
 
-export async function reorderTasks(orderedIds: string[]): AsyncResult<void, AppError> {
+export async function reorderTasks(orderedIds: string[], expectedVersions?: Record<string, number>): AsyncResult<void, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  return repo.reorderTasks(orderedIds);
+  return repo.reorderTasks(orderedIds, expectedVersions);
 }
 
 // Live Timer
@@ -142,30 +143,30 @@ export async function getActiveTimer(): AsyncResult<{ active: boolean; timer: Ac
   });
 }
 
-export async function startTimer(taskId: string, notes?: string): AsyncResult<ActiveTimer, AppError> {
+export async function startTimer(taskId: string, notes?: string, expectedTimerId?: string | null): AsyncResult<ActiveTimer, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  const res = await repo.startTimer(taskId, notes);
+  const res = await repo.startTimer(taskId, notes, expectedTimerId);
   if (!res.ok) return res;
   return ok(toActiveTimer(res.data));
 }
 
-export async function pauseTimer(): AsyncResult<ActiveTimer, AppError> {
+export async function pauseTimer(expectedTimerId?: string | null): AsyncResult<ActiveTimer, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  const res = await repo.pauseTimer();
+  const res = await repo.pauseTimer(expectedTimerId);
   if (!res.ok) return res;
   return ok(toActiveTimer(res.data));
 }
 
-export async function resumeTimer(): AsyncResult<ActiveTimer, AppError> {
+export async function resumeTimer(expectedTimerId?: string | null): AsyncResult<ActiveTimer, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  const res = await repo.resumeTimer();
+  const res = await repo.resumeTimer(expectedTimerId);
   if (!res.ok) return res;
   return ok(toActiveTimer(res.data));
 }
 
-export async function stopTimer(notes?: string, durationSeconds?: number): AsyncResult<{ session: TimeSession; taskTotalTimeSeconds: number }, AppError> {
+export async function stopTimer(notes?: string, durationSeconds?: number, expectedTimerId?: string | null): AsyncResult<{ session: TimeSession; taskTotalTimeSeconds: number }, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  const res = await repo.stopTimer(notes, durationSeconds);
+  const res = await repo.stopTimer(notes, durationSeconds, expectedTimerId);
   if (!res.ok) return res;
   return ok({
     session: toTimeSession(res.data.session),
@@ -173,9 +174,9 @@ export async function stopTimer(notes?: string, durationSeconds?: number): Async
   });
 }
 
-export async function discardTimer(): AsyncResult<void, AppError> {
+export async function discardTimer(expectedTimerId?: string | null): AsyncResult<void, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  return repo.discardTimer();
+  return repo.discardTimer(expectedTimerId);
 }
 
 // Sessions
@@ -186,7 +187,7 @@ export async function getTaskSessions(taskId: string): AsyncResult<TimeSession[]
   return ok(res.data.map(toTimeSession));
 }
 
-export async function addSession(taskId: string, params: { startTime: string; endTime?: string; durationSeconds: number; notes?: string }): AsyncResult<{ session: TimeSession; taskTotalTimeSeconds: number }, AppError> {
+export async function addSession(taskId: string, params: { startTime: string; endTime?: string; durationSeconds: number; notes?: string; requestKey?: string }): AsyncResult<{ session: TimeSession; taskTotalTimeSeconds: number }, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
   const res = await repo.addSession(taskId, params);
   if (!res.ok) return res;
@@ -196,7 +197,7 @@ export async function addSession(taskId: string, params: { startTime: string; en
   });
 }
 
-export async function updateSession(sessionId: string, params: { startTime?: string; endTime?: string; durationSeconds?: number; notes?: string }): AsyncResult<{ session: TimeSession; taskTotalTimeSeconds: number }, AppError> {
+export async function updateSession(sessionId: string, params: { startTime?: string; endTime?: string; durationSeconds?: number; notes?: string; expectedUpdatedAt?: string }): AsyncResult<{ session: TimeSession; taskTotalTimeSeconds: number }, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
   const res = await repo.updateSession(sessionId, params);
   if (!res.ok) return res;
@@ -206,9 +207,9 @@ export async function updateSession(sessionId: string, params: { startTime?: str
   });
 }
 
-export async function deleteSession(sessionId: string): AsyncResult<{ taskTotalTimeSeconds: number }, AppError> {
+export async function deleteSession(sessionId: string, expectedUpdatedAt?: string): AsyncResult<{ taskTotalTimeSeconds: number }, AppError> {
   const repo = container.get<ITaskRepo>(TYPES.ITaskRepo);
-  return repo.deleteSession(sessionId);
+  return repo.deleteSession(sessionId, expectedUpdatedAt);
 }
 
 export async function deleteAllTaskSessions(taskId: string): AsyncResult<void, AppError> {

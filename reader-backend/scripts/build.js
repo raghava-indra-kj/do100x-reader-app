@@ -8,6 +8,7 @@ build({
   entryPoints: {
     index: path.resolve(__dirname, "../src/index.ts"),
     "repair-task-lists": path.resolve(__dirname, "../src/repair-task-lists.ts"),
+    "ical-worker": path.resolve(__dirname, "../src/calendar/ical-worker.ts"),
   },
   outdir: path.resolve(__dirname, "../dist"),
   bundle: true,
@@ -15,5 +16,5 @@ build({
   format: "cjs",
   target: "node22",
   sourcemap: true,
-  external: Object.keys(dependencies).filter((name) => !["@reader/md-ast", "@reader/finance-core", "@reader/habit-core"].includes(name)),
+  external: Object.keys(dependencies).filter((name) => !["@reader/md-ast", "@reader/finance-core", "@reader/habit-core", "@reader/calendar-core"].includes(name)),
 }).then(() => console.log("Backend build complete")).catch(() => process.exit(1));

@@ -27,7 +27,7 @@ export function createMcpSseRouter(): Router {
 
   function extractToken(req: Request): string | undefined {
     // 1. Path param (if /:token or /sse/:token)
-    if (req.params.token) return req.params.token;
+    if (typeof req.params.token === 'string' && req.params.token) return req.params.token;
 
     // 2. Query param (?token=... or ?userId=... or ?key=...)
     if (typeof req.query.token === "string" && req.query.token) return req.query.token;

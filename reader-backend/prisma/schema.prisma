@@ -20,6 +20,92 @@ model appuser {
   readerPreferences reader_preferences?
   financeBooks finance_book[]
   habits habit[]
+  calendarEvents calendar_event[]
+  calendarSettings calendar_settings?
+  calendarSources calendar_source[]
+}
+
+model calendar_source {
+  id String @id @default(uuid()) @db.VarChar(36)
+  userId String @db.VarChar(36)
+  sourceKey String @db.Char(64)
+  name String @db.VarChar(100)
+  color String @db.VarChar(30)
+  timeZone String @db.VarChar(100)
+  url String? @db.Text
+  content String @db.LongText
+  etag String? @db.VarChar(1000)
+  lastModified String? @db.VarChar(1000)
+  enabled Boolean @default(true)
+  version Int @default(1)
+  lastCheckedAt DateTime @db.DateTime(6)
+  lastSuccessAt DateTime @db.DateTime(6)
+  error String? @db.VarChar(500)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  user appuser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, sourceKey])
+  @@index([userId])
+}
+
+model calendar_event {
+  id String @id @default(uuid()) @db.VarChar(36)
+  userId String @db.VarChar(36)
+  taskId String? @db.VarChar(36)
+  habitId String? @db.VarChar(36)
+  requestKey String @db.VarChar(36)
+  requestHash String @db.Char(64)
+  title String @db.VarChar(1000)
+  description String @db.Text
+  location String @db.VarChar(1000)
+  color String @db.VarChar(30)
+  timeZone String @db.VarChar(100)
+  startLocal String @db.Char(16)
+  endLocal String @db.Char(16)
+  startUtc DateTime @db.DateTime(6)
+  endUtc DateTime @db.DateTime(6)
+  allDay Boolean @default(false)
+  recurrence Json?
+  reminders Json
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  deletedAt DateTime? @db.DateTime(6)
+  user appuser @relation(fields: [userId], references: [id], onDelete: Restrict)
+  task task? @relation(fields: [taskId], references: [id], onDelete: Restrict)
+  habit habit? @relation(fields: [habitId], references: [id], onDelete: SetNull)
+  exceptions calendar_occurrence[]
+  @@unique([userId, id])
+  @@unique([userId, requestKey])
+  @@index([userId, startUtc, endUtc])
+  @@index([userId, taskId])
+  @@index([userId, habitId])
+}
+
+model calendar_occurrence {
+  id String @id @default(uuid()) @db.VarChar(36)
+  userId String @db.VarChar(36)
+  eventId String @db.VarChar(36)
+  date String @db.Char(10)
+  startLocal String? @db.Char(16)
+  endLocal String? @db.Char(16)
+  allDay Boolean?
+  completed Boolean @default(false)
+  cancelled Boolean @default(false)
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  event calendar_event @relation(fields: [userId, eventId], references: [userId, id], onDelete: Cascade)
+  @@unique([eventId, date])
+  @@index([userId, date])
+}
+
+model calendar_settings {
+  userId String @id @db.VarChar(36)
+  preferences Json
+  version Int @default(1)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  user appuser @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // Habits are private account data, independent of Reader, Finance and Tasks.
@@ -44,6 +130,7 @@ model habit {
   updatedAt DateTime @updatedAt @db.DateTime(6)
   user appuser @relation(fields: [userId], references: [id], onDelete: Restrict)
   logs habit_log[]
+  calendarEvents calendar_event[]
   @@unique([userId, requestKey])
   @@unique([userId, id])
   @@index([userId, sortOrder])
@@ -804,6 +891,8 @@ model task {
   createdAt        DateTime  @db.DateTime(6)
   updatedAt        DateTime  @db.DateTime(6)
   deletedAt        DateTime? @db.DateTime(6)
+  version          Int @default(1)
+  calendarEvents   calendar_event[]
 
   @@index([userId])
   @@index([listId])

@@ -13,6 +13,7 @@ const appFeatures = {
     finance: ['Keep your accounts together', 'Record income and expenses', 'Plan bills and forecast cash flow'],
     tasks: ['Organize tasks into lists', 'Set priorities and due dates', 'Track time spent on each task'],
     habits: ['Build habits around your schedule', 'Log progress and personal notes', 'Review streaks and check-in history'],
+    calendar: ['Plan your day, week and month', 'Reserve time for tasks and habits', 'Keep recurring plans together'],
 } satisfies Record<typeof suiteApps[number]['id'], string[]>;
 
 /** An illustrative preview only, never a summary of the user's private data. */

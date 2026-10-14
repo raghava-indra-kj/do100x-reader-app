@@ -46,7 +46,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== '1')('Finance ledger enforces exact
       await expect(updateTransaction(tx, actor, book.id, income.id, { ...incomeFields, expectedVersion: 1 })).rejects.toMatchObject({ status: 409 });
       const balances = await accountBalances(tx, owner.id, book.id, '2026-10-31');
       expect(balances.find((item: any) => item.id === bank.id)).toMatchObject({ postedMinor: '135991', pendingMinor: '-2000', projectedMinor: '133991' });
-      expect(balances.find((item: any) => item.id === debt.id).postedMinor).toBe('0');
+      expect(balances.find(item => item.id === debt.id)?.postedMinor).toBe('0');
       const pageOne = await listTransactions(tx, owner.id, book.id, { take: 2 });
       expect(pageOne.nextCursor).toBeTruthy();
       const pageTwo = await listTransactions(tx, owner.id, book.id, { take: 2, cursor: pageOne.nextCursor });

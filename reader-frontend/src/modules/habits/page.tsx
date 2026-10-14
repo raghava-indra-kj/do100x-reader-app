@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { observer } from 'mobx-react-lite';
 import { Archive, ArrowDown, ArrowUp, Bell, BellOff, CalendarDays, ChartNoAxesCombined, Check, ChevronLeft, ChevronRight, Circle, Download, LayoutList, Plus, RefreshCw, Search, Sprout } from 'lucide-react';
 import { addDays, dateRange, dayStatus, goalLabel, localDate, monday, planOn, quantityLabel, roundValue, scheduled, scheduleLabel, weekProgress, type Habit } from '@reader/habit-core';
@@ -59,13 +60,14 @@ function useReminderNotifications(userId: string) {
 }
 
 const HabitsApp = observer(function HabitsApp({ userId }: { userId: string }) {
+  const [params] = useSearchParams();
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata';
   const [clock, setClock] = useState(() => new Date()), today = localDate(timezone, clock);
   const [date, setDate] = useState(today), [view, setView] = useState<View>('today');
   const previousToday = useRef(today);
   const [items, setItems] = useState<Habit[]>([]), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
   const [query, setQuery] = useState(''), [section, setSection] = useState('all'), [filter, setFilter] = useState('all');
-  const [refresh, setRefresh] = useState(0), [selectedId, setSelectedId] = useState<string | null>(null), [detail, setDetail] = useState<Habit | null>(null), [detailLoading, setDetailLoading] = useState(false);
+  const [refresh, setRefresh] = useState(0), [selectedId, setSelectedId] = useState<string | null>(params.get('habit')), [detail, setDetail] = useState<Habit | null>(null), [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
   const [completeSelection, setCompleteSelection] = useState<Habit[] | null>(null);
   const [form, setForm] = useState<Habit | 'new' | null>(null), [logEditor, setLogEditor] = useState<{ habit: Habit; date: string } | null>(null);

@@ -1,0 +1,46 @@
+import { useEffect, useRef, useState } from 'react';
+import { Download, Pencil, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { addDays, validDate } from '@reader/calendar-core';
+import { Button } from '@modules/core/ui/primitives/button';
+import { calendarApi, type CalendarSource } from './api';
+import { colors } from './model';
+import { CalendarDialog, CalendarSelect, Field, IconButton } from './ui';
+
+export function CalendarSources({ timeZone, from, to, onClose, onChanged }: { timeZone: string; from: string; to: string; onClose: () => void; onChanged: () => void }) {
+  const [sources, setSources] = useState<CalendarSource[]>([]), [loading, setLoading] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('');
+  const [mode, setMode] = useState('file'), [name, setName] = useState(''), [color, setColor] = useState('teal'), [zone, setZone] = useState(timeZone), [url, setUrl] = useState(''), [content, setContent] = useState(''), [fileName, setFileName] = useState('');
+  const [editing, setEditing] = useState<CalendarSource | null>(null), [removing, setRemoving] = useState<CalendarSource | null>(null), [exportFrom, setExportFrom] = useState(from), [exportTo, setExportTo] = useState(addDays(to, -1));
+  const lock = useRef(false), mounted = useRef(true);
+  const file = useRef<HTMLInputElement>(null);
+  useEffect(() => { mounted.current = true; const controller = new AbortController(); void calendarApi.sources(controller.signal).then(items => { if (!controller.signal.aborted) { setSources(items); setLoading(false); } }).catch(error => { if (!controller.signal.aborted) { setError(error.message); setLoading(false); } }); return () => { mounted.current = false; controller.abort(); }; }, []);
+  async function run(action: () => Promise<unknown>, changed = true) {
+    if (lock.current) return; lock.current = true; setBusy(true); setError(''); setMessage('');
+    try { await action(); if (changed) { const items = await calendarApi.sources(); if (mounted.current) setSources(items); onChanged(); } }
+    catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : 'Couldn’t update calendars.'); }
+    finally { lock.current = false; if (mounted.current) setBusy(false); }
+  }
+  function clearForm() { setEditing(null); setName(''); setUrl(''); setContent(''); setFileName(''); if (file.current) file.current.value = ''; }
+  return <CalendarDialog title="Calendars & files" busy={busy} onClose={onClose}><div className="calendar-form calendar-sources">
+    <p className="calendar-help">Import a calendar file or subscribe to a private calendar URL. Events appear as read-only overlays; you can copy any occurrence into your own calendar.</p>
+    {error && <p role="alert" className="calendar-error">{error}<button disabled={busy} onClick={() => void run(async () => { setSources(await calendarApi.sources()); }, false)}>Reload calendars</button></p>}{message && <p className="calendar-notice" role="status">{message}</p>}
+    {loading ? <p role="status">Loading calendars…</p> : <div className="calendar-source-list">{sources.map(source => <article key={source.id}>
+      <label className="calendar-source-name"><input type="checkbox" aria-label={`Show ${source.name}`} checked={source.enabled} disabled={busy} onChange={event => void run(() => calendarApi.updateSource(source, { enabled: event.target.checked }))} /><span style={{ color: colors[source.color as keyof typeof colors] }}>●</span><strong>{source.name}</strong></label>
+      <small>{source.kind === 'file' ? 'Imported file' : source.host} · {source.timeZone}</small>{source.kind === 'subscription' && <small>Updated {new Date(source.lastSuccessAt).toLocaleString()}</small>}{source.error && <p role="status" className="calendar-error">{source.error}</p>}
+      <div className="calendar-source-actions"><IconButton label={`Edit ${source.name}`} disabled={busy} onClick={() => { setEditing(source); setName(source.name); setColor(source.color); setZone(source.timeZone); }}><Pencil size={15} /></IconButton>{source.kind === 'subscription' && <IconButton label={`Refresh ${source.name}`} disabled={busy} onClick={() => void run(async () => { const updated = await calendarApi.refreshSource(source); setMessage(updated.error || 'Checked for updates. Feeds are checked at most once every 5 minutes.'); })}><RefreshCw size={15} /></IconButton>}<IconButton label={`Export ${source.name}`} disabled={busy} onClick={() => void run(() => calendarApi.download(`sources/${source.id}/export`, `${source.name.replace(/[^a-z0-9 -]/gi, '').slice(0, 60) || 'calendar'}.ics`), false)}><Download size={15} /></IconButton><IconButton label={`Remove ${source.name}`} disabled={busy} onClick={() => setRemoving(source)}><Trash2 size={15} /></IconButton></div>
+    </article>)}{!sources.length && <p className="calendar-help">No imported calendars yet.</p>}</div>}
+    {removing && <div className="calendar-remove-confirm"><p>Remove “{removing.name}” from do100x? Its original calendar and any copies you created stay intact.</p><Button variant="outlined" disabled={busy} onClick={() => setRemoving(null)}>Cancel</Button><Button disabled={busy} onClick={() => void run(async () => { await calendarApi.removeSource(removing); if (editing?.id === removing.id) clearForm(); setRemoving(null); })}>Remove calendar</Button></div>}
+    <form onSubmit={event => { event.preventDefault(); void run(async () => { if (editing) await calendarApi.updateSource(editing, { name, color, timeZone: zone }); else await calendarApi.addSource({ name, color, timeZone: zone, ...(mode === 'file' ? { content } : { url }) }); clearForm(); setMessage(editing ? 'Calendar updated.' : 'Calendar added.'); }); }}>
+      <h3>{editing ? `Edit ${editing.name}` : 'Add a calendar'}</h3>{!editing && <CalendarSelect label="Calendar source" value={mode} items={{ file: 'Import .ics file', url: 'Subscribe by URL' }} onChange={setMode} disabled={busy} />}
+      <Field label="Calendar name"><input required maxLength={100} value={name} onChange={e => setName(e.target.value)} disabled={busy} /></Field>
+      {!editing && (mode === 'url' ? <Field label="Private calendar URL" hint="Use an HTTPS or webcal link from your calendar provider. The link stays private to your account."><input required type="text" placeholder="https://…/calendar.ics" autoComplete="off" spellCheck={false} maxLength={4000} value={url} onChange={e => setUrl(e.target.value)} disabled={busy} /></Field> : <Field label="Calendar file" hint={fileName || 'iCalendar (.ics), up to 1 MB. Recurring events keep their original rules.'}><input ref={file} type="file" accept=".ics,text/calendar" disabled={busy} onChange={event => {
+        const selected = event.target.files?.[0]; setContent(''); setFileName(''); if (!selected) return;
+        if (selected.size > 1024 * 1024) { setError('Choose a calendar file no larger than 1 MB.'); return; }
+        void run(async () => { setContent(await selected.text()); setFileName(selected.name); if (!name) setName(selected.name.replace(/\.ics$/i, '').slice(0, 100)); }, false);
+      }} /></Field>)}
+      <div className="calendar-form-row"><Field label="Timezone for floating times" hint="Used only when an event has no timezone."><input value={zone} required maxLength={100} onChange={e => setZone(e.target.value)} disabled={busy} /></Field><Field label="Color"><CalendarSelect label="Calendar color" value={color} items={Object.fromEntries(Object.keys(colors).map(value => [value, value[0].toUpperCase() + value.slice(1)]))} onChange={setColor} disabled={busy} /></Field></div>
+      <div className="calendar-form-actions">{editing && <Button type="button" variant="outlined" disabled={busy} onClick={clearForm}>Cancel edit</Button>}<Button type="submit" disabled={busy || !name.trim() || !editing && !(mode === 'file' ? content : url.trim())} startIcon={<Upload size={15} />}>{busy ? 'Working…' : editing ? 'Save calendar' : mode === 'url' ? 'Subscribe' : 'Import calendar'}</Button></div>
+    </form>
+    <section className="calendar-export"><h3>Export planned events</h3><p className="calendar-help">Download your events and task/habit time reservations as .ics. Repeats become individual events for these dates. Imported calendars have their own export button above.</p><div className="calendar-form-row"><Field label="From"><input type="date" value={exportFrom} min="1901-01-01" max="9997-01-01" onInput={e => setExportFrom(e.currentTarget.value)} /></Field><Field label="Through"><input type="date" value={exportTo} min={exportFrom} max="9997-01-01" onInput={e => setExportTo(e.currentTarget.value)} /></Field></div><Button variant="outlined" startIcon={<Download size={15} />} disabled={busy || !validDate(exportFrom) || !validDate(exportTo) || exportTo < exportFrom} onClick={() => void run(() => calendarApi.download(`export?${new URLSearchParams({ from: exportFrom, to: addDays(exportTo, 1), timeZone })}`, `do100x-${exportFrom}.ics`), false)}>Download .ics</Button></section>
+    <p className="calendar-help">Subscriptions refresh every 15 minutes while Calendar is open. Feed failures keep the previous copy. No invitations are sent.</p>
+  </div></CalendarDialog>;
+}

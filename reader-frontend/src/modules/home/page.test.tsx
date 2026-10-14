@@ -28,15 +28,15 @@ describe('suite home', () => {
         expect(html).not.toContain('<button');
     });
 
-    it.each(['authenticated', 'anonymous'])('keeps all four tools as full-card links for %s users', status => {
+    it.each(['authenticated', 'anonymous'])('keeps all five tools as full-card links for %s users', status => {
         auth.status = status;
         auth.isAuthenticated = status === 'authenticated';
         const html = renderHome();
-        for (const [name, route] of [['Reader', '/reader'], ['Finance', '/finance'], ['Tasks', '/tasks'], ['Habits', '/habits']]) {
+        for (const [name, route] of [['Reader', '/reader'], ['Finance', '/finance'], ['Tasks', '/tasks'], ['Calendar', '/calendar'], ['Habits', '/habits']]) {
             expect(html).toContain(`href="${route}"`);
             expect(html).toContain(`aria-label="Open ${name}"`);
         }
-        expect(html.match(/class="suite-home-card /g)).toHaveLength(4);
+        expect(html.match(/class="suite-home-card /g)).toHaveLength(5);
         expect(html.match(/<h1\b/g)).toHaveLength(1);
         expect(html).toContain('aria-label="Choose an app"');
         expect(html).toContain('Read and organize your pages.');
@@ -44,7 +44,7 @@ describe('suite home', () => {
         expect(html).toContain('Plan tasks and track your time.');
         // Card contents cannot contain buttons or other links.
         const cards = html.match(/<a\b[^>]*class="suite-home-card [\s\S]*?<\/a>/g) ?? [];
-        expect(cards).toHaveLength(4);
+        expect(cards).toHaveLength(5);
         for (const card of cards) {
             expect(card.match(/<a\b/g)).toHaveLength(1);
             expect(card).not.toContain('<button');
@@ -64,7 +64,7 @@ describe('suite home', () => {
         expect(html).toContain('href="#home-tools"');
         expect(html).toContain('id="home-tools"');
         expect(html).toContain('Example workspace');
-        expect(html.match(/class="suite-home-features"/g)).toHaveLength(4);
+        expect(html.match(/class="suite-home-features"/g)).toHaveLength(5);
         expect(html).not.toContain('aria-label="Quick access"');
         for (const copy of ['One Google account', 'Built for your everyday', 'Markdown', '100 times better', 'https://reader.do100x.com']) {
             expect(html).not.toContain(copy);

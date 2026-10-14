@@ -1,8 +1,11 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "./prisma";
 import { requireSession } from "./session";
-import { createHierarchyTask, updateHierarchyTask, taskHierarchyTransaction, taskHierarchyErrorHandler } from "./task-hierarchy";
-import { filterMatrixTasks, matrixOptions, tomorrowDueFilter } from "./task-matrix";
+import { createHierarchyTask, updateHierarchyTask, taskHierarchyTransaction, taskHierarchyErrorHandler, softDeleteHierarchyTasks, TaskHierarchyError } from "./task-hierarchy";
+import { filterMatrixTasks, matrixOptions } from "./task-matrix";
+import { createTaskInput, updateTaskInput, parseTaskInput, taskDueFilter } from './task-contract';
+import { z } from 'zod';
+import { lockAccount } from './account-transaction';
 
 const router = Router();
 router.use(requireSession);
@@ -13,6 +16,10 @@ router.get("/", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
   const { listId, status, priority, due, search, parentId, includeSubtasks, matrixDate, timeZone, includeOverdue } = req.query;
   const matrix = matrixOptions(matrixDate, status, timeZone, includeOverdue);
+  if (status !== undefined && !['all', 'active', 'uncompleted', 'todo', 'in_progress', 'done', 'cancelled'].includes(status as string)) throw new TaskHierarchyError(400, 'Choose a valid task status.');
+  if (priority !== undefined && priority !== 'all' && !/^[1-4]$/.test(String(priority))) throw new TaskHierarchyError(400, 'Choose a priority from 1 to 4.');
+  for (const value of [listId, parentId, search]) if (value !== undefined && (typeof value !== 'string' || value.length > 1000)) throw new TaskHierarchyError(400, 'Choose valid task filters.');
+  if (includeSubtasks !== undefined && !['true', 'false'].includes(String(includeSubtasks))) throw new TaskHierarchyError(400, 'Choose a valid subtask filter.');
 
   const where: Record<string, unknown> = {
     userId,
@@ -27,7 +34,7 @@ router.get("/", async (req: Request, res: Response) => {
   // Parent filter (default to top-level tasks if parentId not specified, unless includeSubtasks is true or smart view)
   if (parentId !== undefined) {
     where.parentId = parentId === "null" ? null : (parentId as string);
-  } else if (includeSubtasks !== "true" && !due && !priority && !search) {
+  } else if (includeSubtasks !== "true" && !due && !priority && !search && status !== 'done' && status !== 'cancelled') {
     where.parentId = null; // Top-level tasks only
   }
 
@@ -47,21 +54,9 @@ router.get("/", async (req: Request, res: Response) => {
 
   // Due Date Smart Filter
   if (due) {
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-    if (due === "today") {
-      where.dueDate = { gte: todayStart, lte: todayEnd };
-    } else if (due === "tomorrow") {
-      where.dueDate = tomorrowDueFilter(now);
-    } else if (due === "next7") {
-      const next7End = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-      where.dueDate = { gte: todayStart, lte: next7End };
-    } else if (due === "overdue") {
-      where.dueDate = { lt: todayStart };
-      where.status = { notIn: ["done", "cancelled"] };
-    }
+    const filter = taskDueFilter(due, timeZone);
+    if (filter) where.dueDate = filter;
+    if (due === 'overdue') where.status = { notIn: ['done', 'cancelled'] };
   }
 
   // Search filter
@@ -82,7 +77,7 @@ router.get("/", async (req: Request, res: Response) => {
   });
   const tasks = matrix ? filterMatrixTasks(loadedTasks, matrix) : loadedTasks;
   const parentIds = [...new Set(tasks.map(task => task.parentId).filter((id): id is string => !!id))];
-  const parents = matrix && parentIds.length ? await prisma.task.findMany({ where: { id: { in: parentIds }, userId, deletedAt: null }, select: { id: true, title: true } }) : [];
+  const parents = parentIds.length ? await prisma.task.findMany({ where: { id: { in: parentIds }, userId, deletedAt: null }, select: { id: true, title: true } }) : [];
   const parentTitles = new Map(parents.map(parent => [parent.id, parent.title]));
 
   // Also fetch subtask counts and list info
@@ -111,6 +106,7 @@ router.get("/", async (req: Request, res: Response) => {
 
   const result = tasks.map((t) => ({
     id: t.id,
+    version: t.version,
     listId: t.listId,
     list: t.listId ? listMap.get(t.listId) ?? null : null,
     parentId: t.parentId,
@@ -136,7 +132,7 @@ router.get("/", async (req: Request, res: Response) => {
 // GET /backend-api/tasks/:id - Get task detail with full subtasks tree & time sessions
 router.get("/:id", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
-  const { id } = req.params;
+  const id = parseTaskInput(z.string().min(1).max(36), req.params.id);
 
   const task = await prisma.task.findFirst({
     where: { id, userId, deletedAt: null },
@@ -147,7 +143,8 @@ router.get("/:id", async (req: Request, res: Response) => {
     return;
   }
 
-  // Recursive subtasks collector
+  // Guard old malformed trees as well as newly validated hierarchy writes.
+  const visited = new Set([task.id]);
   async function fetchSubtasksRecursive(parentId: string): Promise<any[]> {
     const children = await prisma.task.findMany({
       where: { parentId, userId, deletedAt: null },
@@ -156,9 +153,12 @@ router.get("/:id", async (req: Request, res: Response) => {
 
     const enriched = [];
     for (const child of children) {
+      if (visited.has(child.id)) throw new TaskHierarchyError(409, 'This task hierarchy contains a cycle and needs repair.');
+      visited.add(child.id);
       const nested = await fetchSubtasksRecursive(child.id);
       enriched.push({
         id: child.id,
+        version: child.version,
         parentId: child.parentId,
         listId: child.listId,
         title: child.title,
@@ -197,6 +197,7 @@ router.get("/:id", async (req: Request, res: Response) => {
 
   res.json({
     id: task.id,
+    version: task.version,
     listId: task.listId,
     list: list ? { id: list.id, name: list.name, color: list.color, icon: list.icon } : null,
     parentId: task.parentId,
@@ -218,6 +219,7 @@ router.get("/:id", async (req: Request, res: Response) => {
       durationSeconds: s.durationSeconds,
       notes: s.notes,
       createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
     })),
     isActiveTimerRunning: activeTimer?.taskId === task.id,
     createdAt: task.createdAt.toISOString(),
@@ -228,19 +230,10 @@ router.get("/:id", async (req: Request, res: Response) => {
 // POST /backend-api/tasks - Create task or subtask
 router.post("/", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
-  const { title, description, listId, parentId, priority, dueDate, dueTime, status } = req.body;
-  if (!title || typeof title !== "string" || !title.trim()) {
-    res.status(400).json({ error: "Enter a task title." });
-    return;
-  }
+  const { title, description, listId, parentId, priority, dueDate, dueTime, status } = parseTaskInput(createTaskInput, req.body);
+  if (dueTime && !dueDate) throw new TaskHierarchyError(400, 'Choose a date before setting a time.');
 
   const now = new Date();
-
-  let parsedDueDate: Date | null = null;
-  if (dueDate) {
-    const d = new Date(dueDate);
-    if (!Number.isNaN(d.getTime())) parsedDueDate = d;
-  }
 
   const newTask = await taskHierarchyTransaction(prisma, tx => createHierarchyTask(tx, userId, {
     listId,
@@ -248,16 +241,18 @@ router.post("/", async (req: Request, res: Response) => {
     title: title.trim(),
     description: description ?? null,
     status: status || "todo",
-    priority: priority !== undefined ? Math.max(1, Math.min(4, parseInt(priority, 10))) : 4,
-    dueDate: parsedDueDate,
+    priority: priority ?? 4,
+    dueDate: dueDate ?? null,
     dueTime: dueTime || null,
     totalTimeSeconds: 0,
+    completedAt: status === 'done' ? now : null,
     createdAt: now,
     updatedAt: now,
   }));
 
   res.json({
     id: newTask.id,
+    version: newTask.version,
     listId: newTask.listId,
     parentId: newTask.parentId,
     title: newTask.title,
@@ -270,6 +265,7 @@ router.post("/", async (req: Request, res: Response) => {
     totalTimeSeconds: newTask.totalTimeSeconds,
     subtaskCount: 0,
     completedSubtaskCount: 0,
+    completedAt: newTask.completedAt?.toISOString() ?? null,
     createdAt: newTask.createdAt.toISOString(),
     updatedAt: newTask.updatedAt.toISOString(),
   });
@@ -278,7 +274,7 @@ router.post("/", async (req: Request, res: Response) => {
 // PATCH /backend-api/tasks/:id - Update task properties
 router.patch("/:id", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
-  const { id } = req.params;
+  const id = parseTaskInput(z.string().min(1).max(36), req.params.id);
   const existing = await prisma.task.findFirst({
     where: { id, userId, deletedAt: null },
   });
@@ -298,11 +294,13 @@ router.patch("/:id", async (req: Request, res: Response) => {
     listId,
     parentId,
     sortOrder,
-  } = req.body;
+    expectedVersion,
+  } = parseTaskInput(updateTaskInput, req.body);
 
   const now = new Date();
   const updateData: Record<string, unknown> = {
     updatedAt: now,
+    expectedVersion,
   };
 
   if (title !== undefined) updateData.title = title.trim();
@@ -318,19 +316,16 @@ router.patch("/:id", async (req: Request, res: Response) => {
   }
 
   if (priority !== undefined) {
-    updateData.priority = Math.max(1, Math.min(4, parseInt(priority, 10)));
+    updateData.priority = priority;
   }
 
   if (dueDate !== undefined) {
-    if (dueDate === null || dueDate === "") {
-      updateData.dueDate = null;
-    } else {
-      const d = new Date(dueDate);
-      if (!Number.isNaN(d.getTime())) updateData.dueDate = d;
-    }
+    updateData.dueDate = dueDate;
+    if (dueDate === null) updateData.dueTime = null;
   }
 
   if (dueTime !== undefined) {
+    if (dueTime && !(dueDate === undefined ? existing.dueDate : dueDate)) throw new TaskHierarchyError(400, 'Choose a date before setting a time.');
     updateData.dueTime = dueTime || null;
   }
 
@@ -345,6 +340,7 @@ router.patch("/:id", async (req: Request, res: Response) => {
 
   res.json({
     id: updated.id,
+    version: updated.version,
     listId: updated.listId,
     parentId: updated.parentId,
     title: updated.title,
@@ -361,53 +357,11 @@ router.patch("/:id", async (req: Request, res: Response) => {
   });
 });
 
-// DELETE /backend-api/tasks/:id - Soft delete task, all descendant subtasks, and clean up time sessions
+// DELETE /backend-api/tasks/:id - Soft delete a subtree while retaining its logged history.
 router.delete("/:id", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
-  const { id } = req.params;
-  const existing = await prisma.task.findFirst({
-    where: { id, userId, deletedAt: null },
-  });
-
-  if (!existing) {
-    res.status(404).json({ error: "Task not found" });
-    return;
-  }
-
-  const now = new Date();
-
-  // Recursive collection of all descendant task IDs
-  async function getAllDescendantTaskIds(taskId: string): Promise<string[]> {
-    const ids: string[] = [taskId];
-    const children = await prisma.task.findMany({
-      where: { parentId: taskId, userId, deletedAt: null },
-      select: { id: true },
-    });
-    for (const child of children) {
-      const subIds = await getAllDescendantTaskIds(child.id);
-      ids.push(...subIds);
-    }
-    return ids;
-  }
-
-  const allTargetIds = await getAllDescendantTaskIds(id);
-
-  // 1. Delete all time sessions associated with task and its subtasks
-  await prisma.time_session.deleteMany({
-    where: { taskId: { in: allTargetIds }, userId },
-  });
-
-  // 2. Soft delete the tasks and all subtasks
-  await prisma.task.updateMany({
-    where: { id: { in: allTargetIds }, userId },
-    data: { deletedAt: now, updatedAt: now },
-  });
-
-  // 3. If active timer was running on any of these tasks, delete it
-  const active = await prisma.active_timer.findUnique({ where: { userId } });
-  if (active && allTargetIds.includes(active.taskId)) {
-    await prisma.active_timer.delete({ where: { userId } });
-  }
+  const id = parseTaskInput(z.string().min(1).max(36), req.params.id);
+  const allTargetIds = await taskHierarchyTransaction(prisma, tx => softDeleteHierarchyTasks(tx, userId, [id]));
 
   res.json({ success: true, deletedTaskId: id, affectedTaskIds: allTargetIds });
 });
@@ -415,21 +369,16 @@ router.delete("/:id", async (req: Request, res: Response) => {
 // POST /backend-api/tasks/reorder - Reorder task sortOrders
 router.post("/reorder", async (req: Request, res: Response) => {
   const userId = res.locals.userId as string;
-  const { orderedIds } = req.body;
-  if (!Array.isArray(orderedIds)) {
-    res.status(400).json({ error: "Choose the tasks to reorder." });
-    return;
-  }
-
-  const now = new Date();
-  await Promise.all(
-    orderedIds.map((id, index) =>
-      prisma.task.updateMany({
-        where: { id, userId, deletedAt: null },
-        data: { sortOrder: index, updatedAt: now },
-      })
-    )
-  );
+  const { orderedIds, expectedVersions } = parseTaskInput(z.object({ orderedIds: z.array(z.string().min(1).max(36)).min(1).max(5000), expectedVersions: z.record(z.string().min(1).max(36), z.number().int().positive()).optional() }).strict(), req.body);
+  if (new Set(orderedIds).size !== orderedIds.length) throw new TaskHierarchyError(400, 'Choose each task only once.');
+  await taskHierarchyTransaction(prisma, async tx => {
+    await lockAccount(tx, userId);
+    const rows = await tx.task.findMany({ where: { id: { in: orderedIds }, userId, deletedAt: null } });
+    if (rows.length !== orderedIds.length) throw new TaskHierarchyError(409, 'Your task list changed. Refresh before reordering.');
+    if (expectedVersions && (Object.keys(expectedVersions).length !== rows.length || rows.some(row => row.version !== expectedVersions[row.id]))) throw new TaskHierarchyError(409, 'Your task list changed in another tab. Refresh before reordering.');
+    const now = new Date();
+    for (const [sortOrder, id] of orderedIds.entries()) await tx.task.update({ where: { id }, data: { sortOrder, updatedAt: now, version: { increment: 1 } } });
+  });
 
   res.json({ success: true });
 });

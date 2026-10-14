@@ -1,10 +1,16 @@
+import { registerTool } from '../register-tool';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
 import type { Prisma } from "@prisma/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { createHierarchyTask, updateHierarchyTask, updateHierarchyTasks, taskHierarchyTransaction, TaskHierarchyError } from "../../task-hierarchy";
-import { filterMatrixTasks, matrixOptions, tomorrowDueFilter } from "../../task-matrix";
+import { createHierarchyTask, updateHierarchyTask, updateHierarchyTasks, taskHierarchyTransaction, softDeleteHierarchyTasks, TaskHierarchyError } from "../../task-hierarchy";
+import { filterMatrixTasks, matrixOptions } from "../../task-matrix";
+import { timeAnalytics } from '../../time-analytics';
+import { instantAt } from '@reader/calendar-core';
+import { addTaskSession, discardTaskTimer, pauseTaskTimer, readActiveTimer, startTaskTimer, stopTaskTimer } from '../../timer-service';
+import { taskDueFilter, taskDate, parseTaskInput, updateTaskInput, createListInput } from '../../task-contract';
+import { accountTransaction } from '../../account-transaction';
 
 async function hierarchyTool(action: () => Promise<CallToolResult>): Promise<CallToolResult> {
   try { return await action(); }
@@ -16,7 +22,7 @@ async function hierarchyTool(action: () => Promise<CallToolResult>): Promise<Cal
 
 export function registerTaskTools(server: McpServer, userId: string) {
   // 1. List tasks
-  server.tool(
+  registerTool(server,
     "reader_list_tasks",
     "List tasks and subtasks with smart filters (by list, status, priority, due date, or search keyword)",
     {
@@ -41,7 +47,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
         where.listId = listId === "null" || listId === "inbox" ? null : listId;
       }
 
-      if (!includeSubtasks && !due && !priority && !search) {
+      if (!includeSubtasks && !due && !priority && !search && status !== 'done' && status !== 'cancelled') {
         where.parentId = null;
       }
 
@@ -58,21 +64,8 @@ export function registerTaskTools(server: McpServer, userId: string) {
       }
 
       if (due && due !== "all") {
-        const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
-        const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-        if (due === "today") {
-          where.dueDate = { gte: todayStart, lte: todayEnd };
-        } else if (due === "tomorrow") {
-          where.dueDate = tomorrowDueFilter(now);
-        } else if (due === "next7") {
-          const next7End = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
-          where.dueDate = { gte: todayStart, lte: next7End };
-        } else if (due === "overdue") {
-          where.dueDate = { lt: todayStart };
-          where.status = { notIn: ["done", "cancelled"] };
-        }
+        where.dueDate = taskDueFilter(due, timeZone);
+        if (due === 'overdue') where.status = { notIn: ['done', 'cancelled'] };
       }
 
       if (search && search.trim()) {
@@ -107,6 +100,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
                 tasks: tasks.map((t) => ({
                   id: t.id,
                   title: t.title,
+                version: t.version,
                   status: t.status,
                   priority: t.priority,
                   priorityLabel: `P${t.priority}`,
@@ -132,7 +126,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
   );
 
   // 2. Get task detail with full subtask hierarchy & logged time sessions
-  server.tool(
+  registerTool(server,
     "reader_get_task",
     "Get full details of a task, its recursive subtasks tree, and all recorded time sessions",
     {
@@ -157,6 +151,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
           out.push({
             id: c.id,
             title: c.title,
+                version: c.version,
             status: c.status,
             priority: c.priority,
             totalTimeSeconds: c.totalTimeSeconds,
@@ -183,6 +178,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
               {
                 id: task.id,
                 title: task.title,
+                version: task.version,
                 description: task.description,
                 status: task.status,
                 priority: task.priority,
@@ -213,7 +209,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
   );
 
   // 3. Create task or subtask
-  server.tool(
+  registerTool(server,
     "reader_create_task",
     "Create a task or nested subtask with priority, due date and Markdown notes. Subtasks inherit their parent’s list; omit listId for subtasks.",
     {
@@ -227,18 +223,14 @@ export function registerTaskTools(server: McpServer, userId: string) {
     },
     async ({ title, description, priority = 4, dueDate, dueTime, listId, parentTaskId }) => hierarchyTool(async () => {
       const now = new Date();
-      let parsedDueDate: Date | null = null;
-      if (dueDate) {
-        const d = new Date(dueDate);
-        if (!Number.isNaN(d.getTime())) parsedDueDate = d;
-      }
+      const parsedDueDate = dueDate === undefined ? null : parseTaskInput(taskDate, dueDate);
 
       const created = await taskHierarchyTransaction(prisma, tx => createHierarchyTask(tx, userId, {
         parentId: parentTaskId,
         listId,
         title: title.trim(),
         description: description || null,
-        priority: Math.max(1, Math.min(4, priority)),
+        priority,
         status: "todo",
         dueDate: parsedDueDate,
         dueTime: dueTime || null,
@@ -256,6 +248,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
                 success: true,
                 taskId: created.id,
                 title: created.title,
+                version: created.version,
                 priority: `P${created.priority}`,
                 listId: created.listId,
                 parentId: created.parentId,
@@ -270,11 +263,12 @@ export function registerTaskTools(server: McpServer, userId: string) {
   );
 
   // 4. Update task
-  server.tool(
+  registerTool(server,
     "reader_update_task",
     "Update a task’s properties or parent. Moving a top-level task to a list moves its entire subtree. Subtasks inherit their parent’s list; detach first to move independently.",
     {
       taskId: z.string().describe("UUID of task to update"),
+      expectedVersion: z.number().int().positive().optional().describe('Version from the last task read; rejects stale saves, including duplicate recurring completion.'),
       title: z.string().optional().describe("New title"),
       description: z.string().optional().describe("New markdown description"),
       status: z.enum(["todo", "in_progress", "done", "cancelled"]).optional().describe("New completion status"),
@@ -284,7 +278,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
       listId: z.string().nullable().optional().describe("New list ID (or null/'inbox' to move to Inbox)"),
       parentTaskId: z.string().nullable().optional().describe("New parent task ID (or null to make top-level)"),
     },
-    async ({ taskId, title, description, status, priority, dueDate, dueTime, listId, parentTaskId }) => hierarchyTool(async () => {
+    async ({ taskId, expectedVersion, title, description, status, priority, dueDate, dueTime, listId, parentTaskId }) => hierarchyTool(async () => {
       const existing = await prisma.task.findFirst({
         where: { id: taskId, userId, deletedAt: null },
       });
@@ -294,7 +288,8 @@ export function registerTaskTools(server: McpServer, userId: string) {
       }
 
       const now = new Date();
-      const updateData: Record<string, unknown> = { updatedAt: now };
+      const validated = parseTaskInput(updateTaskInput, { title, description, status, priority, dueDate, dueTime, listId, parentId: parentTaskId, expectedVersion });
+      const updateData: Record<string, unknown> = { updatedAt: now, ...validated };
 
       if (title !== undefined) updateData.title = title.trim();
       if (description !== undefined) updateData.description = description;
@@ -313,7 +308,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
           updateData.dueDate = null;
         } else {
           const d = new Date(dueDate);
-          if (!Number.isNaN(d.getTime())) updateData.dueDate = d;
+          if (!Number.isNaN(d.getTime())) updateData.dueDate = validated.dueDate;
         }
       }
       if (dueTime !== undefined) updateData.dueTime = dueTime;
@@ -334,6 +329,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
                 success: true,
                 taskId: updated.id,
                 title: updated.title,
+                version: updated.version,
                 status: updated.status,
                 priority: `P${updated.priority}`,
                 listId: updated.listId,
@@ -349,66 +345,20 @@ export function registerTaskTools(server: McpServer, userId: string) {
   );
 
   // 5. Delete task
-  server.tool(
+  registerTool(server,
     "reader_delete_task",
-    "Soft-delete a task and all of its nested subtasks, and delete their related time sessions",
+    "Soft-delete a task and its nested subtasks, preserving logged time history",
     {
       taskId: z.string().describe("Task UUID to delete"),
     },
-    async ({ taskId }) => {
-      const existing = await prisma.task.findFirst({
-        where: { id: taskId, userId, deletedAt: null },
-      });
-      if (!existing) {
-        return { isError: true, content: [{ type: "text", text: `Task not found: ${taskId}` }] };
-      }
-
-      const now = new Date();
-      async function getAllDescendantTaskIds(tId: string): Promise<string[]> {
-        const ids: string[] = [tId];
-        const children = await prisma.task.findMany({
-          where: { parentId: tId, userId, deletedAt: null },
-          select: { id: true },
-        });
-        for (const c of children) {
-          const subIds = await getAllDescendantTaskIds(c.id);
-          ids.push(...subIds);
-        }
-        return ids;
-      }
-
-      const allTargetIds = await getAllDescendantTaskIds(taskId);
-
-      // 1. Delete all related time sessions
-      await prisma.time_session.deleteMany({
-        where: { taskId: { in: allTargetIds }, userId },
-      });
-
-      // 2. Soft-delete all tasks
-      await prisma.task.updateMany({
-        where: { id: { in: allTargetIds }, userId },
-        data: { deletedAt: now, updatedAt: now },
-      });
-
-      // 3. Discard active timer if running on any of these tasks
-      const active = await prisma.active_timer.findUnique({ where: { userId } });
-      if (active && allTargetIds.includes(active.taskId)) {
-        await prisma.active_timer.delete({ where: { userId } });
-      }
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ success: true, deletedTaskId: taskId, affectedTaskIds: allTargetIds }, null, 2),
-          },
-        ],
-      };
-    }
+    async ({ taskId }) => hierarchyTool(async () => {
+      const ids = await taskHierarchyTransaction(prisma, tx => softDeleteHierarchyTasks(tx, userId, [taskId]));
+      return { content: [{ type: "text", text: JSON.stringify({ success: true, deletedTaskId: taskId, affectedTaskIds: ids }, null, 2) }] };
+    })
   );
 
   // 6. List task lists
-  server.tool(
+  registerTool(server,
     "reader_list_task_lists",
     "List all task lists/projects with task counts and total time tracked",
     {},
@@ -419,16 +369,18 @@ export function registerTaskTools(server: McpServer, userId: string) {
       });
 
       const tasks = await prisma.task.findMany({
-        where: { userId, deletedAt: null, parentId: null },
-        select: { listId: true, status: true, totalTimeSeconds: true },
+        where: { userId, deletedAt: null },
+        select: { listId: true, parentId: true, status: true, totalTimeSeconds: true },
       });
 
       const counts = new Map<string | null, { total: number; uncompleted: number; seconds: number }>();
       for (const t of tasks) {
         if (!counts.has(t.listId)) counts.set(t.listId, { total: 0, uncompleted: 0, seconds: 0 });
         const c = counts.get(t.listId)!;
-        c.total++;
-        if (t.status !== "done" && t.status !== "cancelled") c.uncompleted++;
+        if (!t.parentId) {
+          c.total++;
+          if (t.status !== "done" && t.status !== "cancelled") c.uncompleted++;
+        }
         c.seconds += t.totalTimeSeconds || 0;
       }
 
@@ -470,7 +422,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
   );
 
   // 7. Create task list
-  server.tool(
+  registerTool(server,
     "reader_create_task_list",
     "Create a new task list/project",
     {
@@ -478,15 +430,17 @@ export function registerTaskTools(server: McpServer, userId: string) {
       color: z.string().optional().describe("Hex color code (e.g. '#3b82f6')"),
       icon: z.string().optional().describe("Icon name (e.g. 'Book', 'Code', 'Briefcase')"),
     },
-    async ({ name, color = "#3b82f6", icon = "List" }) => {
+    async (raw) => hierarchyTool(async () => {
+      const { name, color = '#3b82f6', icon = 'List' } = parseTaskInput(createListInput, raw);
       const now = new Date();
-      const maxSort = await prisma.task_list.aggregate({
+      const created = await accountTransaction(prisma, userId, async tx => {
+      const maxSort = await tx.task_list.aggregate({
         where: { userId, deletedAt: null },
         _max: { sortOrder: true },
       });
       const sortOrder = (maxSort._max.sortOrder ?? 0) + 1;
 
-      const created = await prisma.task_list.create({
+      return tx.task_list.create({
         data: {
           userId,
           name: name.trim(),
@@ -497,6 +451,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
           updatedAt: now,
         },
       });
+      });
 
       return {
         content: [
@@ -506,499 +461,47 @@ export function registerTaskTools(server: McpServer, userId: string) {
           },
         ],
       };
-    }
+    })
   );
 
   // ==========================================
   // TIME TRACKING & SERVER-SIDE TIMER TOOLS
   // ==========================================
 
-  // 8. Start server live timer
-  server.tool(
-    "reader_start_timer",
-    "Start the live stopwatch timer on a task. Persists on server so it continues running even when browser is closed.",
-    {
-      taskId: z.string().describe("Task UUID to start tracking time on"),
-      notes: z.string().optional().describe("Optional note for this timer session"),
-    },
-    async ({ taskId, notes }) => {
-      const task = await prisma.task.findFirst({
-        where: { id: taskId, userId, deletedAt: null },
-      });
+  const timerId = z.string().uuid().nullable().optional().describe('Timer ID from the last read; protects against changes in another tab. Use null when no timer is active.');
+  const timerResult = (value: unknown): CallToolResult => ({ content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] });
+  registerTool(server,'reader_start_timer', 'Start a timer. Starting the same task again preserves elapsed time; switching tasks saves the previous session.', { taskId: z.string(), notes: z.string().optional(), expectedTimerId: timerId },
+    async input => hierarchyTool(async () => timerResult(await startTaskTimer(prisma, userId, input))));
+  registerTool(server,'reader_get_active_timer', 'Read the current server timer and its ID before changing it.', {},
+    async () => hierarchyTool(async () => { const value = await readActiveTimer(prisma, userId); return timerResult({ ...value, ...value.timer, elapsedSeconds: value.timer?.currentElapsedSeconds ?? 0 }); }));
+  registerTool(server,'reader_pause_timer', 'Pause the active timer without losing elapsed work.', { expectedTimerId: timerId },
+    async input => hierarchyTool(async () => timerResult(await pauseTaskTimer(prisma, userId, input, true))));
+  registerTool(server,'reader_resume_timer', 'Resume the paused timer.', { expectedTimerId: timerId },
+    async input => hierarchyTool(async () => timerResult(await pauseTaskTimer(prisma, userId, input, false))));
+  registerTool(server,'reader_stop_timer', 'Stop and save the active timer once. Supply its ID so a retry cannot stop a newer timer.', { expectedTimerId: timerId, notes: z.string().optional(), durationMinutes: z.number().positive().max(527040).optional() },
+    async ({ durationMinutes, ...input }) => hierarchyTool(async () => timerResult(await stopTaskTimer(prisma, userId, { ...input, durationSeconds: durationMinutes === undefined ? undefined : Math.round(durationMinutes * 60) }))));
+  registerTool(server,'reader_discard_timer', 'Discard the specified active timer without logging time.', { expectedTimerId: timerId },
+    async input => hierarchyTool(async () => timerResult(await discardTaskTimer(prisma, userId, input))));
+  registerTool(server,'reader_log_time_session', 'Log a completed time session. A request key makes retries safe; date uses the specified timezone.', {
+    taskId: z.string(), durationMinutes: z.number().positive().max(527040), notes: z.string().optional(), date: z.string().optional(), timeZone: z.string().optional(), requestKey: z.string().uuid().optional(),
+  }, async ({ taskId, durationMinutes, date, timeZone = 'UTC', ...rest }) => hierarchyTool(async () => {
+    taskDueFilter('all', timeZone);
+    const day = date ? parseTaskInput(taskDate, date)!.toISOString().slice(0, 10) : null;
+    const start = day ? instantAt(`${day}T00:00`, timeZone) : new Date();
+    if (!start) throw new TaskHierarchyError(400, 'This local date begins at a skipped midnight. Choose another date.');
+    return timerResult(await addTaskSession(prisma, userId, taskId, { ...rest, startTime: start.toISOString(), durationSeconds: Math.round(durationMinutes * 60) }));
+  }));
 
-      if (!task) {
-        return { isError: true, content: [{ type: "text", text: `Task not found: ${taskId}` }] };
-      }
-
-      const now = new Date();
-
-      // Auto-complete any existing running timer
-      const existingActive = await prisma.active_timer.findUnique({ where: { userId } });
-      if (existingActive) {
-        let finalDuration = existingActive.accumulatedSeconds;
-        if (!existingActive.isPaused) {
-          finalDuration += Math.max(0, Math.floor((now.getTime() - existingActive.startTime.getTime()) / 1000));
-        }
-        if (finalDuration >= 5) {
-          await prisma.time_session.create({
-            data: {
-              userId,
-              taskId: existingActive.taskId,
-              startTime: existingActive.startTime,
-              endTime: now,
-              durationSeconds: finalDuration,
-              notes: existingActive.notes,
-              createdAt: now,
-              updatedAt: now,
-            },
-          });
-          const agg = await prisma.time_session.aggregate({
-            where: { taskId: existingActive.taskId, userId },
-            _sum: { durationSeconds: true },
-          });
-          await prisma.task.updateMany({
-            where: { id: existingActive.taskId, userId },
-            data: { totalTimeSeconds: agg._sum.durationSeconds ?? 0, updatedAt: now },
-          });
-        }
-      }
-
-      const timer = await prisma.active_timer.upsert({
-        where: { userId },
-        create: {
-          userId,
-          taskId,
-          startTime: now,
-          accumulatedSeconds: 0,
-          isPaused: false,
-          notes: notes || null,
-          createdAt: now,
-          updatedAt: now,
-        },
-        update: {
-          taskId,
-          startTime: now,
-          accumulatedSeconds: 0,
-          isPaused: false,
-          pausedAt: null,
-          notes: notes || null,
-          updatedAt: now,
-        },
-      });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                success: true,
-                status: "running",
-                taskId: timer.taskId,
-                taskTitle: task.title,
-                startTime: timer.startTime.toISOString(),
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  );
-
-  // 9. Get active timer status
-  server.tool(
-    "reader_get_active_timer",
-    "Check if a live timer is currently running, its elapsed seconds, and attached task details",
-    {},
-    async () => {
-      const active = await prisma.active_timer.findUnique({ where: { userId } });
-      if (!active) {
-        return {
-          content: [{ type: "text", text: JSON.stringify({ active: false, message: "No timer is currently running" }, null, 2) }],
-        };
-      }
-
-      const task = await prisma.task.findFirst({
-        where: { id: active.taskId, userId, deletedAt: null },
-        select: { id: true, title: true, listId: true, priority: true },
-      });
-
-      const now = new Date();
-      let currentElapsed = active.accumulatedSeconds;
-      if (!active.isPaused) {
-        currentElapsed += Math.max(0, Math.floor((now.getTime() - active.startTime.getTime()) / 1000));
-      }
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                active: true,
-                taskId: active.taskId,
-                taskTitle: task?.title || "Unknown Task",
-                priority: task ? `P${task.priority}` : "P4",
-                isPaused: active.isPaused,
-                elapsedSeconds: currentElapsed,
-                elapsedFormatted: formatSecondsHuman(currentElapsed),
-                startTime: active.startTime.toISOString(),
-                notes: active.notes,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  );
-
-  // 10. Pause / Resume timer
-  server.tool(
-    "reader_pause_timer",
-    "Pause the currently active timer",
-    {},
-    async () => {
-      const active = await prisma.active_timer.findUnique({ where: { userId } });
-      if (!active || active.isPaused) {
-        return { isError: true, content: [{ type: "text", text: "No active unpaused timer to pause" }] };
-      }
-      const now = new Date();
-      const elapsed = Math.max(0, Math.floor((now.getTime() - active.startTime.getTime()) / 1000));
-      const accumulated = active.accumulatedSeconds + elapsed;
-
-      await prisma.active_timer.update({
-        where: { userId },
-        data: { accumulatedSeconds: accumulated, isPaused: true, pausedAt: now, updatedAt: now },
-      });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ success: true, isPaused: true, totalElapsedFormatted: formatSecondsHuman(accumulated) }, null, 2),
-          },
-        ],
-      };
-    }
-  );
-
-  server.tool(
-    "reader_resume_timer",
-    "Resume the currently paused timer",
-    {},
-    async () => {
-      const active = await prisma.active_timer.findUnique({ where: { userId } });
-      if (!active || !active.isPaused) {
-        return { isError: true, content: [{ type: "text", text: "No paused timer to resume" }] };
-      }
-      const now = new Date();
-      await prisma.active_timer.update({
-        where: { userId },
-        data: { startTime: now, isPaused: false, pausedAt: null, updatedAt: now },
-      });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify({ success: true, isPaused: false, message: "Timer resumed" }, null, 2),
-          },
-        ],
-      };
-    }
-  );
-
-  // 11. Stop timer and save session
-  server.tool(
-    "reader_stop_timer",
-    "Stop the active timer, record the time session with optional notes, and update task total time",
-    {
-      notes: z.string().optional().describe("Optional note/summary of work done during this session"),
-      durationMinutes: z.number().min(1).optional().describe("Optional adjusted duration in minutes (e.g. to subtract away time before saving)"),
-    },
-    async ({ notes, durationMinutes }) => {
-      const active = await prisma.active_timer.findUnique({ where: { userId } });
-      if (!active) {
-        return { isError: true, content: [{ type: "text", text: "No active timer to stop" }] };
-      }
-
-      const now = new Date();
-      let finalDuration = active.accumulatedSeconds;
-      if (!active.isPaused) {
-        finalDuration += Math.max(0, Math.floor((now.getTime() - active.startTime.getTime()) / 1000));
-      }
-
-      if (durationMinutes !== undefined && durationMinutes > 0) {
-        finalDuration = durationMinutes * 60;
-      }
-
-      const session = await prisma.time_session.create({
-        data: {
-          userId,
-          taskId: active.taskId,
-          startTime: active.startTime,
-          endTime: now,
-          durationSeconds: Math.max(1, finalDuration),
-          notes: notes || active.notes,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
-      const agg = await prisma.time_session.aggregate({
-        where: { taskId: active.taskId, userId },
-        _sum: { durationSeconds: true },
-      });
-      const newTotal = agg._sum.durationSeconds ?? 0;
-      await prisma.task.updateMany({
-        where: { id: active.taskId, userId },
-        data: { totalTimeSeconds: newTotal, updatedAt: now },
-      });
-
-      await prisma.active_timer.delete({ where: { userId } });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                success: true,
-                sessionId: session.id,
-                taskId: session.taskId,
-                durationSeconds: session.durationSeconds,
-                durationFormatted: formatSecondsHuman(session.durationSeconds),
-                taskNewTotalFormatted: formatSecondsHuman(newTotal),
-                notes: session.notes,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  );
-
-  // 12. Discard timer
-  server.tool(
-    "reader_discard_timer",
-    "Discard the active timer without recording any time",
-    {},
-    async () => {
-      await prisma.active_timer.deleteMany({ where: { userId } });
-      return {
-        content: [{ type: "text", text: JSON.stringify({ success: true, message: "Active timer discarded" }, null, 2) }],
-      };
-    }
-  );
-
-  // 13. Manually log time session
-  server.tool(
-    "reader_log_time_session",
-    "Manually log a completed time session with duration or start/end times and notes",
-    {
-      taskId: z.string().describe("Task UUID"),
-      durationMinutes: z.number().min(1).describe("Duration spent in minutes"),
-      notes: z.string().optional().describe("Work log notes"),
-      date: z.string().optional().describe("Date of session (YYYY-MM-DD, defaults to today)"),
-    },
-    async ({ taskId, durationMinutes, notes, date }) => {
-      const task = await prisma.task.findFirst({
-        where: { id: taskId, userId, deletedAt: null },
-      });
-      if (!task) {
-        return { isError: true, content: [{ type: "text", text: `Task not found: ${taskId}` }] };
-      }
-
-      const sTime = date ? new Date(date) : new Date();
-      const durationSeconds = durationMinutes * 60;
-      const eTime = new Date(sTime.getTime() + durationSeconds * 1000);
-      const now = new Date();
-
-      const session = await prisma.time_session.create({
-        data: {
-          userId,
-          taskId,
-          startTime: sTime,
-          endTime: eTime,
-          durationSeconds,
-          notes: notes || null,
-          createdAt: now,
-          updatedAt: now,
-        },
-      });
-
-      const agg = await prisma.time_session.aggregate({
-        where: { taskId, userId },
-        _sum: { durationSeconds: true },
-      });
-      const newTotal = agg._sum.durationSeconds ?? 0;
-      await prisma.task.updateMany({
-        where: { id: taskId, userId },
-        data: { totalTimeSeconds: newTotal, updatedAt: now },
-      });
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                success: true,
-                sessionId: session.id,
-                durationFormatted: formatSecondsHuman(durationSeconds),
-                taskTotalFormatted: formatSecondsHuman(newTotal),
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
-  );
-
-  // 14. Time analytics & productivity breakdown
-  server.tool(
-    "reader_get_time_analytics",
-    "Analyze where time was spent across tasks, lists, and days with support for today, yesterday, custom date ranges, and project scopes",
-    {
-      preset: z.enum(["today", "yesterday", "7", "14", "30", "all"]).optional().describe("Time period preset (default: '7')"),
-      startDate: z.string().optional().describe("Optional start date (YYYY-MM-DD)"),
-      endDate: z.string().optional().describe("Optional end date (YYYY-MM-DD)"),
-      listId: z.string().optional().describe("Optional list ID or 'inbox' to scope analysis"),
-      taskId: z.string().optional().describe("Optional task ID to inspect single task focus"),
-    },
-    async ({ preset = "7", startDate, endDate, listId, taskId }) => {
-      const now = new Date();
-      let start: Date;
-      let end: Date = now;
-      let periodLabel = `${preset} days`;
-
-      if (startDate && endDate) {
-        start = new Date(`${startDate}T00:00:00.000`);
-        end = new Date(`${endDate}T23:59:59.999`);
-        periodLabel = `${startDate} to ${endDate}`;
-      } else if (preset === "today") {
-        start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        end = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-        periodLabel = "Today";
-      } else if (preset === "yesterday") {
-        const y = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        start = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 0, 0, 0, 0);
-        end = new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59, 999);
-        periodLabel = "Yesterday";
-      } else if (preset === "all") {
-        start = new Date(0);
-        periodLabel = "All Time";
-      } else {
-        const days = parseInt(preset, 10) || 7;
-        start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-        periodLabel = `Last ${days} Days`;
-      }
-
-      const sessionWhere: Record<string, unknown> = {
-        userId,
-        startTime: { gte: start, lte: end },
-      };
-      if (taskId) sessionWhere.taskId = taskId;
-
-      const sessions = await prisma.time_session.findMany({
-        where: sessionWhere,
-        orderBy: { startTime: "desc" },
-      });
-
-      const taskWhere: Record<string, unknown> = { userId, deletedAt: null };
-      if (listId && listId !== "all") {
-        taskWhere.listId = listId === "inbox" || listId === "null" ? null : listId;
-      }
-
-      const tasks = await prisma.task.findMany({
-        where: taskWhere,
-        select: { id: true, title: true, listId: true, priority: true },
-      });
-      const taskMap = new Map(tasks.map((t) => [t.id, t]));
-
-      const lists = await prisma.task_list.findMany({
-        where: { userId, deletedAt: null },
-        select: { id: true, name: true, color: true },
-      });
-      const listMap = new Map(lists.map((l) => [l.id, l.name]));
-
-      let totalSeconds = 0;
-      const taskTotals = new Map<string, { title: string; listName: string; seconds: number }>();
-      const listTotals = new Map<string, number>();
-
-      for (const s of sessions) {
-        const task = taskMap.get(s.taskId);
-        if (listId && listId !== "all" && !task) continue;
-
-        totalSeconds += s.durationSeconds;
-        const title = task?.title || "Deleted Task";
-        const listName = task?.listId ? listMap.get(task.listId) || "List" : "Inbox";
-
-        if (!taskTotals.has(s.taskId)) {
-          taskTotals.set(s.taskId, { title, listName, seconds: 0 });
-        }
-        taskTotals.get(s.taskId)!.seconds += s.durationSeconds;
-
-        listTotals.set(listName, (listTotals.get(listName) || 0) + s.durationSeconds);
-      }
-
-      const topTasks = Array.from(taskTotals.entries())
-        .map(([id, t]) => ({
-          taskId: id,
-          title: t.title,
-          list: t.listName,
-          durationSeconds: t.seconds,
-          durationFormatted: formatSecondsHuman(t.seconds),
-          percentage: totalSeconds > 0 ? Math.round((t.seconds / totalSeconds) * 100) : 0,
-        }))
-        .sort((a, b) => b.durationSeconds - a.durationSeconds);
-
-      const listBreakdown = Array.from(listTotals.entries())
-        .map(([name, seconds]) => ({
-          list: name,
-          durationSeconds: seconds,
-          durationFormatted: formatSecondsHuman(seconds),
-          percentage: totalSeconds > 0 ? Math.round((seconds / totalSeconds) * 100) : 0,
-        }))
-        .sort((a, b) => b.durationSeconds - a.durationSeconds);
-
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(
-                {
-                  period: periodLabel,
-                  startDate: start.toISOString().slice(0, 10),
-                  endDate: end.toISOString().slice(0, 10),
-                  totalTimeTrackedSeconds: totalSeconds,
-                  totalTimeTrackedFormatted: formatSecondsHuman(totalSeconds),
-                  totalSessionsRecorded: sessions.length,
-                  topTasks,
-                  listBreakdown,
-                },
-                null,
-                2
-              ),
-            },
-          ],
-        };
-      }
-    );
+  registerTool(server,'reader_get_time_analytics', 'Report logged time by task, list and local session start date. Counts and totals use the same filters and retain deleted task history.', {
+    preset: z.enum(['today', 'yesterday', '7', '14', '30', 'all']).optional(), startDate: z.string().optional(), endDate: z.string().optional(), listId: z.string().optional(), taskId: z.string().optional(), timeZone: z.string().optional().describe('IANA timezone for report days (defaults to UTC).'),
+  }, async input => hierarchyTool(async () => timerResult(await timeAnalytics(prisma, userId, input))));
 
   // 15. Create tasks and nested subtasks in bulk
-  server.tool(
+  registerTool(server,
     "reader_create_tasks_bulk",
     "Create multiple tasks and their nested subtask trees in a single structured call. Ideal for decomposing project plans, PRDs, or meeting action items into actionable tasks.",
     {
+      timeZone: z.string().optional().describe('IANA timezone for today/tomorrow (defaults to UTC).'),
       tasks: z
         .array(
           z.object({
@@ -1028,7 +531,9 @@ export function registerTaskTools(server: McpServer, userId: string) {
         )
         .describe("List of tasks to create"),
     },
-    async ({ tasks }) => hierarchyTool(() => taskHierarchyTransaction(prisma, async tx => {
+    async ({ tasks, timeZone = 'UTC' }) => hierarchyTool(() => taskHierarchyTransaction(prisma, async tx => {
+      taskDueFilter('all', timeZone);
+      validateTaskTree(tasks);
       const createdSummary: Array<{
         id: string;
         title: string;
@@ -1074,13 +579,13 @@ export function registerTaskTools(server: McpServer, userId: string) {
         }
 
         const now = new Date();
-        const dueDate = parseSmartDueDate(item.dueDate);
+        const dueDate = parseSmartDueDate(item.dueDate, timeZone);
         const parentTask = await createHierarchyTask(tx, userId, {
           listId: targetListId,
           parentId: null,
           title: item.title.trim(),
           description: item.description || null,
-          priority: Math.max(1, Math.min(4, item.priority || 4)),
+          priority: item.priority ?? 4,
           status: item.status || "todo",
           dueDate,
           dueTime: item.dueTime || null,
@@ -1092,7 +597,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
 
         let subtaskCount = 0;
         if (item.subtasks && item.subtasks.length > 0) {
-          const createdSubs = await createRecursiveSubtasks(tx, item.subtasks, parentTask.id, userId);
+          const createdSubs = await createRecursiveSubtasks(tx, item.subtasks, parentTask.id, userId, timeZone);
           subtaskCount = createdSubs.length;
         }
 
@@ -1125,7 +630,7 @@ export function registerTaskTools(server: McpServer, userId: string) {
   );
 
   // 16. Batch update tasks
-  server.tool(
+  registerTool(server,
     "reader_batch_update_tasks",
     "Update multiple tasks atomically. List moves include descendants; select the top-level parent to move a subtask tree. Every selected task must belong to this account.",
     {
@@ -1134,8 +639,9 @@ export function registerTaskTools(server: McpServer, userId: string) {
       priority: z.number().min(1).max(4).optional().describe("New priority to apply (1=P1, 4=P4)"),
       listId: z.string().optional().describe("Target list UUID (or 'inbox' / 'null')"),
       dueDate: z.string().optional().describe("New due date (YYYY-MM-DD, 'today', 'tomorrow', or 'null' to clear)"),
+      timeZone: z.string().optional().describe('IANA timezone for today/tomorrow (defaults to UTC).'),
     },
-    async ({ taskIds, status, priority, listId, dueDate }) => hierarchyTool(async () => {
+    async ({ taskIds, status, priority, listId, dueDate, timeZone = 'UTC' }) => hierarchyTool(async () => {
       const now = new Date();
       const updateData: Record<string, unknown> = { updatedAt: now };
 
@@ -1144,13 +650,13 @@ export function registerTaskTools(server: McpServer, userId: string) {
         updateData.completedAt = status === "done" ? now : null;
       }
       if (priority !== undefined) {
-        updateData.priority = Math.max(1, Math.min(4, priority));
+        updateData.priority = priority;
       }
       if (listId !== undefined) {
         updateData.listId = listId === "inbox" || listId === "null" || !listId ? null : listId;
       }
       if (dueDate !== undefined) {
-        updateData.dueDate = parseSmartDueDate(dueDate);
+        updateData.dueDate = parseSmartDueDate(dueDate, timeZone);
       }
 
       const res = await taskHierarchyTransaction(prisma, tx => updateHierarchyTasks(tx, userId, taskIds, updateData));
@@ -1175,85 +681,40 @@ export function registerTaskTools(server: McpServer, userId: string) {
   );
 
   // 17. Batch delete tasks
-  server.tool(
+  registerTool(server,
     "reader_batch_delete_tasks",
-    "Soft-delete multiple tasks and their nested subtask trees in bulk, and delete all associated time sessions",
+    "Soft-delete multiple tasks and their nested subtasks atomically, preserving logged time history",
     {
       taskIds: z.array(z.string()).describe("Array of task UUIDs to soft-delete"),
     },
-    async ({ taskIds }) => {
-      const now = new Date();
-
-      async function getAllDescendantTaskIds(tId: string): Promise<string[]> {
-        const ids: string[] = [tId];
-        const children = await prisma.task.findMany({
-          where: { parentId: tId, userId, deletedAt: null },
-          select: { id: true },
-        });
-        for (const c of children) {
-          const subIds = await getAllDescendantTaskIds(c.id);
-          ids.push(...subIds);
-        }
-        return ids;
-      }
-
-      const allTargetIdsSet = new Set<string>();
-      for (const tId of taskIds) {
-        const ids = await getAllDescendantTaskIds(tId);
-        ids.forEach((id) => allTargetIdsSet.add(id));
-      }
-      const allTargetIds = Array.from(allTargetIdsSet);
-
-      // 1. Delete all time sessions
-      await prisma.time_session.deleteMany({
-        where: { taskId: { in: allTargetIds }, userId },
-      });
-
-      // 2. Soft-delete all tasks
-      const res = await prisma.task.updateMany({
-        where: { id: { in: allTargetIds }, userId, deletedAt: null },
-        data: { deletedAt: now, updatedAt: now },
-      });
-
-      // 3. Discard active timer if running on any of these tasks
-      const active = await prisma.active_timer.findUnique({ where: { userId } });
-      if (active && allTargetIds.includes(active.taskId)) {
-        await prisma.active_timer.delete({ where: { userId } });
-      }
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(
-              {
-                success: true,
-                deletedCount: res.count,
-                affectedTaskIds: allTargetIds,
-              },
-              null,
-              2
-            ),
-          },
-        ],
-      };
-    }
+    async ({ taskIds }) => hierarchyTool(async () => {
+      const ids = await taskHierarchyTransaction(prisma, tx => softDeleteHierarchyTasks(tx, userId, taskIds));
+      return { content: [{ type: "text", text: JSON.stringify({ success: true, deletedCount: ids.length, affectedTaskIds: ids }, null, 2) }] };
+    })
   );
 }
 
-function parseSmartDueDate(dateStr?: string | null): Date | null {
+function parseSmartDueDate(dateStr?: string | null, timeZone = 'UTC'): Date | null {
   if (!dateStr || dateStr === "null" || dateStr === "") return null;
   const lower = dateStr.toLowerCase().trim();
-  const now = new Date();
-  if (lower === "today") {
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+  if (lower === 'today' || lower === 'tomorrow') {
+    const filter = taskDueFilter(lower, timeZone)!;
+    return 'gte' in filter ? filter.gte ?? null : null;
   }
-  if (lower === "tomorrow") {
-    const tom = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-    return new Date(tom.getFullYear(), tom.getMonth(), tom.getDate(), 0, 0, 0);
-  }
-  const d = new Date(dateStr);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return parseTaskInput(taskDate, dateStr);
+}
+
+function validateTaskTree(items: unknown) {
+  let count = 0;
+  const visit = (nodes: unknown, depth: number) => {
+    if (!Array.isArray(nodes) || depth > 20) throw new TaskHierarchyError(400, 'Use a task tree no deeper than 20 levels.');
+    for (const node of nodes) {
+      if (++count > 500 || !node || typeof node !== 'object' || typeof node.title !== 'string') throw new TaskHierarchyError(400, 'Create at most 500 tasks with valid titles in one request.');
+      if (node.listName !== undefined && (typeof node.listName !== 'string' || node.listName.trim().length > 255)) throw new TaskHierarchyError(400, 'Use a list name of up to 255 characters.');
+      if (node.subtasks !== undefined) visit(node.subtasks, depth + 1);
+    }
+  };
+  visit(items, 1);
 }
 
 async function createRecursiveSubtasks(
@@ -1268,19 +729,20 @@ async function createRecursiveSubtasks(
     subtasks?: any[];
   }>,
   parentId: string,
-  userId: string
+  userId: string,
+  timeZone = 'UTC'
 ): Promise<Array<{ id: string; title: string }>> {
   const results: Array<{ id: string; title: string }> = [];
   const now = new Date();
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const dueDate = parseSmartDueDate(item.dueDate);
+    const dueDate = parseSmartDueDate(item.dueDate, timeZone);
     const created = await createHierarchyTask(tx, userId, {
       parentId,
       title: item.title.trim(),
       description: item.description || null,
-      priority: Math.max(1, Math.min(4, item.priority || 4)),
+      priority: item.priority ?? 4,
       status: item.status || "todo",
       dueDate,
       dueTime: item.dueTime || null,
@@ -1294,7 +756,7 @@ async function createRecursiveSubtasks(
     results.push({ id: created.id, title: created.title });
 
     if (item.subtasks && item.subtasks.length > 0) {
-      const nested = await createRecursiveSubtasks(tx, item.subtasks, created.id, userId);
+      const nested = await createRecursiveSubtasks(tx, item.subtasks, created.id, userId, timeZone);
       results.push(...nested);
     }
   }

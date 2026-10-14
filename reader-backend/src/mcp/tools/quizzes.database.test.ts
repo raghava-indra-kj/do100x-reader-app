@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { readJson } from '../../test-support/read-json';
 import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import express from "express";
@@ -46,7 +48,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("MCP and HTTP share quiz, revi
         expect(added.questions).toHaveLength(2);
         const removed = await call("reader_apply_quiz_changes", { quizId, changes: { expectedRevisionNo: 2, operations: [{ type: "removeQuestion", questionId: added.questions[1].id }] } });
         expect(removed.questions).toHaveLength(1);
-        const httpRead = await (await fetch(`${base}/quizzes/${quizId}?view=author`, { headers: { Cookie: cookie } })).json();
+        const httpRead = await readJson(fetch(`${base}/quizzes/${quizId}?view=author`, { headers: { Cookie: cookie } }), z.object({ revisionId: z.string() }));
         expect(httpRead.revisionId).toBe(removed.revisionId);
         const changed = await fetch(`${base}/quizzes/${quizId}`, { method: "PATCH", headers: { Origin: "http://localhost:3000", Cookie: cookie, "Content-Type": "application/json" }, body: JSON.stringify({ expectedRevisionNo: 3, operations: [{ type: "setMetadata", title: "HTTP revision" }] }) });
         expect(changed.status).toBe(200);
@@ -66,7 +68,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== "1")("MCP and HTTP share quiz, revi
         } });
         expect(evaluation.evaluations).toHaveLength(1);
         expect((await call("reader_get_quiz_evaluation_history", { attemptId: attempt.id })).filter((row: { source: string }) => row.source === "AI")).toHaveLength(1);
-        const httpAttempt = await (await fetch(`${base}/quizzes/attempts/${attempt.id}`, { headers: { Cookie: cookie } })).json();
+        const httpAttempt = await readJson(fetch(`${base}/quizzes/attempts/${attempt.id}`, { headers: { Cookie: cookie } }), z.object({ questions: z.array(z.object({ answer: z.object({ responseMarkdown: z.string() }), latestFeedback: z.object({ feedbackMarkdown: z.string() }) })) }));
         expect(httpAttempt.questions[0].answer.responseMarkdown).toBe("My answer");
         expect(httpAttempt.questions[0].latestFeedback.feedbackMarkdown).toBe("Add a key detail.");
         expect((await call("reader_get_quiz_attempt", { attemptId: attempt.id })).id).toBe(attempt.id);

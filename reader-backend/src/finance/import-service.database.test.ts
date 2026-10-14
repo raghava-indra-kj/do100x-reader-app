@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
 import { PrismaClient } from '@prisma/client';
 import { expect, it } from 'vitest';
 import { createAccount, createBook, createCategory } from './catalog-service';
@@ -56,7 +57,8 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== '1')('Finance imports handle retrie
       await commitImport(tx, actor, book.id, transferBatch.id, { expectedVersion: 1, acceptUnverified: true });
       const paired = await stageImport(tx, actor, book.id, { requestKey: randomUUID(), accountId: other.id, sourceName: 'Bank B transfer', rows: [{ date: '2026-10-05', amount: '100.00', description: 'From Bank A', externalId: 'transfer-b' }] });
       expect(paired.rows[0].decision).toBe('UNRESOLVED');
-      const pairedResolved = await resolveImport(tx, actor, book.id, paired.id, { expectedVersion: 1, rows: [{ rowId: paired.rows[0].id, decision: 'MATCH', matchMovementId: paired.rows[0].candidateIds[0] }] });
+      const pairedCandidates = z.array(z.string()).nonempty().parse(paired.rows[0].candidateIds);
+      const pairedResolved = await resolveImport(tx, actor, book.id, paired.id, { expectedVersion: 1, rows: [{ rowId: paired.rows[0].id, decision: 'MATCH', matchMovementId: pairedCandidates[0] }] });
       await commitImport(tx, actor, book.id, paired.id, { expectedVersion: pairedResolved.version, acceptUnverified: true });
       expect(await tx.finance_transaction.count({ where: { bookId: book.id, kind: 'TRANSFER' } })).toBe(1);
       const cancelledInput = { requestKey: randomUUID(), accountId: bank.id, sourceName: 'Correct mapping retry', fileHash: 'd'.repeat(64), rows: [{ date: '2026-10-06', amount: '-1.00', description: 'Retry' }] };

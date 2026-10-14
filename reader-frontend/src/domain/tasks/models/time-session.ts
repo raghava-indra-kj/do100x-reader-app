@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { formatTrackedDuration } from './duration';
 
 export const TimeSessionSchema = z.object({
   id: z.string(),
@@ -8,6 +9,7 @@ export const TimeSessionSchema = z.object({
   durationSeconds: z.number().default(0),
   notes: z.string().nullable().optional(),
   createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 
 export type TimeSessionData = z.infer<typeof TimeSessionSchema>;
@@ -20,6 +22,7 @@ export class TimeSession {
   readonly durationSeconds: number;
   readonly notes?: string | null;
   readonly createdAt?: string;
+  readonly updatedAt?: string;
 
   constructor(data: TimeSessionData) {
     this.id = data.id;
@@ -29,14 +32,10 @@ export class TimeSession {
     this.durationSeconds = data.durationSeconds;
     this.notes = data.notes;
     this.createdAt = data.createdAt;
+    this.updatedAt = data.updatedAt;
   }
 
   get durationFormatted(): string {
-    const hours = Math.floor(this.durationSeconds / 3600);
-    const minutes = Math.floor((this.durationSeconds % 3600) / 60);
-    const seconds = this.durationSeconds % 60;
-    if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    if (minutes > 0) return `${minutes}m`;
-    return `${seconds}s`;
+    return formatTrackedDuration(this.durationSeconds);
   }
 }

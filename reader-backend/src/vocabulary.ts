@@ -22,10 +22,10 @@ router.get("/", handle(async (req, res) => {
 router.post("/", handle(async (req, res) => { res.json(await addVocabulary(readSession(req)!, req.body)); }));
 router.post("/read", handle(async (req, res) => { res.json(await readVocabulary(readSession(req)!, req.body)); }));
 router.put("/explanations", handle(async (req, res) => { res.json(await writeExplanations(readSession(req)!, req.body)); }));
-router.patch("/:id", handle(async (req, res) => { res.json(await updateVocabulary(readSession(req)!, req.params.id, req.body)); }));
+router.patch("/:id", handle(async (req, res) => { res.json(await updateVocabulary(readSession(req)!, z.string().parse(req.params.id), req.body)); }));
 router.delete("/:id", handle(async (req, res) => {
   const { expectedVersion } = z.object({ expectedVersion: z.number().int().positive() }).strict().parse(req.body);
-  await deleteVocabulary(readSession(req)!, req.params.id, expectedVersion);
+  await deleteVocabulary(readSession(req)!, z.string().parse(req.params.id), expectedVersion);
   res.status(204).send();
 }));
 export default router;

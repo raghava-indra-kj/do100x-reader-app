@@ -1,3 +1,4 @@
+import { registerTool } from '../register-tool';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
@@ -5,7 +6,7 @@ import { withoutExpiredCaptureComments, isExpiredCapture, createPageComment } fr
 
 export function registerCommentTools(server: McpServer, userId: string) {
   // 1. Get comments
-  server.tool(
+  registerTool(server,
     "reader_get_comments",
     "Get comments, personal annotations, and marked explanations for a page or date",
     {
@@ -61,7 +62,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
   );
 
   // 2. Create comment
-  server.tool(
+  registerTool(server,
     "reader_create_comment",
     "Add a new comment, explanation, or linked annotation to a page or selected text",
     {
@@ -119,7 +120,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
   );
 
   // 3. Update comment
-  server.tool(
+  registerTool(server,
     "reader_update_comment",
     "Edit an existing comment's body or linked page ID",
     {
@@ -163,7 +164,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
   );
 
   // 4. Delete comment
-  server.tool(
+  registerTool(server,
     "reader_delete_comment",
     "Delete a single comment by ID",
     {

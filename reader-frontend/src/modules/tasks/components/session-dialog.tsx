@@ -1,140 +1,176 @@
-import { observer } from 'mobx-react-lite';
-import { X, Clock, Minus, Plus } from 'lucide-react';
-import type { TasksStore } from '../store';
-
-interface Props {
-  store: TasksStore;
-}
-
-export const SessionDialog = observer(({ store }: Props) => {
+import { useId } from "react";
+import { observer } from "mobx-react-lite";
+import { Clock, Minus, Plus, X } from "lucide-react";
+import { Dialog } from "@modules/core/ui/primitives/dialog";
+import { Button } from "@modules/core/ui/primitives/button";
+import type { TasksStore } from "../store";
+const input =
+  "w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] p-2 text-sm";
+export const SessionDialog = observer(({ store }: { store: TasksStore }) => {
+  const title = useId();
   if (!store.isSessionDialogOpen) return null;
-
+  const close = () => {
+    if (!store.isSavingSession) store.setIsSessionDialogOpen(false);
+  };
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-sm bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-lg shadow-xl overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="p-4 border-b border-[var(--color-border-subtle)] flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-7 h-7 rounded-md bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] flex items-center justify-center">
-              <Clock className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <h2 className="text-xs font-bold text-[var(--color-text-strong)]">
-                {store.editingSessionId ? 'Edit time entry' : 'Add time entry'}
-              </h2>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => store.setIsSessionDialogOpen(false)}
-            className="p-1 rounded-md hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <div className="p-4 space-y-3.5 text-xs">
-          {/* Duration Counter & Presets */}
-          <div className="p-3 rounded-lg bg-[var(--color-surface-soft)]/50 border border-[var(--color-border-subtle)] space-y-2.5">
-            <label className="text-[11px] font-bold text-[var(--color-text-strong)] block">
-              Duration
+    <Dialog
+      open
+      labelledBy={title}
+      onOpenChange={(open) => {
+        if (!open) close();
+      }}
+      className="max-w-md max-h-[90dvh] overflow-y-auto p-5"
+    >
+      <header className="flex items-center justify-between gap-3 mb-4">
+        <h2 id={title} className="flex items-center gap-2 font-semibold">
+          <Clock size={18} />
+          {store.editingSessionId ? "Edit time entry" : "Add time entry"}
+        </h2>
+        <Button
+          variant="ghost"
+          size="sm"
+          iconOnly
+          tooltip="Close"
+          aria-label="Close time entry"
+          disabled={store.isSavingSession}
+          onClick={close}
+        >
+          <X size={17} />
+        </Button>
+      </header>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void store.saveSession();
+        }}
+      >
+        <fieldset disabled={store.isSavingSession} className="space-y-4">
+          <div>
+            <label className="block text-sm mb-2" htmlFor={`${title}-duration`}>
+              Duration in minutes
             </label>
-
-            {/* Stepper + Input */}
-            <div className="flex items-center justify-center space-x-3 py-1">
-              <button
+            <div className="flex items-center gap-2">
+              <Button
                 type="button"
+                variant="outlined"
+                iconOnly
+                tooltip="Subtract 5 minutes"
+                aria-label="Subtract 5 minutes"
                 onClick={() => store.adjustSessionDuration(-5)}
-                title="Subtract 5 minutes"
-                className="w-7 h-7 rounded-md bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface-canvas)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-strong)] transition cursor-pointer active:scale-95"
               >
-                <Minus className="w-3 h-3" />
-              </button>
-
-              <div className="flex items-baseline space-x-1.5">
-                <input
-                  type="number"
-                  min={1}
-                  value={store.sessionDurationMinutes}
-                  onChange={(e) => store.setSessionDurationMinutes(parseInt(e.target.value, 10) || 1)}
-                  className="w-16 text-center text-xl font-bold font-mono bg-[var(--color-surface-raised)] border border-[var(--color-border-default)] rounded-md py-0.5 text-[var(--color-text-strong)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)]"
-                  autoFocus
-                />
-                <span className="text-xs font-bold text-[var(--color-text-muted)]">min</span>
-              </div>
-
-              <button
+                <Minus size={16} />
+              </Button>
+              <input
+                id={`${title}-duration`}
+                required
+                type="number"
+                min={1}
+                max={527040}
+                step={1}
+                value={store.sessionDurationMinutes}
+                onChange={(event) =>
+                  store.setSessionDurationMinutes(Number(event.target.value))
+                }
+                className={`${input} flex-1 min-w-0 text-center tabular-nums`}
+              />
+              <Button
                 type="button"
+                variant="outlined"
+                iconOnly
+                tooltip="Add 5 minutes"
+                aria-label="Add 5 minutes"
                 onClick={() => store.adjustSessionDuration(5)}
-                title="Add 5 minutes"
-                className="w-7 h-7 rounded-md bg-[var(--color-surface-raised)] hover:bg-[var(--color-surface-canvas)] border border-[var(--color-border-default)] flex items-center justify-center text-[var(--color-text-strong)] transition cursor-pointer active:scale-95"
               >
-                <Plus className="w-3 h-3" />
-              </button>
+                <Plus size={16} />
+              </Button>
             </div>
-
-            {/* Quick Presets */}
-            <div className="flex items-center justify-between pt-1 border-t border-[var(--color-border-subtle)]">
-              {[15, 25, 30, 45, 60].map((mins) => (
-                <button
-                  key={mins}
+            <div className="flex gap-1 justify-between mt-2">
+              {[15, 25, 30, 45, 60].map((minutes) => (
+                <Button
+                  key={minutes}
                   type="button"
-                  onClick={() => store.setSessionDurationMinutes(mins)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-semibold transition cursor-pointer ${
-                    store.sessionDurationMinutes === mins
-                      ? 'bg-[var(--color-brand)] text-white shadow-2xs'
-                      : 'bg-[var(--color-surface-raised)] hover:bg-[var(--color-brand-soft)] text-[var(--color-text-body)] border border-[var(--color-border-subtle)]'
-                  }`}
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Set duration to ${minutes} minutes`}
+                  onClick={() => store.setSessionDurationMinutes(minutes)}
                 >
-                  {mins}m
-                </button>
+                  {minutes}m
+                </Button>
               ))}
             </div>
+            {store.editingSessionId && !store.sessionDurationAdjusted && (
+              <p className="text-xs text-[var(--color-text-muted)] mt-2">
+                The original seconds are preserved unless you adjust the
+                duration.
+              </p>
+            )}
           </div>
-
-          {/* Date */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[var(--color-text-strong)]">Date</label>
-            <input
-              type="date"
-              value={store.sessionDateInput}
-              onChange={(e) => store.setSessionDateInput(e.target.value)}
-              className="w-full p-2 text-xs rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)] cursor-pointer"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm">
+              Date
+              <input
+                aria-label="Time entry date"
+                required
+                type="date"
+                min="1900-01-01"
+                max="9998-12-31"
+                value={store.sessionDateInput}
+                onInput={(event) =>
+                  store.setSessionDateInput(event.currentTarget.value)
+                }
+                className={`${input} mt-1`}
+              />
+            </label>
+            <label className="text-sm">
+              Started at
+              <input
+                aria-label="Time entry start time"
+                required
+                type="time"
+                value={store.sessionTimeInput}
+                onInput={(event) =>
+                  store.setSessionTimeInput(event.currentTarget.value)
+                }
+                className={`${input} mt-1`}
+              />
+            </label>
           </div>
-
-          {/* Notes */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold text-[var(--color-text-strong)]">Notes (optional)</label>
+          <p className="text-xs text-[var(--color-text-muted)]">
+            Times use {Intl.DateTimeFormat().resolvedOptions().timeZone}.
+          </p>
+          <label className="block text-sm">
+            Notes (optional)
             <textarea
-              rows={2}
+              aria-label="Time entry notes"
+              rows={3}
+              maxLength={15000}
               value={store.sessionNotesInput}
-              onChange={(e) => store.setSessionNotesInput(e.target.value)}
-              placeholder="What did you work on during this time?"
-              className="w-full p-2 text-xs rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-muted)]"
+              onChange={(event) =>
+                store.setSessionNotesInput(event.target.value)
+              }
+              placeholder="What did you work on?"
+              className={`${input} mt-1 resize-y`}
             />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-3 border-t border-[var(--color-border-subtle)] flex items-center justify-end space-x-2 bg-[var(--color-surface-soft)]/20">
-          <button
+          </label>
+        </fieldset>
+        <div className="flex justify-end gap-2 mt-5">
+          <Button
+            variant="outlined"
             type="button"
-            onClick={() => store.setIsSessionDialogOpen(false)}
-            className="px-3 py-1.5 text-xs font-medium rounded-md hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
+            disabled={store.isSavingSession}
+            onClick={close}
           >
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => store.saveSession()}
-            className="px-3.5 py-1.5 bg-[var(--color-brand)] text-white text-xs font-semibold rounded-md shadow-xs hover:bg-[var(--color-brand-hover)] transition cursor-pointer"
+          </Button>
+          <Button
+            type="submit"
+            loading={store.isSavingSession}
+            disabled={store.isSavingSession}
           >
-            {store.editingSessionId ? 'Save' : 'Add time entry'}
-          </button>
+            {store.editingSessionId ? "Save time entry" : "Add time entry"}
+          </Button>
         </div>
-      </div>
-    </div>
+      </form>
+    </Dialog>
   );
 });

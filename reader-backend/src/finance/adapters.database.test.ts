@@ -1,3 +1,5 @@
+import { readJson } from '../test-support/read-json';
+import { AccountSchema, CatalogSchema, OccurrenceSchema, TransactionSchema } from '../../../reader-frontend/src/domain/finance/models/finance';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import express from 'express';
@@ -42,7 +44,7 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== '1')('Finance HTTP and the existing
         expect((await tool('finance_list_books'))[0].id).toBe(book.id);
         expect((await request(`/books/${book.id}/catalog`)).status).toBe(401);
         expect((await request(`/books/${book.id}/catalog?userId=${owner.id}`, 'GET', undefined, otherCookie)).status).toBe(404);
-        const catalog = await (await request(`/books/${book.id}/catalog`, 'GET', undefined, ownerCookie)).json();
+        const catalog = await readJson(request(`/books/${book.id}/catalog`, 'GET', undefined, ownerCookie), CatalogSchema);
         expect(catalog.book.name).toBe('MCP personal book');
         expect(catalog.categories.length).toBeGreaterThan(0);
         const accountInput = { requestKey: randomUUID(), name: 'Cash pocket', openingDate: '2026-10-01', openingAmount: '25.00' };
@@ -50,15 +52,15 @@ it.skipIf(process.env.RUN_DATABASE_TESTS !== '1')('Finance HTTP and the existing
         expect((await request(`/books/${book.id}/accounts`, 'POST', { ...accountInput, userId: stranger.id }, ownerCookie)).status).toBe(422);
         const accountResponse = await request(`/books/${book.id}/accounts`, 'POST', accountInput, ownerCookie);
         expect(accountResponse.status).toBe(201);
-        const account = await accountResponse.json();
+        const account = await readJson(accountResponse, AccountSchema);
         expect((await tool('finance_get_catalog', { bookId: book.id })).accounts[0].id).toBe(account.id);
         const expense = await tool('finance_create_transaction', { bookId: book.id, transaction: { requestKey: randomUUID(), kind: 'EXPENSE', date: '2026-10-02', description: 'Tea', movements: [{ accountId: account.id, amount: '-5.00' }] } });
-        expect((await (await request(`/books/${book.id}/transactions/${expense.id}`, 'GET', undefined, ownerCookie)).json()).movements[0].amountMinor).toBe('-500');
+        expect((await readJson(request(`/books/${book.id}/transactions/${expense.id}`, 'GET', undefined, ownerCookie), TransactionSchema)).movements[0].amountMinor).toBe('-500');
         expect((await tool('finance_get_balances', { bookId: book.id }))[0].postedMinor).toBe('2000');
         const plan = await tool('finance_create_schedule', { bookId: book.id, schedule: { requestKey: randomUUID(), title: 'Upcoming bill', kind: 'EXPENSE', accountId: account.id, frequency: 'MONTHLY', startDate: '2026-10-31', low: '1.00', expected: '2.00', high: '3.00' } });
         const occurrenceRead = await request(`/books/${book.id}/occurrences?from=2026-10-01&to=2026-12-31`, 'GET', undefined, ownerCookie);
         expect(occurrenceRead.status).toBe(200);
-        expect((await occurrenceRead.json())[0].scheduleId).toBe(plan.id);
+        expect((await readJson(occurrenceRead, OccurrenceSchema.array()))[0].scheduleId).toBe(plan.id);
         const csvBatch = await tool('finance_stage_csv_import', { bookId: book.id, statement: { requestKey: randomUUID(), accountId: account.id, sourceName: 'MCP CSV', csv: 'Date,Description,Amount\n2026-10-03,CSV Tea,-1.00', mapping: { date: 'Date', description: 'Description', amount: 'Amount' } } });
         expect((await request(`/books/${book.id}/imports/${csvBatch.id}`, 'GET', undefined, ownerCookie)).status).toBe(200);
         expect((await request(`/books/${book.id}/imports/${csvBatch.id}/commit`, 'POST', { expectedVersion: 1, acceptUnverified: true }, ownerCookie)).status).toBe(200);

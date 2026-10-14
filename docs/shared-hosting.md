@@ -8,10 +8,11 @@ outgoing npm/Prisma downloads and access to the configured MySQL database.
 
 ## Database initialization
 
-Fresh installations use one migration, `20261004000000_initial_schema`, which
-creates the complete current schema. `start.sh` applies it once with Prisma's
-migration tracking; subsequent starts do not recreate tables. Keep future schema
-changes as new incremental migrations once real data exists.
+Fresh installations start with `20261004000000_initial_schema`, then apply the
+later incremental migrations in order. `start.sh` applies each migration once
+with Prisma's migration tracking; subsequent starts do not recreate tables.
+Review every pending migration, including Reader captures, Habits and Calendar,
+before upgrading an installation that already contains data.
 
 The initial schema retains case-sensitive Google identity subjects and vocabulary
 duplicate keys. Do not substitute `db push`, which cannot represent these custom
@@ -137,9 +138,19 @@ migration; review the migration/backups before reverting a release.
 
 ## Verification status
 
-These scripts have not been executed as part of implementation. No ZIP, production
-connection, dependency install, build, migration or hosting startup has been run.
-Verify the artifact/startup on a disposable database before first production use.
+The Calendar work has exercised packaging, a fresh locked runtime installation,
+Prisma generation, migrations and the compiled server on Windows with a randomly
+named disposable local MySQL database. The test replaces the extracted production
+profile before executing startup code and verifies that representative existing
+records survive the upgrade. It also checks authentication, frontend assets,
+task scheduling, the iCalendar parsing worker and file export.
+
+This is not a production deployment or verification on the destination Linux
+host. Production migrations remain a separately authorized release step.
+From the source checkout, an extracted ZIP under
+`releases/calendar-release-check-<UUID>` can be verified with
+`node scripts/habits-test-db.cjs --calendar --release-dir <absolute-directory>`.
+See `docs/calendar.md` in the source checkout for the current release gates.
 
 References: [Node environment parsing](https://nodejs.org/download/release/latest-jod/docs/api/util.html#utilparseenvcontent),
 [locked npm installations](https://docs.npmjs.com/cli/commands/npm-ci/).

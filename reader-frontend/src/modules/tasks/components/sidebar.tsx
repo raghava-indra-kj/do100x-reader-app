@@ -1,4 +1,4 @@
-import { observer } from 'mobx-react-lite';
+import { observer } from "mobx-react-lite";
 import {
   Inbox,
   Calendar,
@@ -10,239 +10,188 @@ import {
   MoreVertical,
   Edit2,
   Trash2,
-} from 'lucide-react';
-import { Loader } from '@modules/core/ui/primitives/loader/loader';
-import type { TasksStore } from '../store';
-import { useState } from 'react';
+} from "lucide-react";
+import { Menu } from "@base-ui/react/menu";
+import { Loader } from "@modules/core/ui/primitives/loader/loader";
+import { Button } from "@modules/core/ui/primitives/button";
+import { Link } from "react-router-dom";
+import type { TasksStore } from "../store";
 
 interface Props {
   store: TasksStore;
+  onNavigate?: () => void;
 }
-
-export const TasksSidebar = observer(({ store }: Props) => {
-  const [menuOpenListId, setMenuOpenListId] = useState<string | null>(null);
-
-  const smartFilters = [
-    {
-      id: 'inbox',
-      label: 'Inbox',
-      icon: Inbox,
-      count: store.inboxCounts.uncompletedCount,
-      color: '#3b82f6',
-    },
-    {
-      id: 'today',
-      label: 'Today',
-      icon: Calendar,
-      count: store.tasks.filter((t) => {
-        if (t.isDone || !t.dueDate) return false;
-        const d = new Date(t.dueDate).toISOString().slice(0, 10);
-        return d === new Date().toISOString().slice(0, 10);
-      }).length,
-      color: '#10b981',
-    },
-    {
-      id: 'next7',
-      label: 'Next 7 days',
-      icon: CalendarDays,
-      count: null,
-      color: '#8b5cf6',
-    },
-    {
-      id: 'matrix',
-      label: 'Priority matrix',
-      icon: Grid,
-      count: null,
-      color: '#f59e0b',
-    },
-    {
-      id: 'analytics',
-      label: 'Time reports',
-      icon: BarChart2,
-      count: null,
-      color: '#ec4899',
-    },
-    {
-      id: 'completed',
-      label: 'Completed',
-      icon: CheckCircle2,
-      count: null,
-      color: '#6b7280',
-    },
-  ];
-
+const views = [
+  { id: "inbox", label: "Inbox", icon: Inbox },
+  { id: "today", label: "Today", icon: Calendar },
+  { id: "next7", label: "Next 7 days", icon: CalendarDays },
+  { id: "matrix", label: "Priority matrix", icon: Grid },
+  { id: "analytics", label: "Time reports", icon: BarChart2 },
+  { id: "completed", label: "Completed", icon: CheckCircle2 },
+];
+const itemClass =
+  "flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-sm outline-none cursor-pointer data-[highlighted]:bg-[var(--color-surface-soft)]";
+export const TasksSidebar = observer(({ store, onNavigate }: Props) => {
+  const createList = () => {
+    onNavigate?.();
+    store.openCreateListDialog();
+  };
+  const rowClass = (active: boolean) =>
+    `flex min-w-0 flex-1 items-center gap-2.5 px-3 py-2 text-left text-sm rounded-md ${active ? "bg-[var(--color-brand-soft)] text-[var(--color-brand-on-soft)] font-semibold" : "text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)]"}`;
   return (
-    <aside className="w-56 flex-shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col h-full select-none pt-2">
-      <div className="flex-1 overflow-y-auto p-2 space-y-4">
-        {/* Smart Views Section */}
+    <aside
+      aria-label="Task navigation"
+      className="w-56 shrink-0 border-r border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] flex flex-col h-full select-none"
+    >
+      <nav
+        className="flex-1 overflow-y-auto p-2 space-y-4"
+        aria-label="Task views and lists"
+      >
         <div className="space-y-0.5">
-          <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)]">
+          <h2 className="px-3 py-2 text-xs font-semibold text-[var(--color-text-muted)]">
             Views
-          </div>
-          {smartFilters.map((f) => {
-            const Icon = f.icon;
-            const isActive = store.currentView === f.id;
-            return (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => store.setCurrentView(f.id)}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  isActive
-                    ? 'bg-[var(--color-brand)] text-white shadow-xs font-semibold'
-                    : 'text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)]'
-                }`}
-              >
-                <div className="flex items-center space-x-2 min-w-0">
-                  <Icon
-                    className="w-3.5 h-3.5 shrink-0 transition-colors"
-                    style={{ color: isActive ? '#ffffff' : f.color }}
-                  />
-                  <span className="truncate">{f.label}</span>
-                </div>
-                {f.count !== null && f.count > 0 && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded font-bold transition-colors ${
-                      isActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-[var(--color-surface-soft)] text-[var(--color-text-muted)]'
-                    }`}
-                  >
-                    {f.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Custom Lists / Projects Section */}
-        <div className="space-y-0.5 pt-2 border-t border-[var(--color-border-subtle)]">
-          <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-subtle)]">
-              Lists
-            </span>
+          </h2>
+          {views.map(({ id, label, icon: Icon }) => (
             <button
+              key={id}
               type="button"
-              onClick={() => store.openCreateListDialog()}
-              title="Create new list"
-              className="p-0.5 rounded hover:bg-[var(--color-surface-soft)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition cursor-pointer"
+              onClick={() => {
+                store.setCurrentView(id);
+                onNavigate?.();
+              }}
+              aria-current={store.currentView === id ? "page" : undefined}
+              className={`${rowClass(store.currentView === id)} w-full`}
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Icon size={16} />
+              <span className="flex-1">{label}</span>
+              {id === "inbox" && store.inboxCounts.uncompletedCount > 0 && (
+                <span className="text-xs tabular-nums text-[var(--color-text-muted)]">
+                  {store.inboxCounts.uncompletedCount}
+                </span>
+              )}
             </button>
+          ))}
+          <Link to="/calendar" onClick={onNavigate} className={rowClass(false)}>
+            <CalendarDays size={16} />
+            Calendar
+          </Link>
+        </div>
+        <div className="border-t border-[var(--color-border-subtle)] pt-2 space-y-0.5">
+          <div className="flex items-center justify-between pl-3 pr-1">
+            <h2 className="text-xs font-semibold text-[var(--color-text-muted)]">
+              Lists
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              iconOnly
+              aria-label="Create new list"
+              tooltip="Create new list"
+              onClick={createList}
+            >
+              <Plus size={16} />
+            </Button>
           </div>
-
           {store.isLoadingLists ? (
-            <div className="py-4 flex items-center justify-center">
-              <Loader size={16} className="text-[var(--color-brand)]" />
+            <div
+              className="py-4 flex justify-center"
+              role="status"
+              aria-label="Loading lists"
+            >
+              <Loader size={16} />
             </div>
           ) : store.lists.length === 0 ? (
-            <div className="px-2 py-3 text-xs text-[var(--color-text-muted)] text-center border border-dashed border-[var(--color-border-subtle)] rounded-md bg-[var(--color-surface-soft)]/20">
-              <p className="text-[11px]">No lists yet.</p>
+            <div className="px-3 py-3 text-sm text-[var(--color-text-muted)]">
+              <p>No lists yet.</p>
               <button
                 type="button"
-                onClick={() => store.openCreateListDialog()}
-                className="mt-1 inline-flex items-center space-x-1 text-[11px] text-[var(--color-brand)] hover:underline font-semibold cursor-pointer"
+                onClick={createList}
+                className="mt-2 text-[var(--color-brand)]"
               >
-                <Plus className="w-3 h-3" />
-                <span>Add list</span>
+                Add a list
               </button>
             </div>
           ) : (
-            <div className="space-y-0.5">
-              {store.lists.map((list) => {
-                const isActive = store.currentView === `list:${list.id}`;
-                const isMenuOpen = menuOpenListId === list.id;
-
-                return (
-                  <div key={list.id} className="relative group">
-                    <button
-                      type="button"
-                      onClick={() => store.setCurrentView(`list:${list.id}`)}
-                      className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-xs font-medium transition-all ${
-                        isActive
-                          ? 'bg-[var(--color-brand)] text-white shadow-xs font-semibold'
-                          : 'text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)]'
-                      }`}
+            store.lists.map((list) => (
+              <div key={list.id} className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    store.setCurrentView(`list:${list.id}`);
+                    onNavigate?.();
+                  }}
+                  aria-current={
+                    store.currentView === `list:${list.id}` ? "page" : undefined
+                  }
+                  className={rowClass(store.currentView === `list:${list.id}`)}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: list.color || "#3b82f6" }}
+                  />
+                  <span className="truncate flex-1">{list.name}</span>
+                  {list.uncompletedCount > 0 && (
+                    <span className="text-xs tabular-nums">
+                      {list.uncompletedCount}
+                    </span>
+                  )}
+                </button>
+                <Menu.Root>
+                  <Menu.Trigger
+                    render={
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        iconOnly
+                        aria-label={`Options for ${list.name}`}
+                        tooltip={`Options for ${list.name}`}
+                      />
+                    }
+                  >
+                    <MoreVertical size={15} />
+                  </Menu.Trigger>
+                  <Menu.Portal>
+                    <Menu.Positioner
+                      sideOffset={4}
+                      align="end"
+                      className="z-50"
                     >
-                      <div className="flex items-center space-x-2 min-w-0">
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0 shadow-xs"
-                          style={{ backgroundColor: list.color || '#3b82f6' }}
-                        />
-                        <span className="truncate">{list.name}</span>
-                      </div>
-
-                      <div className="flex items-center space-x-1 shrink-0">
-                        {list.uncompletedCount > 0 && (
-                          <span
-                            className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
-                              isActive
-                                ? 'bg-white/20 text-white'
-                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-muted)]'
-                            }`}
-                          >
-                            {list.uncompletedCount}
-                          </span>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setMenuOpenListId(isMenuOpen ? null : list.id);
-                          }}
-                          className={`p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-black/15 transition cursor-pointer ${
-                            isActive ? 'text-white' : 'text-[var(--color-text-muted)]'
-                          }`}
-                        >
-                          <MoreVertical className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </button>
-
-                    {/* Context Dropdown */}
-                    {isMenuOpen && (
-                      <div
-                        className="absolute right-1 top-full mt-1 z-30 w-36 bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] rounded-lg shadow-xl border border-[var(--color-border-default)] py-1 text-xs animate-in fade-in duration-100"
-                        onMouseLeave={() => setMenuOpenListId(null)}
-                      >
-                        <button
-                          type="button"
+                      <Menu.Popup className="w-40 p-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] shadow-lg outline-none">
+                        <Menu.Item
+                          className={itemClass}
                           onClick={() => {
-                            setMenuOpenListId(null);
+                            onNavigate?.();
                             store.openEditListDialog(list);
                           }}
-                          className="w-full px-3 py-1.5 text-left flex items-center space-x-2 hover:bg-[var(--color-surface-soft)] transition cursor-pointer"
                         >
-                          <Edit2 className="w-3.5 h-3.5 text-[var(--color-text-muted)]" />
-                          <span>Edit list</span>
-                        </button>
-                        <button
-                          type="button"
+                          <Edit2 size={14} />
+                          Edit list
+                        </Menu.Item>
+                        <Menu.Item
+                          className={`${itemClass} text-[var(--color-error)]`}
                           onClick={() => {
-                            setMenuOpenListId(null);
+                            onNavigate?.();
                             store.requestConfirmation({
-                              title: 'Delete list',
+                              title: "Delete list",
                               message: `Delete “${list.name}”? Its tasks will move to Inbox.`,
-                              confirmLabel: 'Delete list',
-                              confirmVariant: 'danger',
+                              confirmLabel: "Delete list",
+                              confirmVariant: "danger",
                               onConfirm: () => store.deleteList(list.id),
                             });
                           }}
-                          className="w-full px-3 py-1.5 text-left flex items-center space-x-2 hover:bg-[var(--color-error-soft)] text-[var(--color-error)] transition cursor-pointer"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete list</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                          <Trash2 size={14} />
+                          Delete list
+                        </Menu.Item>
+                      </Menu.Popup>
+                    </Menu.Positioner>
+                  </Menu.Portal>
+                </Menu.Root>
+              </div>
+            ))
           )}
         </div>
-      </div>
+      </nav>
     </aside>
   );
 });

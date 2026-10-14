@@ -39,6 +39,7 @@ export interface ITaskRepo {
   }): AsyncResult<TaskData, AppError>;
 
   updateTask(id: string, params: {
+    expectedVersion?: number;
     title?: string;
     description?: string | null;
     status?: string;
@@ -51,21 +52,21 @@ export interface ITaskRepo {
   }): AsyncResult<TaskData, AppError>;
 
   deleteTask(id: string): AsyncResult<void, AppError>;
-  reorderTasks(orderedIds: string[]): AsyncResult<void, AppError>;
+  reorderTasks(orderedIds: string[], expectedVersions?: Record<string, number>): AsyncResult<void, AppError>;
 
   // Live Timer
   getActiveTimer(): AsyncResult<{ active: boolean; timer: ActiveTimerData | null }, AppError>;
-  startTimer(taskId: string, notes?: string): AsyncResult<ActiveTimerData, AppError>;
-  pauseTimer(): AsyncResult<ActiveTimerData, AppError>;
-  resumeTimer(): AsyncResult<ActiveTimerData, AppError>;
-  stopTimer(notes?: string, durationSeconds?: number): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError>;
-  discardTimer(): AsyncResult<void, AppError>;
+  startTimer(taskId: string, notes?: string, expectedTimerId?: string | null): AsyncResult<ActiveTimerData, AppError>;
+  pauseTimer(expectedTimerId?: string | null): AsyncResult<ActiveTimerData, AppError>;
+  resumeTimer(expectedTimerId?: string | null): AsyncResult<ActiveTimerData, AppError>;
+  stopTimer(notes?: string, durationSeconds?: number, expectedTimerId?: string | null): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError>;
+  discardTimer(expectedTimerId?: string | null): AsyncResult<void, AppError>;
 
   // Manual Sessions
   getTaskSessions(taskId: string): AsyncResult<TimeSessionData[], AppError>;
-  addSession(taskId: string, params: { startTime: string; endTime?: string; durationSeconds: number; notes?: string }): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError>;
-  updateSession(sessionId: string, params: { startTime?: string; endTime?: string; durationSeconds?: number; notes?: string }): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError>;
-  deleteSession(sessionId: string): AsyncResult<{ taskTotalTimeSeconds: number }, AppError>;
+  addSession(taskId: string, params: { startTime: string; endTime?: string; durationSeconds: number; notes?: string; requestKey?: string }): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError>;
+  updateSession(sessionId: string, params: { startTime?: string; endTime?: string; durationSeconds?: number; notes?: string; expectedUpdatedAt?: string }): AsyncResult<{ session: TimeSessionData; taskTotalTimeSeconds: number }, AppError>;
+  deleteSession(sessionId: string, expectedUpdatedAt?: string): AsyncResult<{ taskTotalTimeSeconds: number }, AppError>;
   deleteAllTaskSessions(taskId: string): AsyncResult<void, AppError>;
 
   // Analytics

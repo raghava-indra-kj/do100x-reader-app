@@ -1,3 +1,5 @@
+import { z } from 'zod';
+import { readJson } from './test-support/read-json';
 import express from 'express';
 import type { Server } from 'node:http';
 import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -32,7 +34,7 @@ describe('page editing HTTP contract', () => {
     });
     afterAll(async () => { await new Promise<void>((resolve) => server.close(() => resolve())); });
     beforeEach(() => { state.row = { id: 'page', userId: 'owner', content: '## First\n\nold\n\n### Child\n\nchild\n\n## Next\n\nnext', contentVersion: 0, deletedAt: null, title: 'Keep title', category: 'Keep category', meaningSystemPrompt: 'Keep prompt', isPublic: true, parentId: null }; });
-    const snapshot = async () => (await fetch(`${base}/pages/page/edit-targets`, { headers: { cookie } })).json();
+    const snapshot = () => readJson(fetch(`${base}/pages/page/edit-targets`, { headers: { cookie } }), z.object({ contentVersion: z.number(), sections: z.array(z.object({ target: z.unknown(), expectedBodyHash: z.string() })) }));
     const save = async (body: any, headers: Record<string, string> = { cookie }) => fetch(`${base}/pages/page/section-body`, { method: 'PATCH', headers: { 'content-type': 'application/json', origin: 'http://localhost:3000', ...headers }, body: JSON.stringify(body) });
 
     it('requires a real signed session, not an asserted owner header', async () => {
@@ -50,7 +52,7 @@ describe('page editing HTTP contract', () => {
     it('keeps public visitors read-only even when logged in as a different user', async () => {
         const session = await fetch(`${base}/fixture-session/visitor`, { method: 'POST' });
         const otherCookie = session.headers.get('set-cookie')!.split(';')[0];
-        const page = await (await fetch(`${base}/pages/page`, { headers: { cookie: otherCookie } })).json();
+        const page = await readJson(fetch(`${base}/pages/page`, { headers: { cookie: otherCookie } }), z.object({ isOwner: z.boolean() }));
         expect(page.isOwner).toBe(false);
         expect((await fetch(`${base}/pages/page/edit-targets`, { headers: { cookie: otherCookie } })).status).toBe(404);
     });

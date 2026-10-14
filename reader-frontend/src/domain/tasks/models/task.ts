@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { formatTrackedDuration } from './duration';
 
 export const TaskListSummarySchema = z.object({
   id: z.string(),
@@ -11,6 +12,7 @@ export type TaskListSummary = z.infer<typeof TaskListSummarySchema>;
 
 export const TaskSchema = z.object({
   id: z.string(),
+  version: z.number().int().positive().optional(),
   listId: z.string().nullable().optional(),
   list: TaskListSummarySchema.nullable().optional(),
   parentId: z.string().nullable().optional(),
@@ -34,6 +36,7 @@ export type TaskData = z.infer<typeof TaskSchema>;
 
 export class Task {
   readonly id: string;
+  version?: number;
   listId?: string | null;
   list?: TaskListSummary | null;
   parentId?: string | null;
@@ -54,6 +57,7 @@ export class Task {
 
   constructor(data: TaskData) {
     this.id = data.id;
+    this.version = data.version;
     this.listId = data.listId;
     this.list = data.list;
     this.parentId = data.parentId;
@@ -83,11 +87,6 @@ export class Task {
 
   get totalTimeFormatted(): string {
     if (!this.totalTimeSeconds || this.totalTimeSeconds <= 0) return '';
-    const hours = Math.floor(this.totalTimeSeconds / 3600);
-    const minutes = Math.floor((this.totalTimeSeconds % 3600) / 60);
-    const seconds = this.totalTimeSeconds % 60;
-    if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    if (minutes > 0) return `${minutes}m`;
-    return `${seconds}s`;
+    return formatTrackedDuration(this.totalTimeSeconds);
   }
 }
