@@ -55,14 +55,13 @@
 .reader-selection-menu > button { display:flex; gap:8px; align-items:center; width:100%; text-align:left; padding:8px 10px; border-radius:6px; cursor:pointer; }
 .reader-selection-menu > button:hover { background:var(--color-surface-soft); }
 .reader-selection-menu .reader-selection-primary { color:var(--color-brand); font-weight:600; background:var(--color-surface-soft); margin-bottom:3px; }
-.reader-selection-popover details { border-top:1px solid var(--color-border-subtle); margin-top:6px; padding-top:6px; }
-.reader-selection-popover summary { cursor:pointer; padding:4px; color:var(--color-text-muted); font-size:11px; }
-.reader-selection-popover summary svg { display:inline; margin-right:5px; vertical-align:middle; }
+.reader-external-options { border-top:1px solid var(--color-border-subtle); margin-top:6px; padding-top:6px; }
+.reader-external-label { display:flex; align-items:center; gap:5px; padding:4px; color:var(--color-text-muted); font-size:11px; }
 .reader-external-actions { display:flex; flex-wrap:wrap; gap:6px; padding:4px; }
 .reader-external-actions button { padding:5px 8px; border-radius:5px; border:1px solid var(--color-border-default); cursor:pointer; }
 .reader-external-actions small { flex-basis:100%; color:var(--color-text-muted); }
 .reader-selection-popover button:disabled { opacity:.55; cursor:default; }
-.reader-selection-popover button:focus-visible, .reader-selection-popover summary:focus-visible { outline:2px solid var(--color-brand); outline-offset:2px; }
+.reader-selection-popover button:focus-visible { outline:2px solid var(--color-brand); outline-offset:2px; }
 .reader-composer { padding:12px; }
 .reader-composer-header, .reader-composer-header strong { display:flex; align-items:center; gap:7px; }
 .reader-composer-header { justify-content:space-between; margin-bottom:8px; }

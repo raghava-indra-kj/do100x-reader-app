@@ -163,11 +163,11 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
             {isSingleWord(selectedText) && <button onClick={() => { store.dictionaryStore.open(selectedText); setView('hidden'); }}><BookOpen size={15} />Dictionary</button>}
             <button disabled={savingWord} onClick={saveWord}><NotebookPen size={15} />{savingWord ? 'Saving…' : 'Save word'}</button>
             <button onClick={copy}><Copy size={15} />Copy selection</button>
-            <details><summary>Explain elsewhere</summary><div className="reader-external-actions">
+            <div className="reader-external-options" role="group" aria-label="Explain elsewhere"><div className="reader-external-label">Explain elsewhere</div><div className="reader-external-actions">
                 <button disabled={!canGoogle} onClick={() => window.open(googleUrl, '_blank', 'noopener,noreferrer')}>Google AI</button>
                 <button disabled={!canDuck} onClick={() => window.open(duckUrl, '_blank', 'noopener,noreferrer')}>DuckAI</button>
                 {(!canGoogle || !canDuck) && <small>Selection too long for some providers. Use Copy selection instead.</small>}
-            </div></details>
+            </div></div>
         </> : <>
             <div className="reader-composer-header"><strong><MessageSquare size={16} />Ask or comment</strong><ReaderActionButton tooltip="Back to selection tools" className="reader-icon-button" onClick={() => setView('menu')}><ArrowLeft size={16} /></ReaderActionButton></div>
             <blockquote className="reader-composer-context">{selectedText}</blockquote>
@@ -183,11 +183,11 @@ export function SelectionPopover({ containerRef, page, section }: SelectionPopov
                 <button className="reader-composer-ask" disabled={!body || saving} onClick={ask}><Sparkles size={15} />Ask AI</button>
             </div>
             <div className="reader-composer-hint">Ctrl / ⌘ + Enter to ask · add Shift to save</div>
-            <details><summary><Globe size={13} />Ask elsewhere</summary><div className="reader-external-actions">
+            <div className="reader-external-options" role="group" aria-label="Ask elsewhere"><div className="reader-external-label"><Globe size={13} />Ask elsewhere</div><div className="reader-external-actions">
                 <button disabled={!body || !canGoogle} onClick={() => window.open(googleUrl, '_blank', 'noopener,noreferrer')}>Google AI ↗</button>
                 <button disabled={!body || !canDuck} onClick={() => window.open(duckUrl, '_blank', 'noopener,noreferrer')}>DuckAI ↗</button>
                 {(!canGoogle || !canDuck) && <small>This passage is too long for some external links. Copy it to use elsewhere.</small>}
-            </div></details>
+            </div></div>
         </>}
     </div>, document.body);
 }
