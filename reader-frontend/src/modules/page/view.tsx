@@ -25,6 +25,8 @@ import type { Motivation } from './store';
 import { useClipboardPaste } from './hooks/use-clipboard-paste';
 import { useAuthStore } from '@modules/auth/provider/store';
 import { canShowMotivations, useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
+import { X } from 'lucide-react';
+import './components/reader-experience.css';
 
 const SCROLL_STEP = 80;
 
@@ -95,18 +97,27 @@ const PageContent = observer(function PageContent() {
     );
     const contentPanelRef = usePanelRef();
     const scrollRef = useRef<HTMLElement>(null);
-    const isOpen = uiSettings.sidebarPanelOpen;
+    const isOpen = uiSettings.sidebarPanelOpen && !uiSettings.focusMode;
+    const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 700px)').matches);
+    useEffect(() => {
+        const media = window.matchMedia('(max-width: 700px)');
+        const update = () => setCompact(media.matches);
+        media.addEventListener('change', update);
+        return () => media.removeEventListener('change', update);
+    }, []);
     const currentSectionId = store.currentSection?.id;
 
     useEffect(() => {
         const panel = contentPanelRef.current;
         if (!panel) return;
-        if (isOpen) {
-            panel.expand();
-        } else {
-            panel.collapse();
-        }
-    }, [isOpen]);
+        // Keep the panel registered across mobile/desktop transitions. Wait for
+        // the resizable group's layout registration before issuing commands.
+        const frame = requestAnimationFrame(() => {
+            if (isOpen && !compact) panel.expand();
+            else panel.collapse();
+        });
+        return () => cancelAnimationFrame(frame);
+    }, [isOpen, compact]);
 
     useEffect(() => {
         scrollRef.current?.scrollTo({ top: 0 });
@@ -254,24 +265,28 @@ const PageContent = observer(function PageContent() {
             </div>
             <div className="flex-1 overflow-hidden">
                 <div className="flex h-full relative">
-                    <NavRail />
+                    {!uiSettings.focusMode && <NavRail />}
+                    {compact && isOpen && <aside className="reader-mobile-sidebar" aria-label="Reader sidebar">
+                        <div className="reader-mobile-sidebar-close"><button type="button" className="reader-icon-button" aria-label="Close reader sidebar" onClick={() => uiSettings.setSidebarPanelOpen(false)}><X size={16} /></button></div>
+                        <div className="reader-mobile-sidebar-body"><SidebarPanel /></div>
+                    </aside>}
                     <Group orientation="horizontal" {...useDefaultLayout({ id: "page-sidebar" })}>
                         <Panel
                             panelRef={contentPanelRef}
-                            defaultSize={260}
-                            minSize={220}
-                            maxSize={360}
+                            defaultSize={320}
+                            minSize={240}
+                            maxSize={460}
                             collapsible
                             onResize={(size) => {
-                                uiSettings.setSidebarPanelOpen(size.asPercentage > 0);
+                                if (!compact && !uiSettings.focusMode) uiSettings.setSidebarPanelOpen(size.asPercentage > 0);
                             }}
                             className="bg-[var(--color-surface-raised)]"
                         >
-                            <SidebarPanel />
+                            {isOpen && !compact && <SidebarPanel />}
                         </Panel>
-                        <Separator className="w-px bg-[var(--color-border-default)] hover:bg-[var(--color-brand)] active:bg-[var(--color-brand)] transition-colors cursor-col-resize relative">
+                        {!compact && <Separator className="w-px bg-[var(--color-border-default)] hover:bg-[var(--color-brand)] active:bg-[var(--color-brand)] transition-colors cursor-col-resize relative">
                             <div className="absolute inset-y-0 -left-1 -right-1" />
-                        </Separator>
+                        </Separator>}
                         <Panel>
                             <main ref={scrollRef} className="h-full overflow-y-auto">
                                 <PageMain />
@@ -279,29 +294,29 @@ const PageContent = observer(function PageContent() {
                         </Panel>
                     </Group>
                     <Observer>
-                        {() => store.meaningStore.isExpanded ? (
+                        {() => !uiSettings.focusMode && store.meaningStore.isExpanded ? (
                             <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
                                 <PageMeaningPanel />
                             </div>
                         ) : null}
                     </Observer>
                     <Observer>
-                        {() => store.doubtStore.isExpanded ? (
+                        {() => !uiSettings.focusMode && store.doubtStore.isExpanded ? (
                             <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
                                 <PageDoubtPanel />
                             </div>
                         ) : null}
                     </Observer>
                     <Observer>
-                        {() => store.explanationStore.isExpanded ? (
+                        {() => !uiSettings.focusMode && store.explanationStore.isExpanded ? (
                             <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
                                 <PageExplanationPanel />
                             </div>
                         ) : null}
                     </Observer>
                     <Observer>
-                        {() => store.dictionaryStore.isOpen ? (
-                            <div className="w-80 shrink-0 border-l border-[var(--color-border-default)] bg-[var(--color-surface-raised)] h-full overflow-hidden">
+                        {() => !uiSettings.focusMode && store.dictionaryStore.isOpen ? (
+                            <div className={`${compact ? 'absolute inset-y-0 left-12 right-0 z-40' : 'w-80 shrink-0'} border-l border-[var(--color-border-default)] bg-[var(--color-surface-raised)] h-full overflow-hidden`}>
                                 <DictionaryPanel />
                             </div>
                         ) : null}

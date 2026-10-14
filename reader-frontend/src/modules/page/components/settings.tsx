@@ -50,7 +50,7 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">Reading settings</h2>
-                    <BaseDialog.Close className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
+                    <BaseDialog.Close aria-label="Close reading settings" className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
                         <X size={20} />
                     </BaseDialog.Close>
                 </div>
@@ -87,7 +87,13 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     </Observer>
                 </div>
                 <div className="flex flex-col gap-2">
-                    <FormLabel>Default heading level</FormLabel>
+                    <FormLabel>Reading width</FormLabel>
+                    <Observer>{() => <div className="flex gap-2" role="group" aria-label="Reading width">{(['comfortable', 'wide', 'full'] as const).map(width => <Button key={width} size="sm" variant={uiSettings.readingWidth === width ? 'secondary' : 'outlined'} aria-pressed={uiSettings.readingWidth === width} onClick={() => uiSettings.setReadingWidth(width)}>{width === 'comfortable' ? 'Comfortable' : width === 'wide' ? 'Wide' : 'Full width'}</Button>)}</div>}</Observer>
+                    <p className="text-xs text-[var(--color-text-muted)]">Use shorter lines for prose, or more room for tables and code.</p>
+                </div>
+                <div className="flex flex-col gap-2">
+                    <FormLabel>Default section depth</FormLabel>
+                    <p className="text-xs text-[var(--color-text-muted)]">H1 reads larger chapters; deeper levels split them into smaller sections.</p>
                     <Observer>
                         {() => (
                             <Select
@@ -106,7 +112,9 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     <FormLabel>Theme</FormLabel>
                     <ThemeSelector />
                 </div>
-                <div className="border-t border-[var(--color-border-subtle)] pt-4 flex flex-col gap-2.5">
+                <details className="border-t border-[var(--color-border-subtle)] pt-4">
+                    <summary className="text-sm text-[var(--color-text-muted)] cursor-pointer">Import and integration tools</summary>
+                    <div className="pt-3 flex flex-col gap-2.5">
                     {authStore.isAuthenticated && (
                         <Button
                             variant="outlined"
@@ -138,7 +146,8 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                             Account settings
                         </Link>
                     </div>
-                </div>
+                    </div>
+                </details>
             </div>
         </Dialog>
     );

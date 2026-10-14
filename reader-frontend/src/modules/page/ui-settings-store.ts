@@ -18,6 +18,7 @@ interface StoredSettings {
     sidebarPanelId: string;
     subpageSortId: string;
     subpageGroupId: string;
+    readingWidth: 'comfortable' | 'wide' | 'full';
 }
 
 function findById<T extends { id: string }>(items: T[], id: string | undefined, fallback: T): T {
@@ -51,6 +52,8 @@ export class PageUiSettingsStore {
     sidebarPanel: SidebarPanelId;
     subpageSort: PageSubpageSort;
     subpageGroup: PageSubpageGroup;
+    readingWidth: StoredSettings['readingWidth'];
+    focusMode = false;
 
     constructor() {
         const stored = loadStored();
@@ -63,6 +66,7 @@ export class PageUiSettingsStore {
             : 'contents';
         this.subpageSort = findById(PageSubpageSort.VALUES, stored.subpageSortId, PageSubpageSort.SORT_ORDER);
         this.subpageGroup = findById(PageSubpageGroup.VALUES, stored.subpageGroupId, PageSubpageGroup.NONE);
+        this.readingWidth = stored.readingWidth === 'wide' || stored.readingWidth === 'full' ? stored.readingWidth : 'comfortable';
         makeObservable(this, {
             fontSize: observable,
             fontFamilies: observable,
@@ -71,6 +75,10 @@ export class PageUiSettingsStore {
             sidebarPanel: observable,
             subpageSort: observable,
             subpageGroup: observable,
+            readingWidth: observable,
+            focusMode: observable,
+            setReadingWidth: action,
+            setFocusMode: action,
             isFontSizeIncreasable: computed,
             isFontSizeDecreasable: computed,
             setFontSize: action,
@@ -94,6 +102,7 @@ export class PageUiSettingsStore {
             sidebarPanelId: this.sidebarPanel,
             subpageSortId: this.subpageSort.id,
             subpageGroupId: this.subpageGroup.id,
+            readingWidth: this.readingWidth,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     }
@@ -102,6 +111,13 @@ export class PageUiSettingsStore {
         this.fontSize = fontSize;
         this.persist();
     }
+
+    setReadingWidth(width: StoredSettings['readingWidth']) {
+        this.readingWidth = width;
+        this.persist();
+    }
+
+    setFocusMode(focus: boolean) { this.focusMode = focus; }
 
     setFontFamilies(fontFamilies: PageFontFamilies) {
         this.fontFamilies = fontFamilies;
@@ -126,11 +142,13 @@ export class PageUiSettingsStore {
     }
 
     setSidebarPanelOpen(open: boolean) {
+        if (open) this.focusMode = false;
         this.sidebarPanelOpen = open;
         this.persist();
     }
 
     setSidebarPanel(panel: SidebarPanelId) {
+        this.focusMode = false;
         this.sidebarPanel = panel;
         if (!this.sidebarPanelOpen) {
             this.sidebarPanelOpen = true;

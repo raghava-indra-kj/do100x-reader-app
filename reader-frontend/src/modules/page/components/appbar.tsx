@@ -18,7 +18,9 @@ import {
     Sparkles, 
     Share2, 
     Globe,
-    Inbox
+    Inbox,
+    PanelLeftClose,
+    PanelLeftOpen
 } from 'lucide-react';
 import { Observer, observer } from 'mobx-react-lite';
 import { Link, useNavigate } from 'react-router-dom';
@@ -77,7 +79,7 @@ export const PageAppbar = observer(function PageAppbar() {
     return (
         <>
             <AppBarLayout app="reader" showApps={Boolean(authStore.isAuthenticated && page && !page.isPubliclyAccessible)}
-                actions={<>{authStore.isAuthenticated && page && !page.isPubliclyAccessible && <Link to="/reader/captures" aria-label="Temporary inbox" title="Temporary inbox" className="inline-flex items-center gap-1.5 p-2 rounded-md text-xs text-[var(--color-text-muted)] whitespace-nowrap hover:bg-[var(--color-surface-soft)]"><Inbox size={16} aria-hidden="true" /><span className="hidden sm:inline">Temporary inbox</span></Link>}<ReaderPageSearch enabled={Boolean(page && !page.isPubliclyAccessible)} /></>}
+                actions={<>{authStore.isAuthenticated && page && !page.isPubliclyAccessible && <Link to="/reader/captures" aria-label="Temporary inbox" title="Temporary inbox" className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-[var(--color-border-default)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)]"><Inbox size={16} aria-hidden="true" /></Link>}<ReaderPageSearch enabled={Boolean(page && !page.isPubliclyAccessible)} /></>}
                 breadcrumbs={<div className="flex items-center gap-1.5 min-w-0 text-xs leading-tight">
 
                 <Observer>
@@ -131,7 +133,7 @@ export const PageAppbar = observer(function PageAppbar() {
                     }}
                 </Observer>
             </div>}
-                tools={<AppBarTools label="Reading tools" primary={<>
+                tools={<><Button variant={uiSettings.focusMode ? 'secondary' : 'outlined'} size="sm" iconOnly aria-label={uiSettings.focusMode ? 'Exit focus mode' : 'Enter focus mode'} aria-pressed={uiSettings.focusMode} tooltip={uiSettings.focusMode ? 'Exit focus mode' : 'Focus on reading'} onClick={() => uiSettings.setFocusMode(!uiSettings.focusMode)}>{uiSettings.focusMode ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</Button><AppBarTools label="Reading tools" primary={<>
                 {page?.parentPageId && <Button variant="outlined" size="sm" iconOnly
                     aria-label="Back to parent page" tooltip="Back to parent page"
                     onClick={() => navigate(readerPageWithIdRouteValue(page.parentPageId!))}>
@@ -146,7 +148,7 @@ export const PageAppbar = observer(function PageAppbar() {
                         const currentIndex = section ? navigable.indexOf(section) + 1 : 0;
                         return (
                             <>
-                                <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToPrevSection()} disabled={!store.hasPrevSection} tooltip="Previous section (←)">
+                                <Button variant="outlined" size="sm" iconOnly aria-label="Previous section" onClick={() => store.goToPrevSection()} disabled={!store.hasPrevSection} tooltip="Previous section (←)">
                                     <ChevronLeft size={16} />
                                 </Button>
                                 {page && total > 0 && (
@@ -154,7 +156,7 @@ export const PageAppbar = observer(function PageAppbar() {
                                         {currentIndex} / {total}
                                     </span>
                                 )}
-                                <Button variant="outlined" size="sm" iconOnly onClick={() => store.goToNextSection()} disabled={!store.hasNextSection} tooltip="Next section (→)">
+                                <Button variant="outlined" size="sm" iconOnly aria-label="Next section" onClick={() => store.goToNextSection()} disabled={!store.hasNextSection} tooltip="Next section (→)">
                                     <ChevronRight size={16} />
                                 </Button>
                             </>
@@ -171,12 +173,12 @@ export const PageAppbar = observer(function PageAppbar() {
                         const page = store.optCurrentPage;
                         return (<>
                                 {section && (
-                                    <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(section.fullMarkdown); toast.success('Section copied'); }} tooltip="Copy section">
+                                    <Button variant="outlined" size="sm" iconOnly aria-label="Copy section" onClick={() => { navigator.clipboard.writeText(section.fullMarkdown); toast.success('Section copied'); }} tooltip="Copy section">
                                         <Copy size={16} />
                                     </Button>
                                 )}
                                 {page && (
-                                    <Button variant="outlined" size="sm" iconOnly onClick={() => { navigator.clipboard.writeText(page.content); toast.success('Page copied'); }} tooltip="Copy page">
+                                    <Button variant="outlined" size="sm" iconOnly aria-label="Copy page" onClick={() => { navigator.clipboard.writeText(page.content); toast.success('Page copied'); }} tooltip="Copy page">
                                         <ClipboardList size={16} />
                                     </Button>
                                 )}
@@ -187,10 +189,10 @@ export const PageAppbar = observer(function PageAppbar() {
                 <Observer>
                     {() => (
                         <>
-                            <Button variant="outlined" size="sm" iconOnly onClick={() => uiSettings.decreaseFontSize()} disabled={!uiSettings.isFontSizeDecreasable} tooltip="Decrease font size (−)">
+                            <Button variant="outlined" size="sm" iconOnly aria-label="Decrease font size" onClick={() => uiSettings.decreaseFontSize()} disabled={!uiSettings.isFontSizeDecreasable} tooltip="Decrease font size (−)">
                                 <Minus size={16} />
                             </Button>
-                            <Button variant="outlined" size="sm" iconOnly onClick={() => uiSettings.increaseFontSize()} disabled={!uiSettings.isFontSizeIncreasable} tooltip="Increase font size (+)">
+                            <Button variant="outlined" size="sm" iconOnly aria-label="Increase font size" onClick={() => uiSettings.increaseFontSize()} disabled={!uiSettings.isFontSizeIncreasable} tooltip="Increase font size (+)">
                                 <Plus size={16} />
                             </Button>
                         </>
@@ -237,10 +239,12 @@ export const PageAppbar = observer(function PageAppbar() {
                                 variant={isOpen ? 'secondary' : 'outlined'}
                                 size="sm"
                                 iconOnly
+                                aria-label={isOpen ? 'Close dictionary' : 'Open dictionary'}
                                 onClick={() => {
                                     if (isOpen) {
                                         store.dictionaryStore.close();
                                     } else {
+                                        uiSettings.setFocusMode(false);
                                         store.dictionaryStore.open();
                                     }
                                 }}
@@ -280,7 +284,7 @@ export const PageAppbar = observer(function PageAppbar() {
                     <span className="hidden sm:inline font-medium">Take a break</span>
                 </Button>}
 
-                </AppBarTools>}
+                </AppBarTools></>}
             />
                 <PageSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
                 <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />

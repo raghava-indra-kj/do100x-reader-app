@@ -26,7 +26,7 @@ export function NavRail() {
                 const getCount = (id: SidebarPanelId): number => {
                     switch (id) {
                         case 'contents':
-                            return store.flatSections.length;
+                            return store.navigableSections.length;
                         case 'subpages':
                             return store.optCurrentPage?.childrenCount ?? 0;
                         case 'comments':
@@ -69,6 +69,7 @@ export function NavRail() {
                                             }
                                         `}
                                         aria-label={label}
+                                        aria-pressed={isActive}
                                     >
                                         <Icon size={18} />
                                         {count > 0 && (

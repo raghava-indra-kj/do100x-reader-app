@@ -7,13 +7,14 @@ import { usePageStore } from '../store';
 import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
 import { SectionReader } from './section-reader';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, RefreshCw, ArrowLeft, ArrowRight } from 'lucide-react';
 import { PageSkeletonLoader } from './page-skeleton-loader';
 import { Button } from '@modules/core/ui/primitives/button';
 import { SelectionPopover } from './selection-popover';
 import { EmptyPagePlaceholder } from './empty-page-placeholder';
 import '@reader/md-view/md-view.css';
 import '@reader/md-view/md-view-hljs.css';
+import './reader-experience.css';
 
 export const PageMain = observer(function PageMain() {
     const store = usePageStore();
@@ -64,9 +65,12 @@ export const PageMain = observer(function PageMain() {
     const maxLevel = store.headingLevel.value ?? 6;
     const schema = PageColorSchema.VALUES.find(s => s.id === themeStore.theme.value) || PageColorSchema.LIGHT;
     const colors = schema.value;
+    const currentIndex = store.navigableSections.indexOf(section);
+    const previous = store.navigableSections[currentIndex - 1];
+    const next = store.navigableSections[currentIndex + 1];
 
     return (
-        <><div ref={contentRef} className="mx-auto max-w-[var(--container-prose-2xwide)] px-[var(--space-6)] py-[var(--space-8)]">
+        <><div ref={contentRef} className="reader-reading-surface" style={{ maxWidth: uiSettings.readingWidth === 'full' ? '100%' : uiSettings.readingWidth === 'wide' ? 1200 : 860 }}>
             <SectionReader
                 key={`${section.id}:${page.contentVersion}`}
                 page={page}
@@ -82,6 +86,10 @@ export const PageMain = observer(function PageMain() {
                 page={page}
                 section={section}
             />}
+            <nav className="reader-section-navigation" aria-label="Section navigation">
+                {previous ? <button type="button" onClick={() => store.goToPrevSection()}><ArrowLeft size={16} aria-hidden="true" /><span><small>Previous section</small><strong>{previous.title ?? 'Introduction'}</strong></span></button> : <span />}
+                {next ? <button type="button" onClick={() => store.goToNextSection()}><span><small>Next section</small><strong>{next.title ?? 'Introduction'}</strong></span><ArrowRight size={16} aria-hidden="true" /></button> : <span className="reader-section-end">End of this page · {store.navigableSections.length} sections</span>}
+            </nav>
         </div>{editor}</>
     );
 });
