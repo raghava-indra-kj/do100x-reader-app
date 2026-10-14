@@ -1,6 +1,7 @@
+import { SidebarHeader, SidebarEmpty } from '../components/sidebar-ui';
 import { ReaderActionButton } from '../components/reader-action-button';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, ClipboardList, Edit3, Plus, RefreshCw } from 'lucide-react';
+import { ArrowDown, ArrowUp, Edit3, Plus, RefreshCw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { Button } from '@modules/core/ui/primitives/button';
 import { useAuthStore } from '@modules/auth/provider/store';
@@ -59,23 +60,23 @@ export const PageQuizzes = observer(function PageQuizzes() {
         catch (caught) { setError(caught instanceof Error ? caught.message : 'Couldn’t load attempts. Try again.'); }
     };
 
-    return <div className="flex h-full flex-col bg-[var(--color-surface-raised)]">
-        <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border-default)] px-3 py-3">
-            <div><h2 className="text-sm font-semibold">Quizzes</h2></div>
-            {page.isOwner && <Button iconOnly size="sm" tooltip="Create quiz" aria-label="Create quiz" onClick={() => setEditor('new')}><Plus size={15} /></Button>}
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
-            {error && <div role="alert" className="rounded border border-[var(--color-error)] p-2 text-xs text-[var(--color-error)]">{error}<button className="ml-2 underline" onClick={refresh}>Retry</button></div>}
-            {!loading && items.length === 0 && <div className="flex flex-col items-center gap-2 py-8 text-center text-[var(--color-text-muted)]"><ClipboardList size={26} /><p className="text-xs">No quizzes yet.</p></div>}
-            {items.map((item, index) => <div key={item.id} className="rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-3">
-                <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-semibold" title={item.title}>{item.title}</p><p className="text-[11px] text-[var(--color-text-muted)]">Version {item.revisionNo}</p></div>
+    return <div className="reader-panel">
+        <SidebarHeader title="Quizzes" actions={<>
+            <ReaderActionButton tooltip="Refresh quizzes" className="reader-icon-button" disabled={loading} onClick={refresh}><RefreshCw size={14} /></ReaderActionButton>
+            {page.isOwner && <Button variant="ghost" iconOnly size="sm" tooltip="Create quiz" aria-label="Create quiz" onClick={() => setEditor('new')}><Plus size={15} /></Button>}
+        </>} />
+        <div className="reader-panel-scroll">
+            {error && <div role="alert" className="reader-panel-error">{error}<button className="ml-2 underline" onClick={refresh}>Retry</button></div>}
+            {!loading && !error && items.length === 0 && <SidebarEmpty title="Practice what you read">Create a quiz to revisit the important ideas.{page.isOwner && <div><button onClick={() => setEditor('new')}>Create your first quiz</button></div>}</SidebarEmpty>}
+            {items.map((item, index) => <div key={item.id} className="reader-quiz-card">
+                <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-semibold" title={item.title}>{item.title}</p></div>
                     {page.isOwner && <ReaderActionButton className="text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" aria-label={`Edit ${item.title}`} tooltip="Edit quiz" onClick={() => setEditor(item.id)}><Edit3 size={14} /></ReaderActionButton>}
                 </div>
-                <div className="mt-3 flex flex-wrap gap-1.5"><Button size="sm" variant="outlined" onClick={() => setPreview(item.id)}>Preview</Button><Button size="sm" onClick={() => setAttempt({ quizId: item.id })} disabled={!auth.isAuthenticated}>Take quiz</Button>
+                <div className="reader-quiz-actions"><Button size="sm" variant="outlined" onClick={() => setPreview(item.id)}>Preview</Button><Button size="sm" onClick={() => setAttempt({ quizId: item.id })} disabled={!auth.isAuthenticated}>Take quiz</Button>
                     {auth.isAuthenticated && <Button size="sm" variant="outlined" onClick={() => showHistory(item.id)}>{historyQuiz === item.id ? 'Hide attempts' : 'My attempts'}</Button>}
                 </div>
                 {!auth.isAuthenticated && <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">Sign in to save your answers.</p>}
-                {page.isOwner && <><div className="mt-3 flex items-center gap-2 border-t border-[var(--color-border-subtle)] pt-2 text-[11px]"><button disabled={index === 0} aria-label={`Move ${item.title} up`} className="disabled:opacity-30" onClick={() => swap(item, items[index - 1])}><ArrowUp size={14} /></button><button disabled={index === items.length - 1} aria-label={`Move ${item.title} down`} className="disabled:opacity-30" onClick={() => swap(item, items[index + 1])}><ArrowDown size={14} /></button><button className="ml-auto text-[var(--color-text-muted)] hover:text-[var(--color-error)]" onClick={() => setArchivePending(item.id)}>Archive</button></div>{archivePending === item.id && <div className="mt-2 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-soft)] p-2 text-xs"><p className="mb-2">Archive this quiz? No new attempts can start. Past submissions stay available.</p><div className="flex justify-end gap-2"><Button size="sm" variant="outlined" onClick={() => setArchivePending(null)}>Cancel</Button><Button size="sm" onClick={() => archive(item)}>Archive quiz</Button></div></div>}</>}
+                {page.isOwner && <><div className="mt-2 flex items-center gap-2 text-[11px]"><ReaderActionButton tooltip="Move quiz up" disabled={index === 0} aria-label={`Move ${item.title} up`} className="disabled:opacity-30" onClick={() => swap(item, items[index - 1])}><ArrowUp size={14} /></ReaderActionButton><ReaderActionButton tooltip="Move quiz down" disabled={index === items.length - 1} aria-label={`Move ${item.title} down`} className="disabled:opacity-30" onClick={() => swap(item, items[index + 1])}><ArrowDown size={14} /></ReaderActionButton><button className="ml-auto text-[var(--color-text-muted)] hover:text-[var(--color-error)]" onClick={() => setArchivePending(item.id)}>Archive</button></div>{archivePending === item.id && <div className="mt-2 rounded-md border border-[var(--color-border-default)] bg-[var(--color-surface-soft)] p-2 text-xs"><p className="mb-2">Archive this quiz? No new attempts can start. Past submissions stay available.</p><div className="flex justify-end gap-2"><Button size="sm" variant="outlined" onClick={() => setArchivePending(null)}>Cancel</Button><Button size="sm" onClick={() => archive(item)}>Archive quiz</Button></div></div>}</>}
                 {historyQuiz === item.id && <div className="mt-3 space-y-1 border-t border-[var(--color-border-subtle)] pt-2">{!history && <p className="text-xs">Loading attempts…</p>}{history?.items.length === 0 && <p className="text-xs text-[var(--color-text-muted)]">No attempts yet.</p>}{history?.items.map((entry) => <button key={entry.id} className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-[var(--color-surface-soft)]" onClick={() => setAttempt({ quizId: item.id, attemptId: entry.id })}>{new Date(entry.startedAt).toLocaleDateString()} · Version {entry.revisionNo} · {entry.status === 'SUBMITTED' ? 'Submitted' : 'Continue'}</button>)}{history?.nextCursor && <button className="text-xs underline" onClick={async () => { const next = await quizApi.attempts(item.id, history.nextCursor!); setHistory({ items: [...history.items, ...next.items], nextCursor: next.nextCursor }); }}>More attempts</button>}</div>}
             </div>)}
             {loading && <p className="py-3 text-center text-xs text-[var(--color-text-muted)]">Loading…</p>}
@@ -90,7 +91,6 @@ export const PageQuizzes = observer(function PageQuizzes() {
                 {archivedCursor && <Button size="sm" variant="outlined" onClick={async () => { try { const next = await quizApi.list(page.pageId, archivedCursor, true); setArchived((current) => [...current, ...next.items]); setArchivedCursor(next.nextCursor); } catch (caught) { setError(caught instanceof Error ? caught.message : 'Couldn’t load archived quizzes. Try again.'); } }}>Load more archived quizzes</Button>}
             </div>}
         </div>
-        <div className="border-t border-[var(--color-border-default)] p-2"><button className="flex w-full items-center justify-center gap-1 text-xs text-[var(--color-text-muted)]" onClick={refresh}><RefreshCw size={12} /> Refresh</button></div>
         {editor && <QuizEditor pageId={page.pageId} quizId={editor === 'new' ? undefined : editor} onClose={() => setEditor(null)} onSaved={refresh} />}
         {preview && <QuizPreview quizId={preview} canAttempt={auth.isAuthenticated} onClose={() => setPreview(null)} onStart={() => { setAttempt({ quizId: preview }); setPreview(null); }} />}
         {attempt && <QuizAttempt quizId={attempt.quizId} attemptId={attempt.attemptId} onClose={() => setAttempt(null)} onChanged={() => { if (historyQuiz === attempt.quizId) void quizApi.attempts(attempt.quizId).then(setHistory); }} />}

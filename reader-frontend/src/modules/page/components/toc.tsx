@@ -65,7 +65,7 @@ export const PageToc = observer(function PageToc() {
     if (!page) return <div className="reader-outline-empty" role="status">Loading contents…</div>;
     const index = active ? store.navigableSections.indexOf(active) + 1 : 0;
     return <div className="reader-outline">
-        <header className="reader-outline-header">
+        <div className="reader-outline-header">
             <div className="reader-outline-heading"><h2>Contents</h2>
                 {store.isOwner && <ReaderActionButton type="button" className="reader-icon-button" onClick={() => setEditOpen(true)} aria-label="Edit page" tooltip="Edit page"><Pencil size={14} /></ReaderActionButton>}
             </div>
@@ -77,7 +77,7 @@ export const PageToc = observer(function PageToc() {
                     <ReaderActionButton tooltip="Collapse all sections" className="reader-icon-button" disabled={Boolean(query.trim()) || collapsed.size === branches.length} onClick={() => setCollapsed(new Set(branches))}><ChevronsUp size={16} /></ReaderActionButton>
                 </div>}</div>
             </>}
-        </header>
+        </div>
         <nav className="reader-outline-scroll" aria-label="Table of contents">
             {filtered.length ? renderNodes(filtered) : <div className="reader-outline-empty"><List size={22} aria-hidden="true" /><p>{query ? 'No matching sections.' : page.isEmpty ? 'Add content to start reading.' : 'Headings will appear here.'}</p>{query && <button type="button" onClick={() => setQuery('')}>Clear search</button>}</div>}
         </nav>

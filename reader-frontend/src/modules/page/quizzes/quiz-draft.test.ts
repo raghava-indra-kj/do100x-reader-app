@@ -29,6 +29,6 @@ describe('quiz draft changes', () => {
     it('rejects empty questions and invalid correct choices before sending', () => {
         const draft = draftFromRevision(base);
         draft.questions[0].value = { ...draft.questions[0].value, promptMarkdown: '' };
-        expect(validateQuizDraft(draft)).toMatch(/prompt/);
+        expect(validateQuizDraft(draft)).toBe('Add the question and explanation for question 1.');
     });
 });

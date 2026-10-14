@@ -2,7 +2,7 @@ import { ReaderActionButton } from './reader-action-button';
 import { observer } from 'mobx-react-lite';
 import { usePageStore } from '../store';
 import { PageAiLookupPanel } from './ai-lookup-panel';
-import { MessageSquare, FilePlus, Check, StickyNote } from 'lucide-react';
+import { FilePlus, Check, StickyNote } from 'lucide-react';
 import { useState } from 'react';
 import { createComment } from '@domain/comment/services/comments-service';
 import { toast } from '@modules/core/ui/primitives/toast';
@@ -56,7 +56,9 @@ export const PageDoubtPanel = observer(function PageDoubtPanel() {
     return (
         <PageAiLookupPanel
             title="Questions"
-            icon={<MessageSquare size={12} className="text-[var(--color-brand)]" />}
+            onStart={text => store.doubtStore.open(text, store.currentSection?.fullMarkdown ?? '', store.optCurrentPage?.title ?? '', store.currentSection?.title ?? '')}
+            startLabel="Ask AI"
+            startPlaceholder="Ask about this section…"
             storeInstance={store.doubtStore}
             queryLabel="Question"
             rephraseLabel="Edit your question"
