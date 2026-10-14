@@ -11,6 +11,7 @@ import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
 import { FolderTree, FilePlus, Pencil, ClipboardPaste } from 'lucide-react';
 import { SubpageRow } from './subpage-row';
+import { ImportMarkdownAction } from './import-markdown';
 
 export interface EmptyPagePlaceholderProps {
     page: Page;
@@ -34,7 +35,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                 setSubpagesState(DataState.error(result.error));
             }
         });
-    }, [page.id]);
+    }, [page.id, store.subpagesVersion]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -73,6 +74,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                 </div>
                 {store.isOwner && <div className="subpage-heading-actions">
                     <Button variant="outlined" size="sm" onClick={() => setCreateSubpageOpen(true)}><FilePlus size={14} aria-hidden="true" /> New subpage</Button>
+                    <ImportMarkdownAction />
                     <Button size="sm" onClick={() => setEditPageOpen(true)}><Pencil size={14} aria-hidden="true" /> Add content</Button>
                     {!hasSubpages && subpagesState.isLoaded && <Button variant="ghost" size="sm" onClick={handlePasteFromClipboard}><ClipboardPaste size={14} aria-hidden="true" /> Paste content</Button>}
                 </div>}

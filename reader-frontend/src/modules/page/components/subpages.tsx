@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageStore } from '../store';
 import { SubpageItem } from './subpage-item';
 import { UpsertPageDialog } from './upsert-page';
+import { ImportMarkdownAction } from './import-markdown';
 import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FileText, Plus, Search } from 'lucide-react';
@@ -69,7 +70,7 @@ export const PageSubpages = observer(function PageSubpages() {
                 setDataState(DataState.error(result.error));
             }
         });
-    }, [store.pageId]);
+    }, [store.pageId, store.subpagesVersion]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -128,6 +129,7 @@ export const PageSubpages = observer(function PageSubpages() {
                         className="pl-8"
                     />
                 </div>
+                {store.isOwner && <ImportMarkdownAction iconOnly />}
                 {store.isOwner && (
                     <Button size="sm" iconOnly onClick={() => setUpsertOpen(true)} tooltip="New subpage" aria-label="New subpage">
                         <Plus size={14} />

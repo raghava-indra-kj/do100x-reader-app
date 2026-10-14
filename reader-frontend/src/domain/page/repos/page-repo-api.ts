@@ -51,7 +51,14 @@ export class PageRepoApi implements IPagesRepo {
     }): AsyncResult<string, AppError> {
         try {
             const { data } = await apiClient.post('/pages', params);
-            return ok(data as string);
+            const parsed = z.string().uuid().safeParse(data);
+            if (!parsed.success) {
+                return err(new AppError({
+                    message: 'The server returned an unexpected response instead of a page ID. Check your subpages before retrying.',
+                    errorCode: 'PAGE_CREATE_UNEXPECTED_RESPONSE',
+                }));
+            }
+            return ok(parsed.data);
         } catch (error) {
             return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t create the page. Try again.'), cause: error }));
         }

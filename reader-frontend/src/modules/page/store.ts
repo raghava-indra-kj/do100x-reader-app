@@ -55,6 +55,7 @@ export class PageStore {
     _motivationQuote: Motivation | null;
     commentsVersion: number;
     vocabVersion: number;
+    subpagesVersion: number;
     commentsCount: number;
     vocabCount: number;
 
@@ -73,6 +74,7 @@ export class PageStore {
         this._motivationQuote = null;
         this.commentsVersion = 0;
         this.vocabVersion = 0;
+        this.subpagesVersion = 0;
         this.commentsCount = 0;
         this.vocabCount = 0;
         makeObservable<PageStore, "_currentPage" | "_currentSectionId" | "_parentPageTitle">(this, {
@@ -83,6 +85,7 @@ export class PageStore {
             _motivationQuote: observable.ref,
             commentsVersion: observable,
             vocabVersion: observable,
+            subpagesVersion: observable,
             commentsCount: observable,
             vocabCount: observable,
             optCurrentPage: computed,
@@ -105,6 +108,7 @@ export class PageStore {
             setHeadingLevel: action,
             bumpCommentsVersion: action,
             bumpVocabVersion: action,
+            bumpSubpagesVersion: action,
             loadCommentsCount: action,
             loadVocabCount: action,
             setPagePublic: action,
@@ -124,6 +128,10 @@ export class PageStore {
     bumpVocabVersion() {
         this.vocabVersion++;
         this.loadVocabCount();
+    }
+
+    bumpSubpagesVersion() {
+        this.subpagesVersion++;
     }
 
     async loadCommentsCount() {
