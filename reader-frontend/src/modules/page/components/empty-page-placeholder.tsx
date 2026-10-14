@@ -12,6 +12,12 @@ import { toast } from '@modules/core/ui/primitives/toast/toast';
 import { FolderTree, FilePlus, Pencil, ClipboardPaste } from 'lucide-react';
 import { SubpageRow } from './subpage-row';
 import { ImportMarkdownAction } from './import-markdown';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SubpageItem } from './subpage-item';
+import { useSubpageReorder } from '../hooks/use-subpage-reorder';
+import { sortSubpages, groupSubpages } from '../subpage-order';
+import { PageSubpageSort, PageSubpageGroup } from '../theme';
 
 export interface EmptyPagePlaceholderProps {
     page: Page;
@@ -20,15 +26,19 @@ export interface EmptyPagePlaceholderProps {
 export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ page }: EmptyPagePlaceholderProps) {
     const store = usePageStore();
     const mountedRef = useRef(true);
+    const requestVersion = useRef(0);
+    const { sensors, onDragEnd } = useSubpageReorder();
+    const settings = store.uiSettingsStore;
 
     const [subpagesState, setSubpagesState] = useState<DataState<PageListItem[]>>(DataState.init);
     const [editPageOpen, setEditPageOpen] = useState(false);
     const [createSubpageOpen, setCreateSubpageOpen] = useState(false);
 
     const loadSubpages = useCallback(() => {
+        const request = ++requestVersion.current;
         setSubpagesState(DataState.loading());
         queryPages({ parentPageId: page.id }).then((result) => {
-            if (!mountedRef.current) return;
+            if (!mountedRef.current || request !== requestVersion.current) return;
             if (result.ok) {
                 setSubpagesState(DataState.data(result.data));
             } else {
@@ -42,6 +52,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
         loadSubpages();
         return () => {
             mountedRef.current = false;
+            requestVersion.current++;
         };
     }, [loadSubpages]);
 
@@ -51,6 +62,14 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
     });
 
     const hasSubpages = subpages.length > 0;
+    const sorted = sortSubpages(subpages, settings.subpageSort);
+    const grouped = settings.subpageGroup.groupByCategory;
+    const canReorder = store.isOwner && !grouped && settings.subpageSort === PageSubpageSort.SORT_ORDER;
+    const renderRows = (items: PageListItem[]) => <div className="subpage-list">
+        {items.map(subpage => canReorder
+            ? <SubpageItem key={subpage.id} page={subpage} parentPageId={page.id} showMetadata />
+            : <SubpageRow key={subpage.id} page={subpage} parentPageId={page.id} showMetadata />)}
+    </div>;
 
     const handlePasteFromClipboard = useCallback(async () => {
         try {
@@ -72,7 +91,7 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                     <FolderTree size={20} aria-hidden="true" />
                     <div><h1>{page.title}</h1>{page.category && <p>{page.category}</p>}</div>
                 </div>
-                {store.isOwner && <div className="subpage-heading-actions">
+                {store.isOwner && !page.captureExpiresAt && <div className="subpage-heading-actions">
                     <Button variant="outlined" size="sm" onClick={() => setCreateSubpageOpen(true)}><FilePlus size={14} aria-hidden="true" /> New subpage</Button>
                     <ImportMarkdownAction />
                     <Button size="sm" onClick={() => setEditPageOpen(true)}><Pencil size={14} aria-hidden="true" /> Add content</Button>
@@ -80,11 +99,26 @@ export const EmptyPagePlaceholder = observer(function EmptyPagePlaceholder({ pag
                 </div>}
             </header>
             {hasSubpages && <section className="subpage-list-section" aria-label="Subpages">
-                <h2 className="subpage-list-label">Subpages · {subpages.length}</h2>
-                <div className="subpage-list">
-                    {subpages.map(subpage => <SubpageRow key={subpage.id} page={subpage} parentPageId={page.id}
-                        showMetadata onDeleted={loadSubpages} onEdited={loadSubpages} />)}
+                <div className="subpage-list-toolbar">
+                    <h2 className="subpage-list-label">Subpages · {subpages.length}</h2>
+                    <label>Sort <select aria-label="Sort main page list" value={settings.subpageSort.id} onChange={event => {
+                        const value = PageSubpageSort.VALUES.find(item => item.id === event.target.value);
+                        if (value) settings.setSubpageSort(value);
+                    }}>{PageSubpageSort.VALUES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+                    <label>Group <select aria-label="Group main page list" value={settings.subpageGroup.id} onChange={event => {
+                        const value = PageSubpageGroup.VALUES.find(item => item.id === event.target.value);
+                        if (value) settings.setSubpageGroup(value);
+                    }}>{PageSubpageGroup.VALUES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+                    {store.isOwner && !canReorder && <Button variant="ghost" size="sm" onClick={() => {
+                        settings.setSubpageSort(PageSubpageSort.SORT_ORDER); settings.setSubpageGroup(PageSubpageGroup.NONE);
+                    }}>Rearrange pages</Button>}
                 </div>
+                {canReorder && <p className="subpage-list-label">Drag a handle to rearrange, or focus it and press Space, then use arrow keys.</p>}
+                {grouped ? groupSubpages(sorted).map(group => <div key={group.category ?? '__uncategorized__'} className="subpage-list-group">
+                    <h3 className="subpage-list-label">{group.category ?? 'Uncategorized'}</h3>{renderRows(group.pages)}
+                </div>) : canReorder ? <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+                    <SortableContext items={sorted.map(item => item.id)} strategy={verticalListSortingStrategy}>{renderRows(sorted)}</SortableContext>
+                </DndContext> : renderRows(sorted)}
             </section>}
             {!hasSubpages && subpagesState.isLoaded && <div className="subpage-empty">
                 <p>No subpages yet.</p>

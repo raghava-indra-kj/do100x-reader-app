@@ -31,6 +31,7 @@ export async function getEvaluationContext(db: QuizDb, userId: string, attemptId
 
 /** Append a valid batch, or replay the exact same request without new rows. */
 export async function recordEvaluations(db: QuizDb, userId: string, attemptId: string, input: EvaluationBatchInput) {
+  await getEvaluationContext(db, userId, attemptId);
   const parsed = evaluationBatchSchema.safeParse(input);
   if (!parsed.success) throw new QuizError(422, parsed.error.issues[0]?.message ?? "Check the feedback entries and try again.");
   const value = parsed.data;

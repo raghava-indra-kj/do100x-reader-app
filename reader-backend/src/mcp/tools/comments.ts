@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
+import { withoutExpiredCaptureComments, isExpiredCapture, createPageComment } from "../../reader/capture-comment-access";
 
 export function registerCommentTools(server: McpServer, userId: string) {
   // 1. Get comments
@@ -38,7 +39,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
           {
             type: "text",
             text: JSON.stringify(
-              comments.map((c) => ({
+              (await withoutExpiredCaptureComments(prisma, comments)).map((c) => ({
                 id: c.id,
                 pageId: c.pageId,
                 pageTitle: c.pageTitle,
@@ -92,8 +93,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
       }
 
       const now = new Date();
-      const newComment = await prisma.comment.create({
-        data: {
+      const newComment = await createPageComment(prisma, {
           userId,
           pageId,
           pageTitle: targetPage.title,
@@ -104,8 +104,8 @@ export function registerCommentTools(server: McpServer, userId: string) {
           isExplanation: isExplanation ?? false,
           createdAt: now,
           updatedAt: now,
-        },
-      });
+      }, true);
+      if (!newComment) return { isError: true, content: [{ type: 'text', text: 'Page or linked page is no longer available.' }] };
 
       return {
         content: [
@@ -132,7 +132,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
         where: { id: commentId, userId },
       });
 
-      if (!existing) {
+      if (!existing || await isExpiredCapture(prisma, existing.pageId)) {
         return {
           isError: true,
           content: [{ type: "text", text: `Comment not found: ${commentId}` }],
@@ -143,6 +143,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
         updatedAt: new Date(),
       };
       if (body !== undefined) updateData.body = body;
+      if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId, deletedAt: null, captureExpiresAt: null } })) return { isError: true, content: [{ type: 'text', text: 'Linked page must be one of your saved pages.' }] };
       if (linkedPageId !== undefined) updateData.linkedPageId = linkedPageId;
 
       await prisma.comment.update({
@@ -173,7 +174,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
         where: { id: commentId, userId },
       });
 
-      if (!existing) {
+      if (!existing || await isExpiredCapture(prisma, existing.pageId)) {
         return {
           isError: true,
           content: [{ type: "text", text: `Comment not found: ${commentId}` }],

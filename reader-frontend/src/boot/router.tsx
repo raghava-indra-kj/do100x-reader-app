@@ -13,6 +13,8 @@ const PagePage = lazy(() => import('../modules/page/page'));
 const SettingsPage = lazy(() => import('../modules/settings/page'));
 const TasksPage = lazy(() => import('../modules/tasks/page'));
 const FinancePage = lazy(() => import('../modules/finance/page'));
+const CapturesPage = lazy(() => import('../modules/reader/captures/page'));
+const CaptureImportPage = lazy(() => import('../modules/reader/captures/import-page'));
 
 /** Documents handle their own visibility so shared Reader pages remain public. */
 export function ApplicationRoutes() {
@@ -21,6 +23,8 @@ export function ApplicationRoutes() {
         <Route path={readerPageWithIdRoute} element={<PagePage />} />
         <Route path={loginPageRoute} element={<LoginPage />} />
         <Route path={readerPageRoute} element={<AuthGuard><ReaderHome /></AuthGuard>} />
+        <Route path="/reader/captures" element={<AuthGuard><CapturesPage /></AuthGuard>} />
+        <Route path="/reader/capture" element={<AuthGuard><CaptureImportPage /></AuthGuard>} />
         <Route path={vocabularyPageRoute} element={<AuthGuard><VocabularyPage /></AuthGuard>} />
         <Route path={settingsPageRoute} element={<AuthGuard><SettingsPage /></AuthGuard>} />
         <Route path={tasksPageRoute} element={<AuthGuard><TasksPage /></AuthGuard>} />

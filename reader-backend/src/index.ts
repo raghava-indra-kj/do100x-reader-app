@@ -19,6 +19,8 @@ import userPreferencesRouter from "./user-preferences";
 import { createQuizRouter } from "./quiz/quiz-router";
 import { createFinanceRouter } from "./finance/finance-router";
 import { prisma } from "./prisma";
+import { createCapturesRouter } from './reader/captures';
+import { startCaptureCleanup } from './reader/capture-cleanup';
 import { createMcpSseRouter } from "./mcp/sse-router";
 
 const app = express();
@@ -52,6 +54,7 @@ app.get("/backend-api/status", (_req, res) => {
 app.use("/backend-api", attachSession());
 app.use("/backend-api/auth", createAuthRouter());
 app.use("/backend-api/reader", createReaderPreferencesRouter());
+app.use("/backend-api/reader/captures", createCapturesRouter(prisma));
 app.use("/backend-api/pages", pagesRouter);
 app.use("/backend-api/quizzes", createQuizRouter(prisma));
 app.use("/backend-api/finance", createFinanceRouter(prisma));
@@ -81,6 +84,8 @@ process.on("unhandledRejection", (reason) => {
 });
 
 process.title = `do100x [Port ${PORT}]`;
+// Enabled after the additive capture migration has been applied during deployment.
+if (process.env.READER_CAPTURE_CLEANUP === '1') startCaptureCleanup(prisma);
 
 app.listen(PORT, (error?: Error) => {
   if (error) {

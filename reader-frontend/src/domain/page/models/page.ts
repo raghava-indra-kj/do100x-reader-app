@@ -14,6 +14,8 @@ export class Page {
     readonly updatedAt: Date;
     readonly sections: Section[];
     readonly childrenCount: number;
+    readonly captureExpiresAt: Date | null;
+    readonly captureSourceUrl: string | null;
     readonly isPublic: boolean;
     readonly isPubliclyAccessible: boolean;
     readonly isOwner: boolean;
@@ -33,6 +35,8 @@ export class Page {
         updatedAt: Date;
         sections: Section[];
         childrenCount: number;
+        captureExpiresAt?: Date | null;
+        captureSourceUrl?: string | null;
         isPublic?: boolean;
         isPubliclyAccessible?: boolean;
         isOwner?: boolean;
@@ -51,6 +55,8 @@ export class Page {
         this.updatedAt = params.updatedAt;
         this.sections = params.sections;
         this.childrenCount = params.childrenCount;
+        this.captureExpiresAt = params.captureExpiresAt ?? null;
+        this.captureSourceUrl = params.captureSourceUrl ?? null;
         this.isPublic = params.isPublic ?? false;
         this.isPubliclyAccessible = params.isPubliclyAccessible ?? false;
         this.isOwner = params.isOwner ?? true;

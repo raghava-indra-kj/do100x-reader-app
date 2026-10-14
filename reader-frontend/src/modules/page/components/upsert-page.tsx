@@ -168,6 +168,7 @@ export function UpsertPageDialog({
             });
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
+                store.bumpSubpagesVersion();
                 onOpenChange(false);
                 store.loadPage();
             } else {
@@ -185,6 +186,7 @@ export function UpsertPageDialog({
             });
             if (result.ok) {
                 setSubmitState(DataState.data(undefined));
+                store.bumpSubpagesVersion();
                 onOpenChange(false);
                 navigate(readerPageWithIdRouteValue(result.data));
             } else {

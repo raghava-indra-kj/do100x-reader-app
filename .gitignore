@@ -6,6 +6,7 @@ reader-backend/node_modules/
 # Build outputs
 reader-frontend/dist/
 reader-backend/dist/
+reader-extension/dist/
 releases/
 
 # Environment files

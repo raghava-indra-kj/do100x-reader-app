@@ -479,6 +479,9 @@ model page {
   createdAt               DateTime  @db.DateTime(6)
   updatedAt               DateTime  @db.DateTime(6)
   deletedAt               DateTime? @db.DateTime(6)
+  captureExpiresAt        DateTime? @db.DateTime(6)
+  captureKey              String?   @db.VarChar(36)
+  captureSourceUrl        String?   @db.VarChar(2048)
   meaningSystemPrompt     String?   @db.Text
   explanationSystemPrompt String?   @db.Text
   doubtSystemPrompt       String?   @db.Text
@@ -486,6 +489,8 @@ model page {
   quizzes quiz[]
   homePreferences reader_preferences[]
   @@index([userId, deletedAt, updatedAt])
+  @@unique([userId, captureKey])
+  @@index([captureExpiresAt, id])
 }
 
 enum quiz_question_kind {

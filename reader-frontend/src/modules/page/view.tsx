@@ -5,6 +5,7 @@ import { Group, Panel, Separator, usePanelRef, useDefaultLayout } from 'react-re
 import { Observer } from 'mobx-react-lite';
 import type { ExtractedPaste } from '@lib/md-parser';
 import { PageAppbar } from './components/appbar';
+import { CaptureBanner } from '@modules/reader/captures/capture-banner';
 import { NavRail } from './components/nav-rail';
 import { PageSubpages } from './components/subpages';
 import { PageQuizzes } from './quizzes/quiz-panel';
@@ -32,6 +33,9 @@ function PageProvider({ pageId, children }: { pageId: string; children: React.Re
 
     useEffect(() => {
         store.mount();
+        const refreshCollection = () => store.bumpSubpagesVersion();
+        window.addEventListener('focus', refreshCollection);
+        return () => window.removeEventListener('focus', refreshCollection);
     }, [store]);
 
     return (
@@ -180,7 +184,7 @@ const PageContent = observer(function PageContent() {
         });
     }, [store.isOwner]);
 
-    useClipboardPaste(handleGlobalPaste);
+    useClipboardPaste(handleGlobalPaste, !currentPage?.captureExpiresAt);
 
     const [motivations, setMotivations] = useState<Motivation[]>([]);
     const prevProgressRef = useRef<number | null>(null);
@@ -237,6 +241,7 @@ const PageContent = observer(function PageContent() {
     return (
         <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
             <PageAppbar />
+            <CaptureBanner />
             <div className="h-1 shrink-0" style={{ backgroundColor: 'var(--color-border-default)', opacity: 0.25 }}>
                 <Observer>
                     {() => (

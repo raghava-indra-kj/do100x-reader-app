@@ -1,0 +1,24 @@
+.capture-page { min-height: 100vh; background: var(--color-surface-canvas); color: var(--color-text-strong); }
+.capture-content { width: min(100% - 32px, 1000px); margin: 28px auto; }
+.capture-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+.capture-heading h1, .capture-dialog h2 { font-size: 22px; font-weight: 650; }
+.capture-heading p, .capture-dialog p { color: var(--color-text-muted); font-size: 14px; margin-top: 6px; }
+.capture-list { display: grid; gap: 10px; margin-top: 18px; }
+.capture-card { border: 1px solid var(--color-border-subtle); border-radius: 10px; padding: 18px; background: var(--color-surface-raised); display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.capture-card h2 { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.capture-card p, .capture-card time { display: block; font-size: 12px; color: var(--color-text-muted); margin-top: 6px; }
+.capture-card a:hover { text-decoration: underline; }
+.capture-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.capture-actions a { color: var(--color-brand); font-size: 13px; }
+.capture-dialog { display: grid; gap: 14px; }
+.capture-destinations { max-height: 280px; overflow: auto; display: grid; gap: 8px; }
+.capture-destinations label { display: flex; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--color-border-subtle); border-radius: 6px; cursor: pointer; }
+.capture-destinations small { display: block; color: var(--color-text-muted); }
+.capture-banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 20px; flex-shrink: 0; border-bottom: 1px solid var(--color-border-subtle); background: var(--color-surface-soft); }
+.capture-banner strong, .capture-banner span { display: block; }
+.capture-banner strong { font-size: 13px; }
+.capture-banner span, .capture-banner a { font-size: 12px; color: var(--color-text-muted); }
+.capture-banner a { text-decoration: underline; }
+.capture-empty { padding: 32px 20px; border: 1px dashed var(--color-border-subtle); border-radius: 10px; color: var(--color-text-muted); }
+.capture-content [role=alert] { color: var(--color-error); margin: 12px 0; }
+@media (max-width: 600px) { .capture-card { flex-direction: column; align-items: stretch; } .capture-banner { padding: 10px 12px; } }

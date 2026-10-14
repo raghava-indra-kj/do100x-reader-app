@@ -1,0 +1,13 @@
+:root { color-scheme: light dark; font-family: system-ui, sans-serif; background: #faf7f1; color: #28251f; }
+body { width: 340px; padding: 18px; margin: 0; box-sizing: border-box; }
+header { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; } header img { width: 66px; height: auto; }
+h1 { font-size: 21px; line-height: 1.25; margin: 0 0 10px; }
+p,small { font-size: 12px; line-height: 1.6; color: #625f58; } small { display: block; font-size: 11px; margin-top: 14px; }
+button { border: 1px solid #ef5324; border-radius: 7px; background: #ef5324; color: white; font: inherit; font-weight: 600; font-size: 12px; padding: 10px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: wait; } button:focus-visible,summary:focus-visible { outline: 2px solid #1c60bd; outline-offset: 2px; }
+.actions { display: grid; gap: 8px; margin: 18px 0; }.secondary { background: transparent; color: #a53819; }
+details { padding: 12px; border: 1px solid #d9d0c2; border-radius: 8px; } summary { font-size: 13px; cursor: pointer; }
+label { display: block; font-size: 11px; margin: 12px 0 5px; } input,textarea { box-sizing: border-box; width: 100%; padding: 8px; font: inherit; font-size: 12px; border: 1px solid #d9d0c2; border-radius: 5px; background: #fffdf9; color: #28251f; } textarea { resize: vertical; margin-bottom: 8px; }
+footer { display: flex; justify-content: space-between; }.text { border: 0; background: transparent; color: #a53819; padding: 6px 0; font-size: 11px; }
+#status[data-error=true] { color: #a12621; }
+@media(prefers-color-scheme:dark) { :root { background: #25231f; color: #f8f2e8; } p,small { color: #c6bfb3; } input,textarea { background: #302d27; color: #f8f2e8; } .text,.secondary { color: #ffac8b; } #status[data-error=true] { color: #ffa4a0; } }

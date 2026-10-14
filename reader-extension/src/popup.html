@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>do100x Reader</title><link rel="stylesheet" href="popup.css"></head>
+<body><header><img src="icon.png" alt="do100x"><strong>Reader</strong></header>
+<h1>Read without the clutter</h1><p>Open content in your private temporary inbox. Captures expire after 7 days unless you keep them.</p>
+<div class="actions"><button id="article">Read this page</button><button id="selection" class="secondary">Read selected text</button></div>
+<details><summary>Read copied text</summary><label for="title">Title</label><input id="title" maxlength="1000" value="Copied text"><label for="content">Paste text or Markdown</label><textarea id="content" rows="6" placeholder="Paste only the content you want to send to do100x."></textarea><button id="paste">Open in Reader</button></details>
+<p id="status" role="status" aria-live="polite"></p>
+<footer><button id="inbox" class="text">Temporary inbox</button><button id="retry" class="text">Retry last capture</button></footer>
+<small>Uses your do100x sign-in. Nothing is captured until you choose an action. Unsent captures stay in this browser session for up to 30 minutes.</small>
+<script src="popup.js"></script></body></html>

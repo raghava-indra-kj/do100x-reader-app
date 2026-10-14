@@ -17,10 +17,11 @@ import {
     BookOpen, 
     Sparkles, 
     Share2, 
-    Globe 
+    Globe,
+    Inbox
 } from 'lucide-react';
 import { Observer, observer } from 'mobx-react-lite';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useEffect, useState } from 'react';
 import { usePageStore } from '../store';
@@ -76,7 +77,7 @@ export const PageAppbar = observer(function PageAppbar() {
     return (
         <>
             <AppBarLayout app="reader" showApps={Boolean(authStore.isAuthenticated && page && !page.isPubliclyAccessible)}
-                actions={<ReaderPageSearch enabled={Boolean(page && !page.isPubliclyAccessible)} />}
+                actions={<>{authStore.isAuthenticated && page && !page.isPubliclyAccessible && <Link to="/reader/captures" aria-label="Temporary inbox" title="Temporary inbox" className="inline-flex items-center gap-1.5 p-2 rounded-md text-xs text-[var(--color-text-muted)] whitespace-nowrap hover:bg-[var(--color-surface-soft)]"><Inbox size={16} aria-hidden="true" /><span className="hidden sm:inline">Temporary inbox</span></Link>}<ReaderPageSearch enabled={Boolean(page && !page.isPubliclyAccessible)} /></>}
                 breadcrumbs={<div className="flex items-center gap-1.5 min-w-0 text-xs leading-tight">
 
                 <Observer>
@@ -253,7 +254,7 @@ export const PageAppbar = observer(function PageAppbar() {
                 <Observer>
                     {() => {
                         const isOwner = store.isOwner;
-                        if (!isOwner) return null;
+                        if (!isOwner || store.optCurrentPage?.captureExpiresAt) return null;
                         return (
                             <Button 
                                 variant={store.isPublic ? 'secondary' : 'outlined'}

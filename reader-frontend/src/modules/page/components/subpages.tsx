@@ -1,4 +1,4 @@
-import { queryPages, swapSortOrder } from '@domain/page/services/pages-service';
+import { queryPages } from '@domain/page/services/pages-service';
 import type { PageListItem } from '@domain/page/models/page-list-item';
 import { DataState } from '@lib/utils/data-state';
 import { Button } from '@modules/core/ui/primitives/button';
@@ -11,45 +11,15 @@ import { usePageStore } from '../store';
 import { SubpageItem } from './subpage-item';
 import { UpsertPageDialog } from './upsert-page';
 import { ImportMarkdownAction } from './import-markdown';
-import { DndContext, closestCenter, type DragEndEvent, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { DndContext, closestCenter } from '@dnd-kit/core';
+import { useSubpageReorder } from '../hooks/use-subpage-reorder';
+import { sortSubpages, groupSubpages } from '../subpage-order';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { FileText, Plus, Search } from 'lucide-react';
 import { PageSubpageSort, PageSubpageGroup } from '../theme';
 
 const SORT_ITEMS = Object.fromEntries(PageSubpageSort.VALUES.map(s => [s.id, s.label]));
 const GROUP_ITEMS = Object.fromEntries(PageSubpageGroup.VALUES.map(g => [g.id, g.label]));
-
-function sortPages(pages: PageListItem[], sort: PageSubpageSort): PageListItem[] {
-    const sorted = [...pages];
-    switch (sort.key) {
-        case 'createdAt':
-            return sorted.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-        case 'title':
-            return sorted.sort((a, b) => a.title.localeCompare(b.title));
-        case 'sortOrder':
-        default:
-            return sorted.sort((a, b) => a.sortOrder - b.sortOrder);
-    }
-}
-
-function groupByCategory(pages: PageListItem[]): { category: string | null; pages: PageListItem[] }[] {
-    const groups = new Map<string | null, PageListItem[]>();
-    for (const page of pages) {
-        const cat = page.category;
-        if (!groups.has(cat)) groups.set(cat, []);
-        groups.get(cat)!.push(page);
-    }
-    const nullGroup = groups.get(null);
-    const result: { category: string | null; pages: PageListItem[] }[] = [];
-    const sortedKeys = [...groups.keys()].filter((k): k is string => k !== null).sort();
-    for (const key of sortedKeys) {
-        result.push({ category: key, pages: groups.get(key)! });
-    }
-    if (nullGroup) {
-        result.push({ category: null, pages: nullGroup });
-    }
-    return result;
-}
 
 export const PageSubpages = observer(function PageSubpages() {
     const store = usePageStore();
@@ -58,12 +28,14 @@ export const PageSubpages = observer(function PageSubpages() {
     const [search, setSearch] = useState('');
     const [upsertOpen, setUpsertOpen] = useState(false);
     const mountedRef = useRef(true);
+    const requestVersion = useRef(0);
     const hasSearch = !!search.trim();
 
     const load = useCallback(() => {
+        const request = ++requestVersion.current;
         setDataState(DataState.loading());
         queryPages({ parentPageId: store.pageId }).then((result) => {
-            if (!mountedRef.current) return;
+            if (!mountedRef.current || request !== requestVersion.current) return;
             if (result.ok) {
                 setDataState(DataState.data(result.data));
             } else {
@@ -77,23 +49,11 @@ export const PageSubpages = observer(function PageSubpages() {
         load();
         return () => {
             mountedRef.current = false;
+            requestVersion.current++;
         };
     }, [load]);
 
-    const sensors = useSensors(
-        useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
-    );
-
-    const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-        const { active, over } = event;
-        if (!over || active.id === over.id) return;
-
-        const result = await swapSortOrder({
-            pageId1: String(active.id),
-            pageId2: String(over.id),
-        });
-        if (result.ok) load();
-    }, [load]);
+    const { sensors, onDragEnd } = useSubpageReorder();
 
     const filtered = useMemo(() => {
         return dataState.ifLoadedOr({
@@ -106,13 +66,13 @@ export const PageSubpages = observer(function PageSubpages() {
         });
     }, [dataState, hasSearch, search]);
 
-    const sorted = useMemo(() => sortPages(filtered, uiSettings.subpageSort), [filtered, uiSettings.subpageSort]);
+    const sorted = useMemo(() => sortSubpages(filtered, uiSettings.subpageSort), [filtered, uiSettings.subpageSort]);
     const isGrouped = uiSettings.subpageGroup.groupByCategory && !hasSearch;
-    const canDragReorder = store.isOwner && !isGrouped && uiSettings.subpageSort === PageSubpageSort.SORT_ORDER;
+    const canDragReorder = store.isOwner && !hasSearch && !isGrouped && uiSettings.subpageSort === PageSubpageSort.SORT_ORDER;
 
     const grouped = useMemo(() => {
         if (!isGrouped) return null;
-        return groupByCategory(sorted);
+        return groupSubpages(sorted);
     }, [isGrouped, sorted]);
 
     return (
@@ -129,8 +89,8 @@ export const PageSubpages = observer(function PageSubpages() {
                         className="pl-8"
                     />
                 </div>
-                {store.isOwner && <ImportMarkdownAction iconOnly />}
-                {store.isOwner && (
+                {store.isOwner && !store.optCurrentPage?.captureExpiresAt && <ImportMarkdownAction iconOnly />}
+                {store.isOwner && !store.optCurrentPage?.captureExpiresAt && (
                     <Button size="sm" iconOnly onClick={() => setUpsertOpen(true)} tooltip="New subpage" aria-label="New subpage">
                         <Plus size={14} />
                     </Button>
@@ -215,7 +175,7 @@ export const PageSubpages = observer(function PageSubpages() {
                                 <DndContext
                                     sensors={sensors}
                                     collisionDetection={closestCenter}
-                                    onDragEnd={handleDragEnd}
+                                    onDragEnd={onDragEnd}
                                 >
                                     <SortableContext
                                         items={sorted.map((p) => p.id)}

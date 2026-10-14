@@ -1,6 +1,6 @@
 import type { Section } from '@domain/page/models/section';
 import { Page } from '@domain/page/models/page';
-import { getPage, updatePageShareStatus } from '@domain/page/services/pages-service';
+import { getPage, swapSortOrder, updatePageShareStatus } from '@domain/page/services/pages-service';
 import { getComments } from '@domain/comment/services/comments-service';
 import { getVocabulary } from '@domain/vocabulary/services/vocabulary-service';
 import { DataState } from '@lib/utils/data-state';
@@ -56,6 +56,7 @@ export class PageStore {
     commentsVersion: number;
     vocabVersion: number;
     subpagesVersion: number;
+    reorderingSubpages = false;
     commentsCount: number;
     vocabCount: number;
 
@@ -86,6 +87,7 @@ export class PageStore {
             commentsVersion: observable,
             vocabVersion: observable,
             subpagesVersion: observable,
+            reorderingSubpages: observable,
             commentsCount: observable,
             vocabCount: observable,
             optCurrentPage: computed,
@@ -109,6 +111,7 @@ export class PageStore {
             bumpCommentsVersion: action,
             bumpVocabVersion: action,
             bumpSubpagesVersion: action,
+            reorderSubpages: action,
             loadCommentsCount: action,
             loadVocabCount: action,
             setPagePublic: action,
@@ -132,6 +135,21 @@ export class PageStore {
 
     bumpSubpagesVersion() {
         this.subpagesVersion++;
+    }
+
+    async reorderSubpages(pageId1: string, pageId2: string): Promise<string | null> {
+        if (!this.isOwner || this.reorderingSubpages || pageId1 === pageId2) return null;
+        this.reorderingSubpages = true;
+        try {
+            const result = await swapSortOrder({ pageId1, pageId2 });
+            if (!result.ok) return result.error.message;
+            this.bumpSubpagesVersion();
+            return null;
+        } catch {
+            return 'Couldn’t reorder the pages. Try again.';
+        } finally {
+            runInAction(() => { this.reorderingSubpages = false; });
+        }
     }
 
     async loadCommentsCount() {
@@ -269,6 +287,8 @@ export class PageStore {
                         updatedAt: this._currentPage.updatedAt,
                         sections: this._currentPage.sections,
                         childrenCount: this._currentPage.childrenCount,
+                        captureExpiresAt: this._currentPage.captureExpiresAt,
+                        captureSourceUrl: this._currentPage.captureSourceUrl,
                         isPublic: result.data.isPublic,
                         isPubliclyAccessible: result.data.isPubliclyAccessible,
                         isOwner: this._currentPage.isOwner,
@@ -303,6 +323,8 @@ export class PageStore {
                 this.loadCommentsCount();
                 this.loadVocabCount();
             } else {
+                this._currentPage = null;
+                this._currentSectionId = null;
                 this.initDataState = DataState.error(result.error);
             }
         });

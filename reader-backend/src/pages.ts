@@ -102,6 +102,8 @@ router.get("/:pageId", async (req, res) => {
       category: true,
       sortOrder: true,
       childrenCount: true,
+      captureExpiresAt: true,
+      captureSourceUrl: true,
       isPublic: true,
       createdAt: true,
       updatedAt: true,
@@ -135,6 +137,8 @@ router.get("/:pageId", async (req, res) => {
     category: page.category ?? null,
     sortOrder: page.sortOrder,
     childrenCount: page.childrenCount,
+    captureExpiresAt: page.captureExpiresAt,
+    captureSourceUrl: page.captureSourceUrl,
     isPublic: page.isPublic,
     isPubliclyAccessible: isPublic,
     isOwner,
@@ -239,6 +243,7 @@ router.post("/", async (req, res) => {
   if (parentPageId) {
     const parent = await prisma.page.findFirst({ where: { id: parentPageId, userId, deletedAt: null } });
     if (!parent) { res.status(404).json({ message: "Parent page not found" }); return; }
+    if (parent.captureExpiresAt) { res.status(409).json({ message: "Keep this capture before adding subpages." }); return; }
   }
 
   const maxSortOrderRow = await prisma.page.aggregate({
@@ -293,6 +298,11 @@ router.patch("/:pageId/share", async (req, res) => {
 
   if (reqUserId && page.userId !== reqUserId) {
     res.status(403).json({ message: "Only the page owner can change sharing." });
+    return;
+  }
+
+  if (page.captureExpiresAt) {
+    res.status(409).json({ message: "Keep this capture before sharing it." });
     return;
   }
 
@@ -409,6 +419,9 @@ router.post("/swap", async (req, res) => {
   }
 
   const s1 = page1.sortOrder;
+  if (page1.parentId !== page2.parentId || page1.captureExpiresAt || page2.captureExpiresAt) {
+    res.status(400).json({ message: 'Only saved pages in the same collection can be reordered.' }); return;
+  }
   const s2 = page2.sortOrder;
   const parentId = page1.parentId;
   const now = new Date();
@@ -421,12 +434,12 @@ router.post("/swap", async (req, res) => {
   await prisma.$transaction(async (tx: any) => {
     if (s1 < s2) {
       await tx.page.updateMany({
-        where: { parentId, deletedAt: null, sortOrder: { gt: s1, lte: s2 } },
+        where: { userId: res.locals.userId, parentId, deletedAt: null, sortOrder: { gt: s1, lte: s2 } },
         data: { sortOrder: { decrement: 1 } },
       });
     } else {
       await tx.page.updateMany({
-        where: { parentId, deletedAt: null, sortOrder: { gte: s2, lt: s1 } },
+        where: { userId: res.locals.userId, parentId, deletedAt: null, sortOrder: { gte: s2, lt: s1 } },
         data: { sortOrder: { increment: 1 } },
       });
     }

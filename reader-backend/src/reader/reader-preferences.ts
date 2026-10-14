@@ -11,10 +11,10 @@ export async function ensureReaderHome(db: PrismaClient, userId: string): Promis
     await tx.$queryRaw`SELECT id FROM appuser WHERE id = ${userId} FOR UPDATE`;
     const preferences = await tx.reader_preferences.findUnique({ where: { userId } });
     if (preferences?.homePageId) {
-      const home = await tx.page.findFirst({ where: { id: preferences.homePageId, userId, deletedAt: null }, select: { id: true } });
+      const home = await tx.page.findFirst({ where: { id: preferences.homePageId, userId, deletedAt: null, captureExpiresAt: null }, select: { id: true } });
       if (home) return home.id;
     }
-    let home = await tx.page.findFirst({ where: { userId, parentId: null, deletedAt: null }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
+    let home = await tx.page.findFirst({ where: { userId, parentId: null, deletedAt: null, captureExpiresAt: null }, orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }], select: { id: true } });
     if (!home) {
       const now = new Date();
       home = await tx.page.create({ data: { userId, title: "Home", parentId: null, content: "", sortOrder: 0, childrenCount: 0, createdAt: now, updatedAt: now }, select: { id: true } });
@@ -29,7 +29,7 @@ export function createReaderPreferencesRouter(db: PrismaClient = prisma) {
   router.use(requireSession);
   router.get("/preferences", async (_req, res) => {
     const value = await db.reader_preferences.findUnique({ where: { userId: res.locals.userId } });
-    const home = value?.homePageId ? await db.page.findFirst({ where: { id: value.homePageId, userId: res.locals.userId, deletedAt: null }, select: { id: true } }) : null;
+    const home = value?.homePageId ? await db.page.findFirst({ where: { id: value.homePageId, userId: res.locals.userId, deletedAt: null, captureExpiresAt: null }, select: { id: true } }) : null;
     res.json({ homePageId: home?.id ?? null });
   });
   router.post("/home", async (_req, res) => res.json({ homePageId: await ensureReaderHome(db, res.locals.userId) }));
@@ -40,7 +40,7 @@ export function createReaderPreferencesRouter(db: PrismaClient = prisma) {
     const homePageId = input.data.homePageId;
     const updated = await db.$transaction(async tx => {
       await tx.$queryRaw`SELECT id FROM appuser WHERE id = ${userId} FOR UPDATE`;
-      if (homePageId && !await tx.page.findFirst({ where: { id: homePageId, userId, deletedAt: null }, select: { id: true } })) return false;
+      if (homePageId && !await tx.page.findFirst({ where: { id: homePageId, userId, deletedAt: null, captureExpiresAt: null }, select: { id: true } })) return false;
       await tx.reader_preferences.upsert({ where: { userId }, create: { userId, homePageId }, update: { homePageId } });
       return true;
     });

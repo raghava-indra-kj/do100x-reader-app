@@ -7,6 +7,12 @@
 .subpage-heading-copy p { font-size: 12px; color: var(--color-text-muted); margin-top: 2px; overflow-wrap: anywhere; }
 .subpage-heading-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
 .subpage-list-section { margin-top: 16px; }
+.subpage-list-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 10px; }
+.subpage-list-toolbar h2 { margin: 0 auto 0 0; }
+.subpage-list-toolbar label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--color-text-muted); }
+.subpage-list-toolbar select { padding: 6px 10px; border: 1px solid var(--color-border-subtle); border-radius: 6px; background: var(--color-surface-raised); color: var(--color-text-strong); }
+.subpage-list-group + .subpage-list-group { margin-top: 16px; }
+.subpage-list > div + div { border-top: 1px solid var(--color-border-subtle); }
 .subpage-list-label { font-size: 12px; color: var(--color-text-muted); margin-bottom: 8px; }
 .subpage-list { border: 1px solid var(--color-border-subtle); border-radius: 8px; background: var(--color-surface-raised); }
 .subpage-row { display: flex; align-items: center; gap: 4px; min-width: 0; min-height: 42px; padding: 2px 6px; border-radius: 5px; }

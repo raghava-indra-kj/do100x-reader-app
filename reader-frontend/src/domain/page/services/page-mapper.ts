@@ -49,6 +49,8 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         updatedAt: dbPage.updatedAt,
         sections,
         childrenCount: dbPage.childrenCount,
+        captureExpiresAt: dbPage.captureExpiresAt,
+        captureSourceUrl: dbPage.captureSourceUrl,
         isPublic: dbPage.isPublic,
         isPubliclyAccessible: dbPage.isPubliclyAccessible,
         isOwner: dbPage.isOwner,

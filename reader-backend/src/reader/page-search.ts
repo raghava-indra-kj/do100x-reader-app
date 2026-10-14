@@ -21,7 +21,7 @@ export async function searchPages(db: PrismaClient, userId: string, query: z.inf
     ELSE 3 END,` : Prisma.empty;
   const rows = await db.$queryRaw<SearchRow[]>(Prisma.sql`
     SELECT id, title, category, parentId, updatedAt FROM page
-    WHERE userId = ${userId} AND deletedAt IS NULL ${filter}
+    WHERE userId = ${userId} AND deletedAt IS NULL AND captureExpiresAt IS NULL ${filter}
     ORDER BY ${rank} updatedAt DESC, id ASC LIMIT ${limit + 1}
   `);
   const selected = rows.slice(0, limit);

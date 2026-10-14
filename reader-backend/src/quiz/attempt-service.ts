@@ -29,6 +29,8 @@ async function ownedAttempt(db: QuizDb, attemptId: string, userId: string) {
     include: { revision: { include: { questions: { orderBy: { position: "asc" }, include: { options: { orderBy: { position: "asc" } } } }, quiz: true } } },
   });
   if (!attempt) throw new QuizError(404, "Attempt not found");
+  const page = await db.page.findFirst({ where: { id: attempt.revision.quiz.pageId, deletedAt: null }, select: { id: true } });
+  if (!page) throw new QuizError(404, 'This quiz page is no longer available.');
   return attempt;
 }
 

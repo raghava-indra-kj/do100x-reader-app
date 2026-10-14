@@ -20,7 +20,7 @@ export interface SubpageRowProps {
     dragHandle?: ReactNode;
 }
 
-/** Shared row presentation; sorting belongs to the sidebar wrapper, not this row. */
+/** Shared row presentation; collection wrappers provide ordering controls. */
 export const SubpageRow = observer(function SubpageRow({ page, parentPageId, onDeleted, onEdited, showMetadata = false, dragHandle }: SubpageRowProps) {
     const store = usePageStore();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -45,7 +45,7 @@ export const SubpageRow = observer(function SubpageRow({ page, parentPageId, onD
                 <Button variant="ghost" size="sm" iconOnly aria-label={`Page actions: ${page.title}`} tooltip="Page actions"><MoreHorizontal size={16} aria-hidden="true" /></Button>
             </Popover>
             <UpsertPageDialog open={editOpen} onOpenChange={open => { setEditOpen(open); if (!open) onEdited?.(); }} parentPageId={parentPageId} editPageId={page.id} initialTitle={page.title} initialCategory={page.category} />
-            <DeletePageDialog open={deleteOpen} onOpenChange={setDeleteOpen} pageId={page.id} pageTitle={page.title} onDeleted={onDeleted} />
+            <DeletePageDialog open={deleteOpen} onOpenChange={setDeleteOpen} pageId={page.id} pageTitle={page.title} onDeleted={() => { store.bumpSubpagesVersion(); onDeleted?.(); }} />
         </>}
     </div>;
 });

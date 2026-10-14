@@ -10,6 +10,8 @@ export const DbPageSchema = z.object({
     category: z.string().nullable(),
     sortOrder: z.number(),
     childrenCount: z.number(),
+    captureExpiresAt: z.coerce.date().nullable().optional(),
+    captureSourceUrl: z.string().nullable().optional(),
     isPublic: z.boolean().optional().default(false),
     isPubliclyAccessible: z.boolean().optional().default(false),
     isOwner: z.boolean().optional().default(true),

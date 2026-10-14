@@ -2,6 +2,7 @@ import { Router } from "express";
 import { prisma } from "./prisma";
 import { readSession, requireSession } from "./session";
 import { canReadPage } from "./page-access";
+import { withoutExpiredCaptureComments, isExpiredCapture, createPageComment } from './reader/capture-comment-access';
 
 const router = Router();
 router.use((req, res, next) => req.method === "GET" ? next() : requireSession(req, res, next));
@@ -57,7 +58,7 @@ router.get("/", async (req, res) => {
   });
 
   res.json(
-    comments.map((c: any) => ({
+    (await withoutExpiredCaptureComments(prisma, comments)).map((c: any) => ({
       id: c.id,
       pageId: c.pageId,
       pageTitle: c.pageTitle,
@@ -101,10 +102,9 @@ router.post("/", async (req, res) => {
 
   const now = new Date();
   if (!pageId || !await canReadPage(prisma, pageId, finalUserId)) { res.status(404).json({ message: "Page not found" }); return; }
-  if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId: finalUserId, deletedAt: null } })) { res.status(404).json({ message: "Linked page not found" }); return; }
+  if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId: finalUserId, deletedAt: null, captureExpiresAt: null } })) { res.status(404).json({ message: "Linked page not found" }); return; }
 
-  const newComment = await prisma.comment.create({
-    data: {
+  const newComment = await createPageComment(prisma, {
       userId: finalUserId,
       pageId,
       pageTitle,
@@ -115,9 +115,8 @@ router.post("/", async (req, res) => {
       isExplanation: isExplanation ?? false,
       createdAt: now,
       updatedAt: now,
-    },
   });
-
+  if (!newComment) { res.status(404).json({ message: 'Page or linked page is no longer available.' }); return; }
   res.status(201).json(newComment.id);
 });
 
@@ -134,7 +133,7 @@ router.put("/:commentId", async (req, res) => {
     where: { id: commentId, userId: reqUserId },
   });
 
-  if (!existing) {
+  if (!existing || await isExpiredCapture(prisma, existing.pageId)) {
     res.status(404).json({ message: "Comment not found" });
     return;
   }
@@ -145,7 +144,7 @@ router.put("/:commentId", async (req, res) => {
     updatedAt: new Date(),
   };
   if (linkedPageId !== undefined) {
-    if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId: reqUserId, deletedAt: null } })) { res.status(404).json({ message: "Linked page not found" }); return; }
+    if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId: reqUserId, deletedAt: null, captureExpiresAt: null } })) { res.status(404).json({ message: "Linked page not found" }); return; }
     updateData.linkedPageId = linkedPageId ?? null;
   }
 

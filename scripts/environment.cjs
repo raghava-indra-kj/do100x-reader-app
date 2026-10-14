@@ -5,7 +5,7 @@ const path = require('node:path');
 const { parseEnv } = require('node:util');
 const root = path.resolve(__dirname, '..');
 const backend = path.join(root, 'reader-backend');
-const applicationKeys = ['NODE_ENV', 'DATABASE_URL', 'GOOGLE_CLIENT_ID', 'APP_ORIGINS', 'SESSION_SECRET', 'PORT'];
+const applicationKeys = ['NODE_ENV', 'DATABASE_URL', 'GOOGLE_CLIENT_ID', 'APP_ORIGINS', 'SESSION_SECRET', 'PORT', 'READER_CAPTURE_CLEANUP'];
 
 function requireNode() {
   const [major, minor] = process.versions.node.split('.').map(Number);
@@ -19,9 +19,10 @@ function readProfile(profile) {
   let raw, values;
   try { raw = fs.readFileSync(file, 'utf8'); values = parseEnv(raw); }
   catch { throw new Error(`Create reader-backend/${path.basename(file)} using its example file before continuing.`); }
-  const required = applicationKeys.filter(key => key !== 'PORT');
+  const required = applicationKeys.filter(key => !['PORT', 'READER_CAPTURE_CLEANUP'].includes(key));
   const missing = required.filter(key => !values[key]?.trim());
   if (missing.length) throw new Error(`${path.basename(file)} is missing: ${missing.join(', ')}.`);
+  if (values.READER_CAPTURE_CLEANUP !== undefined && !['0', '1'].includes(values.READER_CAPTURE_CLEANUP)) throw new Error('READER_CAPTURE_CLEANUP must be 0 or 1.');
   if (values.NODE_ENV !== profile) throw new Error(`${path.basename(file)} must set NODE_ENV=${profile}.`);
   if (values.SESSION_SECRET.length < 32) throw new Error('SESSION_SECRET must contain at least 32 characters.');
   if (!/^[\w-]+\.apps\.googleusercontent\.com$/.test(values.GOOGLE_CLIENT_ID) || values.GOOGLE_CLIENT_ID.startsWith('your-')) {
