@@ -1,3 +1,4 @@
+import { ReaderActionButton } from './reader-action-button';
 import { observer } from 'mobx-react-lite';
 import { useCallback } from 'react';
 import { X, Search, RotateCcw } from 'lucide-react';
@@ -91,13 +92,13 @@ export const DictionaryPanel = observer(function DictionaryPanel() {
             {/* Header */}
             <div className="flex items-center justify-between shrink-0 px-4 pt-4 pb-2">
                 <span className="text-xs font-semibold text-[var(--color-text-subtle)] uppercase tracking-wider">Dictionary</span>
-                <button
+                <ReaderActionButton
                     onClick={() => dictStore.close()}
                     className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"
-                    title="Close dictionary"
+                    tooltip="Close dictionary"
                 >
                     <X size={14} />
-                </button>
+                </ReaderActionButton>
             </div>
 
             {/* Search */}
@@ -111,14 +112,14 @@ export const DictionaryPanel = observer(function DictionaryPanel() {
                     className="flex-1 min-w-0 border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-3 py-1.5 text-sm rounded-[var(--radius-md)] transition-colors outline-none focus:border-[var(--color-brand)]"
                     autoFocus
                 />
-                <button
+                <ReaderActionButton
                     onClick={handleSearch}
                     disabled={!dictStore.searchWord.trim()}
                     className="shrink-0 p-1.5 rounded-[var(--radius-md)] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                    title="Search"
+                    tooltip="Search"
                 >
                     <Search size={16} />
-                </button>
+                </ReaderActionButton>
             </div>
 
             {/* Results */}

@@ -1,3 +1,4 @@
+import { MarkdownActionButton } from '../action-button';
 import { useEffect, useRef, useState } from "react";
 import { Maximize2, AlertCircle } from "lucide-react";
 import { useMdViewColors } from "../../context/md-view-context";
@@ -104,15 +105,15 @@ export function D2Block({
 
   return (
     <div className={`md-d2-wrapper ${className}`}>
-      <button
+      <MarkdownActionButton
         type="button"
         className="md-d2-fullscreen-btn"
         onClick={() => setIsFullscreen(true)}
-        title="Open diagram fullscreen"
+        tooltip="Open diagram fullscreen"
         aria-label="Open D2 diagram fullscreen"
       >
         <Maximize2 size={16} aria-hidden="true" />
-      </button>
+      </MarkdownActionButton>
 
       <div
         ref={ref}

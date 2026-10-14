@@ -1,3 +1,4 @@
+import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { readerPageWithIdRouteValue } from '@boot/routes';
 import { AppBarLayout } from '@modules/core/ui/components/appbar/appbar-layout';
 import { AppBarTools } from '@modules/core/ui/components/appbar/appbar-tools';
@@ -79,7 +80,7 @@ export const PageAppbar = observer(function PageAppbar() {
     return (
         <>
             <AppBarLayout app="reader" showApps={Boolean(authStore.isAuthenticated && page && !page.isPubliclyAccessible)}
-                actions={<>{authStore.isAuthenticated && page && !page.isPubliclyAccessible && <Link to="/reader/captures" aria-label="Temporary inbox" title="Temporary inbox" className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-[var(--color-border-default)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)]"><Inbox size={16} aria-hidden="true" /></Link>}<ReaderPageSearch enabled={Boolean(page && !page.isPubliclyAccessible)} /></>}
+                actions={<>{authStore.isAuthenticated && page && !page.isPubliclyAccessible && <Tooltip content="Temporary inbox"><Link to="/reader/captures" aria-label="Temporary inbox" className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-[var(--color-border-default)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)]"><Inbox size={16} aria-hidden="true" /></Link></Tooltip>}<ReaderPageSearch enabled={Boolean(page && !page.isPubliclyAccessible)} /></>}
                 breadcrumbs={<div className="flex items-center gap-1.5 min-w-0 text-xs leading-tight">
 
                 <Observer>

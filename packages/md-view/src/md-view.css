@@ -882,3 +882,12 @@
 .md-view ::-webkit-scrollbar-track {
   background-color: var(--md-color-scrollbarTrack);
 }
+.md-action-tooltip {
+  max-width: min(260px, calc(100vw - 16px));
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: var(--tooltip-bg, #252525);
+  color: var(--tooltip-text, #fff);
+  font: 500 12px/1.4 system-ui, sans-serif;
+  box-shadow: 0 2px 8px #0002;
+}

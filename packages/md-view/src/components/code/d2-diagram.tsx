@@ -1,3 +1,4 @@
+import { MarkdownActionButton } from '../action-button';
 import { useEffect, useState } from "react";
 import { Maximize2, AlertCircle } from "lucide-react";
 import { getD2Instance } from "./d2-instance";
@@ -116,15 +117,15 @@ export function D2Diagram({
       {!loading && !error && svg && (
         <>
           {allowFullscreen && (
-            <button
+            <MarkdownActionButton
               type="button"
               className="md-d2-fullscreen-btn"
               onClick={() => setIsFullscreen(true)}
-              title="Open diagram fullscreen"
+              tooltip="Open diagram fullscreen"
               aria-label="Open D2 diagram fullscreen"
             >
               <Maximize2 size={16} aria-hidden="true" />
-            </button>
+            </MarkdownActionButton>
           )}
 
           <div

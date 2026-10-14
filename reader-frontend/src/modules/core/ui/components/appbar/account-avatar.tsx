@@ -1,3 +1,4 @@
+import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { observer } from 'mobx-react-lite';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -17,10 +18,10 @@ export const AccountAvatar = observer(function AccountAvatar() {
     const label = auth.currentUser.label || 'User';
     const initial = label.charAt(0).toUpperCase();
     const avatarUrl = auth.currentUser.avatarUrl;
-    return <Link to={settingsPageRoute} className="suite-account-avatar"
-        title={`Account settings — ${label}`} aria-label={`Account settings — ${label}`}>
+    return <Tooltip content={`Account settings — ${label}`}><Link to={settingsPageRoute} className="suite-account-avatar"
+        aria-label={`Account settings — ${label}`}>
         {avatarUrl
             ? <AccountPhoto key={`${auth.currentUser.id}:${avatarUrl}`} src={avatarUrl} initial={initial} />
             : <span aria-hidden="true">{initial}</span>}
-    </Link>;
+    </Link></Tooltip>;
 });

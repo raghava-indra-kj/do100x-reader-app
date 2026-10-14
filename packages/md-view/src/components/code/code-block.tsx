@@ -1,3 +1,4 @@
+import { MarkdownActionButton } from '../action-button';
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -58,15 +59,15 @@ export function CodeBlock({ language, codeClassName, children }: CodeBlockProps)
   return (
     <pre className="md-code-block">
       {language && <span className="md-code-block-language" aria-label={`Language: ${language}`}>{language}</span>}
-      <button
+      <MarkdownActionButton
         type="button"
         className="md-code-block-copy"
         onClick={copyCode}
-        title={copyLabel}
+        tooltip={copyLabel}
         aria-label={copyLabel}
       >
         {copyState === "copied" ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
-      </button>
+      </MarkdownActionButton>
       <code
         ref={codeRef}
         data-language={language}

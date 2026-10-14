@@ -1,3 +1,4 @@
+import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { usePageStore } from '../store';
 import { ThemeSelector } from '@modules/core/ui/components/theme-selector';
 import { Select } from '@modules/core/ui/primitives/select';
@@ -50,9 +51,9 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
             <div className="flex flex-col gap-6">
                 <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">Reading settings</h2>
-                    <BaseDialog.Close aria-label="Close reading settings" className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
+                    <Tooltip content="Close reading settings"><BaseDialog.Close aria-label="Close reading settings" className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
                         <X size={20} />
-                    </BaseDialog.Close>
+                    </BaseDialog.Close></Tooltip>
                 </div>
                 <div className="flex flex-col gap-2">
                     <FormLabel>Text size</FormLabel>

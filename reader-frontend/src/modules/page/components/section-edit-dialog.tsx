@@ -1,3 +1,4 @@
+import { ReaderActionButton } from './reader-action-button';
 import { useEffect, useId, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Copy, X } from 'lucide-react';
@@ -87,7 +88,7 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
                     <h2 id={titleId} className="text-lg font-semibold text-[var(--color-text-strong)]">Edit section</h2>
                     <p className="truncate text-sm text-[var(--color-text-muted)]">{page.title} / {range.title ?? 'Introduction'}</p>
                 </div>
-                <Button variant="outlined" iconOnly title="Close section editor" aria-label="Close section editor" onClick={close} disabled={saving}><X size={18} /></Button>
+                <Button variant="outlined" iconOnly tooltip="Close section editor" aria-label="Close section editor" onClick={close} disabled={saving}><X size={18} /></Button>
             </header>
             <p id={scopeId} className="shrink-0 border-b border-[var(--color-border-subtle)] bg-[var(--color-surface-soft)] px-5 py-3 text-xs text-[var(--color-text-muted)]">
                 Only this section’s content will change. Its heading and other sections stay unchanged. Use page editing to change headings.
@@ -96,9 +97,9 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
                 <div className="flex min-h-0 flex-col border-b border-[var(--color-border-default)] md:border-b-0 md:border-r">
                     <div className="flex shrink-0 items-center justify-between px-5 py-3">
                         <label htmlFor="section-markdown" className="text-sm font-semibold">Markdown</label>
-                        <button type="button" title={copied ? 'Draft copied' : 'Copy draft'} aria-label="Copy draft" className="rounded p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" onClick={async () => {
+                        <ReaderActionButton type="button" tooltip={copied ? 'Draft copied' : 'Copy draft'} aria-label="Copy draft" className="rounded p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" onClick={async () => {
                             try { await navigator.clipboard.writeText(draft); setCopied(true); } catch { setError('Couldn’t copy the draft. Select the text and copy it manually.'); }
-                        }}><Copy size={15} /></button>
+                        }}><Copy size={15} /></ReaderActionButton>
                     </div>
                     <textarea id="section-markdown" value={draft} onChange={(event) => { setDraft(event.target.value); setCopied(false); }} readOnly={saving} autoFocus spellCheck={false}
                         className="min-h-0 flex-1 resize-none bg-[var(--color-surface-canvas)] px-5 pb-5 font-mono text-sm leading-relaxed text-[var(--color-text-strong)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-brand)]" />

@@ -1,3 +1,4 @@
+import { ReaderActionButton } from '../components/reader-action-button';
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, ClipboardList, Edit3, Plus, RefreshCw } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
@@ -68,7 +69,7 @@ export const PageQuizzes = observer(function PageQuizzes() {
             {!loading && items.length === 0 && <div className="flex flex-col items-center gap-2 py-8 text-center text-[var(--color-text-muted)]"><ClipboardList size={26} /><p className="text-xs">No quizzes yet.</p></div>}
             {items.map((item, index) => <div key={item.id} className="rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-3">
                 <div className="flex items-start justify-between gap-2"><div className="min-w-0"><p className="truncate text-sm font-semibold" title={item.title}>{item.title}</p><p className="text-[11px] text-[var(--color-text-muted)]">Version {item.revisionNo}</p></div>
-                    {page.isOwner && <button className="text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" aria-label={`Edit ${item.title}`} title="Edit quiz" onClick={() => setEditor(item.id)}><Edit3 size={14} /></button>}
+                    {page.isOwner && <ReaderActionButton className="text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" aria-label={`Edit ${item.title}`} tooltip="Edit quiz" onClick={() => setEditor(item.id)}><Edit3 size={14} /></ReaderActionButton>}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5"><Button size="sm" variant="outlined" onClick={() => setPreview(item.id)}>Preview</Button><Button size="sm" onClick={() => setAttempt({ quizId: item.id })} disabled={!auth.isAuthenticated}>Take quiz</Button>
                     {auth.isAuthenticated && <Button size="sm" variant="outlined" onClick={() => showHistory(item.id)}>{historyQuiz === item.id ? 'Hide attempts' : 'My attempts'}</Button>}

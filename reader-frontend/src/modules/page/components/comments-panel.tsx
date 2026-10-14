@@ -1,3 +1,4 @@
+import { ReaderActionButton } from './reader-action-button';
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { usePageStore } from '../store';
@@ -9,7 +10,7 @@ import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Input } from '@modules/core/ui/primitives/input';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { ConfirmationDialog } from '@modules/core/ui/components/confirmation-dialog';
-import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link as LinkIcon, Unlink, NotebookPen, ShieldCheck } from 'lucide-react';
+import { MessageSquare, Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link as LinkIcon, Unlink, NotebookPen, ShieldCheck, Sparkles } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { readerPageWithIdRouteValue, loginPageRoute } from '@boot/routes';
 
@@ -53,6 +54,7 @@ function CommentCard({
     onDeleted: (commentId: string) => void;
 }) {
     const navigate = useNavigate();
+    const store = usePageStore();
     const [isEditing, setIsEditing] = useState(false);
     const [editBody, setEditBody] = useState(comment.body);
     const [isSaving, setIsSaving] = useState(false);
@@ -224,39 +226,39 @@ function CommentCard({
                                 autoFocus
                                 className="flex-1 text-xs"
                             />
-                            <button
+                            <ReaderActionButton
                                 onClick={handleSaveLink}
                                 disabled={isSavingLink}
                                 className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-brand)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
-                                title="Save link"
+                                tooltip="Save link"
                             >
                                 <Check size={12} />
-                            </button>
-                            <button
+                            </ReaderActionButton>
+                            <ReaderActionButton
                                 onClick={() => { setIsLinking(false); setLinkPageId(comment.linkedPageId ?? ''); }}
                                 className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
-                                title="Cancel"
+                                tooltip="Cancel"
                             >
                                 <X size={12} />
-                            </button>
+                            </ReaderActionButton>
                         </div>
                     ) : comment.linkedPageId ? (
                         <div className="flex items-center gap-1.5 mt-2">
                             <LinkIcon size={11} className="shrink-0 text-[var(--color-brand)]" />
-                            <button
+                            <ReaderActionButton
                                 onClick={() => navigate(readerPageWithIdRouteValue(comment.linkedPageId!))}
                                 className="text-[10px] text-[var(--color-brand)] hover:underline cursor-pointer truncate"
-                                title={`Go to linked page: ${comment.linkedPageId}`}
+                                tooltip={`Go to linked page: ${comment.linkedPageId}`}
                             >
                                 {comment.linkedPageId}
-                            </button>
-                            <button
+                            </ReaderActionButton>
+                            <ReaderActionButton
                                 onClick={handleUnlink}
                                 className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
-                                title="Remove link"
+                                tooltip="Remove link"
                             >
                                 <Unlink size={11} />
-                            </button>
+                            </ReaderActionButton>
                         </div>
                     ) : null}
 
@@ -266,9 +268,10 @@ function CommentCard({
                             {formatRelativeTime(comment.createdAt)}
                         </span>
                         {!isEditing && (
-                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-0.5">
+                                <ReaderActionButton tooltip="Ask AI about this comment" onClick={() => store.doubtStore.open(comment.body, comment.selectedText, comment.pageTitle, comment.sectionTitle ?? '')} className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-brand)]" disabled={!comment.body.trim()}><Sparkles size={13} /></ReaderActionButton>
                                 <Tooltip content="Link page">
-                                    <button
+                                    <button aria-label="Link page"
                                         onClick={() => { setLinkPageId(comment.linkedPageId ?? ''); setIsLinking(true); }}
                                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-brand)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
                                     >
@@ -276,7 +279,7 @@ function CommentCard({
                                     </button>
                                 </Tooltip>
                                 <Tooltip content="Edit comment">
-                                    <button
+                                    <button aria-label="Edit comment"
                                         onClick={() => { setEditBody(comment.body); setIsEditing(true); }}
                                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
                                     >
@@ -284,7 +287,7 @@ function CommentCard({
                                     </button>
                                 </Tooltip>
                                 <Tooltip content="Delete comment">
-                                    <button
+                                    <button aria-label="Delete comment"
                                         onClick={handleDelete}
                                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
                                     >
@@ -422,6 +425,7 @@ export const PageComments = observer(function PageComments() {
                     <div className="flex items-center gap-0.5">
                         <Tooltip content={copyFeedback ? 'Copied' : 'Copy all comments'}>
                             <button
+                                aria-label={copyFeedback ? 'Copied' : 'Copy all comments'}
                                 onClick={handleCopyAll}
                                 className={`p-1 rounded transition-colors cursor-pointer ${
                                     copyFeedback
@@ -434,6 +438,7 @@ export const PageComments = observer(function PageComments() {
                         </Tooltip>
                         <Tooltip content={allExpanded ? 'Collapse all' : 'Expand all'}>
                             <button
+                                aria-label={allExpanded ? 'Collapse all comments' : 'Expand all comments'}
                                 onClick={toggleAll}
                                 className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer rounded"
                             >

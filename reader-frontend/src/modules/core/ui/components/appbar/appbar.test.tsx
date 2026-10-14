@@ -28,7 +28,7 @@ describe('homepage app bar account identity', () => {
         const html = renderToStaticMarkup(<MemoryRouter><AppBar /></MemoryRouter>);
         expect(html).toContain(`href="${settingsPageRoute}"`);
         expect(html).toContain('aria-label="Account settings — reader@example.com"');
-        expect(html).toContain('title="Account settings — reader@example.com"');
+        expect(html).not.toContain('title="Account settings — reader@example.com"');
         expect(html).not.toContain('>reader@example.com</span>');
         expect(html).not.toContain('max-w-40 truncate');
     });

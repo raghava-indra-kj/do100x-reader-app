@@ -1,3 +1,4 @@
+import { ReaderActionButton } from './reader-action-button';
 import { GripVertical } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -15,9 +16,9 @@ export const SubpageItem = observer(function SubpageItem({ hideDrag, ...props }:
         id: props.page.id, disabled: !store.isOwner || hideDrag || store.reorderingSubpages,
     });
     return <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : undefined }}>
-        <SubpageRow {...props} dragHandle={store.isOwner && !hideDrag ? <button type="button" {...attributes} {...listeners}
-            disabled={store.reorderingSubpages} className="subpage-drag" title="Drag to reorder, or press Space and use arrow keys" aria-label={`Reorder ${props.page.title}`}>
+        <SubpageRow {...props} dragHandle={store.isOwner && !hideDrag ? <ReaderActionButton type="button" {...attributes} {...listeners}
+            disabled={store.reorderingSubpages} className="subpage-drag" tooltip="Drag to reorder, or press Space and use arrow keys" aria-label={`Reorder ${props.page.title}`}>
             <GripVertical size={12} aria-hidden="true" />
-        </button> : undefined} />
+        </ReaderActionButton> : undefined} />
     </div>;
 });

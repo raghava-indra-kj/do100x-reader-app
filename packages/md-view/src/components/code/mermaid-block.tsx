@@ -1,3 +1,4 @@
+import { MarkdownActionButton } from '../action-button';
 import { useEffect, useRef, useState } from "react";
 import type { MermaidConfig } from "mermaid";
 import { Maximize2 } from "lucide-react";
@@ -128,15 +129,15 @@ export function MermaidBlock({ children }: { children?: unknown }) {
 
   return (
     <div className="md-mermaid-wrapper">
-      <button
+      <MarkdownActionButton
         type="button"
         className="md-mermaid-fullscreen-btn"
         onClick={() => setIsFullscreen(true)}
-        title="Open fullscreen"
+        tooltip="Open fullscreen"
         aria-label="Open Mermaid diagram fullscreen"
       >
         <Maximize2 size={16} aria-hidden="true" />
-      </button>
+      </MarkdownActionButton>
 
       <div
         ref={ref}

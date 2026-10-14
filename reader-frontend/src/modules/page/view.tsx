@@ -1,3 +1,4 @@
+import { ReaderActionButton } from './components/reader-action-button';
 import { observer } from 'mobx-react-lite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -267,7 +268,7 @@ const PageContent = observer(function PageContent() {
                 <div className="flex h-full relative">
                     {!uiSettings.focusMode && <NavRail />}
                     {compact && isOpen && <aside className="reader-mobile-sidebar" aria-label="Reader sidebar">
-                        <div className="reader-mobile-sidebar-close"><button type="button" className="reader-icon-button" aria-label="Close reader sidebar" onClick={() => uiSettings.setSidebarPanelOpen(false)}><X size={16} /></button></div>
+                        <div className="reader-mobile-sidebar-close"><ReaderActionButton tooltip="Close reader sidebar" className="reader-icon-button" onClick={() => uiSettings.setSidebarPanelOpen(false)}><X size={16} /></ReaderActionButton></div>
                         <div className="reader-mobile-sidebar-body"><SidebarPanel /></div>
                     </aside>}
                     <Group orientation="horizontal" {...useDefaultLayout({ id: "page-sidebar" })}>

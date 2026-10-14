@@ -26,7 +26,7 @@ export function NavRail() {
                 const getCount = (id: SidebarPanelId): number => {
                     switch (id) {
                         case 'contents':
-                            return store.navigableSections.length;
+                            return 0;
                         case 'subpages':
                             return store.optCurrentPage?.childrenCount ?? 0;
                         case 'comments':

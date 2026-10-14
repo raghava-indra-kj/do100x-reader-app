@@ -1,6 +1,8 @@
 import { observer } from 'mobx-react-lite';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronRight, Copy, List, LocateFixed, Pencil, Search, X } from 'lucide-react';
+import { ChevronRight, ChevronsDown, ChevronsUp, Copy, List, LocateFixed, Pencil, Search, X } from 'lucide-react';
+import { Select } from '@modules/core/ui/primitives/select';
+import { ReaderActionButton } from './reader-action-button';
 import { usePageStore } from '../store';
 import { PageHeadingLevel } from '../theme/page-heading-level';
 import { buildOutline, compactOutline, filterOutline, outlineAncestors, outlineBranches, type OutlineNode } from '../toc-outline';
@@ -48,10 +50,10 @@ export const PageToc = observer(function PageToc() {
             const title = label ?? section.title ?? section.rawTitle ?? 'Introduction';
             return <li key={section.id}>
                 <div className={`reader-outline-row ${isActive ? 'is-active' : ''} ${path.includes(section.id) && !isActive ? 'is-ancestor' : ''}`} style={{ paddingLeft: `${Math.min(depth, 5) * 12 + 6}px` }}>
-                    {children.length ? <button type="button" className="reader-outline-toggle" aria-label={`${open ? 'Collapse' : 'Expand'} ${title}`} aria-expanded={open} onClick={() => toggle(section.id)} disabled={Boolean(query.trim())}>
+                    {children.length ? <ReaderActionButton tooltip={`${open ? 'Collapse' : 'Expand'} ${title}`} className="reader-outline-toggle" aria-expanded={open} onClick={() => toggle(section.id)} disabled={Boolean(query.trim())}>
                         <ChevronRight size={14} aria-hidden="true" style={{ transform: open ? 'rotate(90deg)' : undefined }} />
-                    </button> : <span className="reader-outline-leaf" aria-hidden="true">·</span>}
-                    <button type="button" ref={isActive ? activeRef : undefined} className="reader-outline-link" aria-current={isActive ? 'location' : undefined} title={title} onClick={() => {
+                    </ReaderActionButton> : <span className="reader-outline-leaf" aria-hidden="true" />}
+                    <button type="button" ref={isActive ? activeRef : undefined} className="reader-outline-link" aria-current={isActive ? 'location' : undefined} onClick={() => {
                         store.setCurrentSection(section);
                         if (window.matchMedia('(max-width: 700px)').matches) store.uiSettingsStore.setSidebarPanelOpen(false);
                     }}>{title}</button>
@@ -64,21 +66,22 @@ export const PageToc = observer(function PageToc() {
     const index = active ? store.navigableSections.indexOf(active) + 1 : 0;
     return <div className="reader-outline">
         <header className="reader-outline-header">
-            <div className="reader-outline-heading"><h2>Contents <span>{store.navigableSections.length}</span></h2>
-                {store.isOwner && <button type="button" className="reader-icon-button" onClick={() => setEditOpen(true)} aria-label="Edit page" title="Edit page"><Pencil size={14} /></button>}
+            <div className="reader-outline-heading"><h2>Contents</h2>
+                {store.isOwner && <ReaderActionButton type="button" className="reader-icon-button" onClick={() => setEditOpen(true)} aria-label="Edit page" tooltip="Edit page"><Pencil size={14} /></ReaderActionButton>}
             </div>
             {outline.length > 0 && <>
-                <div className="reader-outline-search"><Search size={14} aria-hidden="true" /><input aria-label="Find a section" placeholder="Find a section…" value={query} onChange={event => setQuery(event.target.value)} />{query && <button type="button" className="reader-icon-button" onClick={() => setQuery('')} aria-label="Clear section search"><X size={13} /></button>}</div>
-                <div className="reader-outline-controls"><label>Show <select aria-label="Contents heading depth" value={store.headingLevel.id} onChange={event => { const level = PageHeadingLevel.VALUES.find(item => item.id === event.target.value); if (level) store.setHeadingLevel(level); }}>
-                    {PageHeadingLevel.VALUES.filter(level => level.value && store.flatSections.some(section => section.level === level.value)).map(level => <option key={level.id} value={level.id}>Through {level.label}</option>)}
-                </select></label>
-                {branches.length > 0 && <button type="button" disabled={Boolean(query.trim())} onClick={() => setCollapsed(collapsed.size ? new Set() : new Set(branches))}>{collapsed.size ? 'Expand all' : 'Collapse all'}</button>}</div>
+                <div className="reader-outline-search"><Search size={14} aria-hidden="true" /><input aria-label="Find a section" placeholder="Find a section…" value={query} onChange={event => setQuery(event.target.value)} />{query && <ReaderActionButton tooltip="Clear section search" className="reader-icon-button" onClick={() => setQuery('')}><X size={13} /></ReaderActionButton>}</div>
+                <div className="reader-outline-controls"><Select ariaLabel="Contents heading depth" tooltip="Choose heading depth" className="reader-outline-depth" value={store.headingLevel.id} onValueChange={value => { const level = PageHeadingLevel.VALUES.find(item => item.id === value); if (level) store.setHeadingLevel(level); }} items={Object.fromEntries(PageHeadingLevel.VALUES.filter(level => level.value && store.flatSections.some(section => section.level === level.value)).map(level => [level.id, `Through ${level.label}`]))} />
+                {branches.length > 0 && <div className="reader-outline-footer-actions">
+                    <ReaderActionButton tooltip="Expand all sections" className="reader-icon-button" disabled={Boolean(query.trim()) || !collapsed.size} onClick={() => setCollapsed(new Set())}><ChevronsDown size={16} /></ReaderActionButton>
+                    <ReaderActionButton tooltip="Collapse all sections" className="reader-icon-button" disabled={Boolean(query.trim()) || collapsed.size === branches.length} onClick={() => setCollapsed(new Set(branches))}><ChevronsUp size={16} /></ReaderActionButton>
+                </div>}</div>
             </>}
         </header>
         <nav className="reader-outline-scroll" aria-label="Table of contents">
             {filtered.length ? renderNodes(filtered) : <div className="reader-outline-empty"><List size={22} aria-hidden="true" /><p>{query ? 'No matching sections.' : page.isEmpty ? 'Add content to start reading.' : 'Headings will appear here.'}</p>{query && <button type="button" onClick={() => setQuery('')}>Clear search</button>}</div>}
         </nav>
-        {active && <footer className="reader-outline-footer"><div><span>Section {index} of {store.navigableSections.length}</span><div className="reader-outline-footer-actions"><button type="button" className="reader-icon-button" onClick={revealCurrent} aria-label="Show current section in contents" title="Show current section"><LocateFixed size={15} /></button><button type="button" className="reader-icon-button" aria-label="Copy current section" title="Copy current section" onClick={() => { void navigator.clipboard.writeText(active.fullMarkdown).then(() => toast.success('Section copied'), () => toast.error('Couldn’t copy this section.')); }}><Copy size={14} /></button></div></div><progress max={store.navigableSections.length} value={index} aria-label="Section position" /></footer>}
+        {active && <footer className="reader-outline-footer"><div><span>Section {index} of {store.navigableSections.length}</span><div className="reader-outline-footer-actions"><ReaderActionButton type="button" className="reader-icon-button" onClick={revealCurrent} aria-label="Show current section in contents" tooltip="Show current section"><LocateFixed size={15} /></ReaderActionButton><ReaderActionButton type="button" className="reader-icon-button" aria-label="Copy current section" tooltip="Copy current section" onClick={() => { void navigator.clipboard.writeText(active.fullMarkdown).then(() => toast.success('Section copied'), () => toast.error('Couldn’t copy this section.')); }}><Copy size={14} /></ReaderActionButton></div></div><progress max={store.navigableSections.length} value={index} aria-label="Section position" /></footer>}
         {store.isOwner && <UpsertPageDialog open={editOpen} onOpenChange={setEditOpen} parentPageId={page.parentPageId} editPageId={page.id} initialTitle={page.title} initialContent={page.content} initialCategory={page.category} />}
     </div>;
 });

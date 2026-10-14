@@ -1,3 +1,4 @@
+import { ReaderActionButton } from './reader-action-button';
 import { observer } from 'mobx-react-lite';
 import { useState, useEffect } from 'react';
 import { usePageStore } from '../store';
@@ -303,28 +304,28 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                     {activeEntry && extraHeaderActions && extraHeaderActions(activeEntry)}
                     
                     {storeInstance.history.length > 0 && (
-                        <button
+                        <ReaderActionButton
                             onClick={() => storeInstance.clearHistory()}
                             className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] transition-colors cursor-pointer"
-                            title="Clear lookup history"
+                            tooltip="Clear lookup history"
                         >
                             <Trash2 size={13} />
-                        </button>
+                        </ReaderActionButton>
                     )}
-                    <button
+                    <ReaderActionButton
                         onClick={() => storeInstance.toggleExpand()}
                         className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"
-                        title={storeInstance.isExpanded ? "Restore" : "Expand to full width"}
+                        tooltip={storeInstance.isExpanded ? "Restore" : "Expand to full width"}
                     >
                         {storeInstance.isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-                    </button>
-                    <button
+                    </ReaderActionButton>
+                    <ReaderActionButton
                         onClick={() => storeInstance.close()}
                         className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors cursor-pointer"
-                        title="Close"
+                        tooltip="Close"
                     >
                         <X size={14} />
-                    </button>
+                    </ReaderActionButton>
                 </div>
             </div>
 
@@ -348,16 +349,16 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                             {entry.error && (
                                 <span className="text-[10px] text-red-500 font-bold leading-none">!</span>
                             )}
-                            <button
+                            <ReaderActionButton
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     storeInstance.removeEntry(entry.id);
                                 }}
                                 className="text-[var(--color-text-muted)] hover:text-white rounded-full p-0.5 -mr-1 cursor-pointer"
-                                title="Remove item"
+                                tooltip="Remove item"
                             >
                                 <X size={9} />
-                            </button>
+                            </ReaderActionButton>
                         </div>
                     ))}
                 </div>
@@ -408,25 +409,25 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[10px] text-[var(--color-text-subtle)] font-semibold uppercase tracking-wider">AI response</span>
                                     <div className="flex items-center gap-1">
-                                        <button
+                                        <ReaderActionButton
                                             onClick={() => storeInstance.retry?.(activeEntry.id)}
                                             className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] p-1 rounded transition-colors cursor-pointer"
-                                            title="Regenerate response"
+                                            tooltip="Regenerate response"
                                         >
                                             <RotateCcw size={12} />
                                             <span>Regenerate</span>
-                                        </button>
-                                        <button
+                                        </ReaderActionButton>
+                                        <ReaderActionButton
                                             onClick={() => {
                                                 navigator.clipboard.writeText(activeEntry.responseMarkdown);
                                                 toast.success('Response copied');
                                             }}
                                             className="flex items-center gap-1 text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] p-1 rounded transition-colors cursor-pointer"
-                                            title="Copy response"
+                                            tooltip="Copy response"
                                         >
                                             <Copy size={12} />
                                             <span>Copy</span>
-                                        </button>
+                                        </ReaderActionButton>
                                     </div>
                                 </div>
                                 <MarkdownRenderer

@@ -1,3 +1,4 @@
+import { MarkdownActionButton } from '../action-button';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Workflow, ZoomIn, ZoomOut, Maximize, X } from "lucide-react";
@@ -250,50 +251,50 @@ export function D2FullscreenModal({ svg, colors, onClose, title = "D2 diagram" }
         </div>
 
         <div className="md-d2-fullscreen-controls">
-          <button
+          <MarkdownActionButton
             type="button"
             className="md-d2-control-btn"
             onClick={() => zoomByFactor(0.8)}
-            title="Zoom out (-)"
+            tooltip="Zoom out (-)"
             aria-label="Zoom out"
           >
             <ZoomOut size={16} />
-          </button>
+          </MarkdownActionButton>
 
           <span className="md-d2-zoom-badge" title="Zoom">{zoomPercent}%</span>
 
-          <button
+          <MarkdownActionButton
             type="button"
             className="md-d2-control-btn"
             onClick={() => zoomByFactor(1.25)}
-            title="Zoom in (+)"
+            tooltip="Zoom in (+)"
             aria-label="Zoom in"
           >
             <ZoomIn size={16} />
-          </button>
+          </MarkdownActionButton>
 
-          <button
+          <MarkdownActionButton
             type="button"
             className="md-d2-control-btn"
             onClick={fitToScreen}
-            title="Fit to screen (0)"
+            tooltip="Fit to screen (0)"
             aria-label="Fit to screen"
           >
             <Maximize size={16} />
             <span className="md-d2-control-label">Fit</span>
-          </button>
+          </MarkdownActionButton>
 
           <div className="md-d2-control-divider" />
 
-          <button
+          <MarkdownActionButton
             type="button"
             className="md-d2-control-btn md-d2-close-btn"
             onClick={onClose}
-            title="Close fullscreen (Esc)"
+            tooltip="Close fullscreen (Esc)"
             aria-label="Close fullscreen"
           >
             <X size={16} />
-          </button>
+          </MarkdownActionButton>
         </div>
       </header>
 

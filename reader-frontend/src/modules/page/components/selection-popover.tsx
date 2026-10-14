@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { useRef, useState, useEffect, useCallback, type RefObject } from 'react';
+import { useRef, useState, useEffect, type RefObject } from 'react';
 import type { Page } from '@domain/page/models/page';
 import type { Section } from '@domain/page/models/section';
 import { useTextSelection } from '../hooks/use-text-selection';
@@ -8,6 +8,8 @@ import { createComment } from '@domain/comment/services/comments-service';
 import { createVocabulary } from '@domain/vocabulary/services/vocabulary-service';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
 import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote, Copy, Check, NotebookPen } from 'lucide-react';
+import { ReaderActionButton } from './reader-action-button';
+import './reader-experience.css';
 
 const POPOVER_OFFSET = 10;
 const GOOGLE_URL_MAX = 2048;
@@ -49,464 +51,143 @@ function buildDuckDoubtUrl(pageTitle: string, sectionTitle: string, selectedText
     return `https://duck.ai/?q=${encodeURIComponent(query)}`;
 }
 
-const btnBase =
-    'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs transition-colors';
-const btnEnabled =
-    'text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)] cursor-pointer';
-const btnDisabled =
-    'text-[var(--color-text-body)] opacity-40 cursor-not-allowed';
-
 export function SelectionPopover({ containerRef, page, section }: SelectionPopoverProps) {
     const popoverRef = useRef<HTMLDivElement>(null);
     const store = usePageStore();
     const selection = useTextSelection(containerRef, popoverRef);
-
+    const selectedText = selection?.text.trim() ?? '';
     const sectionTitle = section.title ?? section.rawTitle ?? '';
-    const trimmedText = selection?.text.trim() ?? '';
-
-    const [view, setView] = useState<'menu' | 'doubt' | 'comment'>('menu');
-    const [doubt, setDoubt] = useState('');
-    const [commentBody, setCommentBody] = useState('');
+    const [view, setView] = useState<'menu' | 'compose' | 'hidden'>('menu');
+    const [draft, setDraft] = useState('');
     const [isExplanation, setIsExplanation] = useState(false);
-    const [isSavingComment, setIsSavingComment] = useState(false);
-    const [isSavingVocab, setIsSavingVocab] = useState(false);
-    const [doubtCopied, setDoubtCopied] = useState(false);
-    const [popoverHeight, setPopoverHeight] = useState(180);
+    const [saving, setSaving] = useState(false);
+    const [savedDrafts, setSavedDrafts] = useState<string[]>([]);
+    const [saveError, setSaveError] = useState('');
+    const [savingWord, setSavingWord] = useState(false);
+    const [height, setHeight] = useState(240);
+    const [viewport, setViewport] = useState({ width: 1024, height: 768 });
+    const savingRef = useRef(false);
+    const selectionVersion = useRef(0);
 
     useEffect(() => {
+        const resize = () => setViewport({ width: window.innerWidth, height: window.visualViewport?.height ?? window.innerHeight });
+        resize();
+        window.addEventListener('resize', resize);
+        window.visualViewport?.addEventListener('resize', resize);
+        return () => {
+            window.removeEventListener('resize', resize);
+            window.visualViewport?.removeEventListener('resize', resize);
+        };
+    }, []);
+
+    useEffect(() => {
+        selectionVersion.current += 1;
         setView('menu');
-        setDoubt('');
-        setCommentBody('');
+        setDraft('');
         setIsExplanation(false);
-        setDoubtCopied(false);
-    }, [selection?.text]);
+        setSavedDrafts([]);
+        setSaveError('');
+    }, [selectedText, page.id, section.id]);
 
     useEffect(() => {
         const node = popoverRef.current;
         if (!node) return;
+        const observer = new ResizeObserver(() => setHeight(node.getBoundingClientRect().height));
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [selectedText, view]);
 
-        setPopoverHeight(node.offsetHeight || 180);
-
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                const height = entry.borderBoxSize?.[0]
-                    ? entry.borderBoxSize[0].blockSize
-                    : (entry.target as HTMLElement).offsetHeight;
-                if (height > 0) {
-                    setPopoverHeight(height);
-                }
-            }
-        });
-        resizeObserver.observe(node);
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [selection?.text, view]);
-
-    const handleCopyDoubt = useCallback(() => {
-        if (!doubt.trim()) return;
-        const prompt = `I am reading about "${page.title}" > "${sectionTitle}".\n\nHere is the passage I am studying:\n"""\n${trimmedText}\n"""\n\nMy doubt/question is:\n${doubt.trim()}\n\nPlease help me understand this and directly answer my doubt.`;
-        navigator.clipboard.writeText(prompt);
-        setDoubtCopied(true);
-        setTimeout(() => setDoubtCopied(false), 1500);
-    }, [doubt, page.title, sectionTitle, trimmedText]);
-
-    if (!selection) return null;
-
-    const { rect } = selection;
-
-    // — Meaning: enabled only for a single word
-    const canMeaning = isSingleWord(trimmedText);
-
-    // — Explain with Google: enabled only if URL fits within limit
-    const googleUrl = buildGoogleExplainUrl(page.title, sectionTitle, trimmedText);
-    const canGoogle = googleUrl.length <= GOOGLE_URL_MAX;
-
-    // — Explain with DuckAI: enabled only if URL fits within limit
-    const duckUrl = buildDuckExplainUrl(page.title, sectionTitle, trimmedText);
-    const canDuck = duckUrl.length <= DUCK_URL_MAX;
-
-    // — Ask Doubt: enabled if either base URL fits within limit
-    const canDoubt =
-        buildGoogleDoubtUrl(page.title, sectionTitle, trimmedText, '').length <= GOOGLE_URL_MAX ||
-        buildDuckDoubtUrl(page.title, sectionTitle, trimmedText, '').length <= DUCK_URL_MAX;
-
-    // — Google Doubt submit query:
-    const googleDoubtUrl = buildGoogleDoubtUrl(page.title, sectionTitle, trimmedText, doubt);
-    const remainingGoogleChars = GOOGLE_URL_MAX - googleDoubtUrl.length;
-    const canSubmitGoogle = doubt.trim().length > 0 && remainingGoogleChars >= 0;
-
-    // — Duck Doubt submit query:
-    const duckDoubtUrl = buildDuckDoubtUrl(page.title, sectionTitle, trimmedText, doubt);
-    const remainingDuckChars = DUCK_URL_MAX - duckDoubtUrl.length;
-    const canSubmitDuck = doubt.trim().length > 0 && remainingDuckChars >= 0;
-
-    // Position above the selection by default; flip below if not enough space.
-    const spaceAbove = rect.top;
-    const showAbove = spaceAbove > popoverHeight + POPOVER_OFFSET;
-
-    const idealTop = showAbove
-        ? rect.top - POPOVER_OFFSET - popoverHeight
-        : rect.bottom + POPOVER_OFFSET;
-
-    // Constrain top to be within the window bounds, leaving at least 10px padding from the top/bottom.
-    const top = Math.max(10, Math.min(idealTop, window.innerHeight - popoverHeight - 10));
-
+    if (!selection || view === 'hidden') return null;
+    const body = draft.trim();
+    const saved = savedDrafts.includes(JSON.stringify([body, isExplanation]));
+    const width = Math.min(view === 'menu' ? 230 : 400, viewport.width - 24);
+    const idealTop = selection.rect.top > height + POPOVER_OFFSET
+        ? selection.rect.top - height - POPOVER_OFFSET : selection.rect.bottom + POPOVER_OFFSET;
     const style: React.CSSProperties = {
-        position: 'fixed',
-        left: Math.max(80, Math.min(rect.left + rect.width / 2, window.innerWidth - 80)),
-        transform: 'translateX(-50%)',
-        zIndex: 9999,
-        top,
+        position: 'fixed', zIndex: 40, width,
+        left: Math.max(12, Math.min(selection.rect.left + selection.rect.width / 2 - width / 2, viewport.width - width - 12)),
+        top: Math.max(12, Math.min(idealTop, viewport.height - height - 12)),
+        maxHeight: viewport.height - 24, overflowY: 'auto',
     };
-
-    const handleMeaning = () => {
-        if (!canMeaning) return;
-        store.dictionaryStore.open(trimmedText);
+    const googleUrl = view === 'menu' ? buildGoogleExplainUrl(page.title, sectionTitle, selectedText) : buildGoogleDoubtUrl(page.title, sectionTitle, selectedText, body);
+    const duckUrl = view === 'menu' ? buildDuckExplainUrl(page.title, sectionTitle, selectedText) : buildDuckDoubtUrl(page.title, sectionTitle, selectedText, body);
+    const canGoogle = googleUrl.length <= GOOGLE_URL_MAX;
+    const canDuck = duckUrl.length <= DUCK_URL_MAX;
+    const ask = () => {
+        if (!body || saving) return;
+        store.doubtStore.open(body, selectedText, page.title, sectionTitle);
+        setView('hidden');
     };
-
-    const handleGoogle = () => {
-        if (!canGoogle) return;
-        window.open(googleUrl, '_blank', 'noopener,noreferrer');
-    };
-
-    const handleDuck = () => {
-        if (!canDuck) return;
-        window.open(duckUrl, '_blank', 'noopener,noreferrer');
-    };
-
-    const handleGoogleSubmit = () => {
-        if (!canSubmitGoogle) return;
-        window.open(googleDoubtUrl, '_blank', 'noopener,noreferrer');
-    };
-
-    const handleDuckSubmit = () => {
-        if (!canSubmitDuck) return;
-        window.open(duckDoubtUrl, '_blank', 'noopener,noreferrer');
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            if (canSubmitDuck) {
-                handleDuckSubmit();
-            } else if (canSubmitGoogle) {
-                handleGoogleSubmit();
-            }
-        }
-    };
-
-    const handleCommentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            handleCommentSubmit();
-        }
-    };
-
-    const handleCommentSubmit = async () => {
-        if (!commentBody.trim() || isSavingComment) return;
-        setIsSavingComment(true);
-        const result = await createComment({
-            pageId: page.id,
-            pageTitle: page.title,
-            sectionTitle: sectionTitle || null,
-            selectedText: trimmedText,
-            body: commentBody.trim(),
-            isExplanation,
-        });
-        setIsSavingComment(false);
-        if (result.ok) {
-            setCommentBody('');
-            setIsExplanation(false);
-            setView('menu');
-            toast.success(isExplanation ? 'Explanation saved' : 'Comment saved');
+    const save = async () => {
+        if (!body || savingRef.current || saved) return;
+        const version = selectionVersion.current;
+        const savedKey = JSON.stringify([body, isExplanation]);
+        savingRef.current = true;
+        setSaving(true);
+        setSaveError('');
+        try {
+            const result = await createComment({ pageId: page.id, pageTitle: page.title, sectionTitle: sectionTitle || null, selectedText, body, isExplanation });
+            if (!result.ok) throw result.error;
             store.bumpCommentsVersion();
+            if (version === selectionVersion.current) setSavedDrafts(previous => [...previous, savedKey]);
+            toast.success('Comment saved. You can also ask AI about it.');
+        } catch {
+            if (version === selectionVersion.current) setSaveError('Couldn’t save your comment. Your draft is still here; try again.');
+        } finally {
+            savingRef.current = false;
+            setSaving(false);
         }
     };
-
-    const handleVocabSubmit = async () => {
-        if (!trimmedText || isSavingVocab) return;
-        setIsSavingVocab(true);
-        const result = await createVocabulary({
-            term: trimmedText,
-        });
-        setIsSavingVocab(false);
-        if (result.ok) {
-            setView('menu');
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(`Page: ${page.title}\nSection: ${sectionTitle}\n\n${selectedText}\n\n${body}`);
+            toast.success('Text and context copied');
+        } catch { toast.error('Couldn’t copy. Please try again.'); }
+    };
+    const saveWord = async () => {
+        if (savingWord) return;
+        setSavingWord(true);
+        try {
+            const result = await createVocabulary({ term: selectedText });
+            if (!result.ok) throw result.error;
             toast.success(result.data.created ? 'Word saved' : 'Already saved');
             store.bumpVocabVersion();
-        } else {
-            toast.error(result.error.message);
-        }
+        } catch { toast.error('Couldn’t save this word. Please try again.'); }
+        finally { setSavingWord(false); }
     };
-
-    return createPortal(
-        view === 'menu' ? (
-            <div
-                ref={popoverRef}
-                style={style}
-                className="flex flex-col items-stretch gap-0.5 rounded-lg bg-[var(--color-surface-raised)] p-1 shadow-lg ring-1 ring-[var(--color-border-subtle)] min-w-[120px]"
-                onMouseDown={(e) => e.preventDefault()}
-            >
-                {/* Meaning — single word only */}
-                <button
-                    onClick={handleMeaning}
-                    className={`${btnBase} ${canMeaning ? btnEnabled : btnDisabled}`}
-                    title={canMeaning ? 'Look up meaning' : 'Select a single word'}
-                    disabled={!canMeaning}
-                >
-                    <BookOpen size={13} />
-                    <span>Meaning</span>
-                </button>
-
-                <button
-                    onClick={() => {
-                        store.meaningStore.open(trimmedText, page.title, sectionTitle);
-                    }}
-                    className={`${btnBase} ${btnEnabled}`}
-                    title="Look up with AI"
-                >
-                    <Sparkles size={13} />
-                    <span>Word meanings</span>
-                </button>
-
-                <button
-                    onClick={() => {
-                        store.explanationStore.open(trimmedText, page.title, sectionTitle);
-                    }}
-                    className={`${btnBase} ${btnEnabled}`}
-                    title="Explain with AI"
-                >
-                    <Sparkles size={13} />
-                    <span>Explain with AI</span>
-                </button>
-
-                <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
-
-                {/* Explain with Google — under URL limit */}
-                <button
-                    onClick={handleGoogle}
-                    className={`${btnBase} ${canGoogle ? btnEnabled : btnDisabled}`}
-                    title={canGoogle ? 'Explain with Google AI' : 'Selection too long for Google'}
-                    disabled={!canGoogle}
-                >
-                    <Globe size={13} />
-                    <span>Explain (Google)</span>
-                </button>
-
-                <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
-
-                {/* Explain with DuckAI — under URL limit */}
-                <button
-                    onClick={handleDuck}
-                    className={`${btnBase} ${canDuck ? btnEnabled : btnDisabled}`}
-                    title={canDuck ? 'Explain with DuckAI' : 'Selection too long for DuckAI'}
-                    disabled={!canDuck}
-                >
-                    <Sparkles size={13} />
-                    <span>Explain (DuckAI)</span>
-                </button>
-
-                <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
-
-                {/* Ask Doubt */}
-                <button
-                    onClick={() => setView('doubt')}
-                    className={`${btnBase} ${canDoubt ? btnEnabled : btnDisabled}`}
-                    title={canDoubt ? 'Ask a question about this text' : 'Selection too long'}
-                    disabled={!canDoubt}
-                >
-                    <MessageSquare size={13} />
-                    <span>Ask a question</span>
-                </button>
-
-                <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
-
-                {/* Add Comment */}
-                <button
-                    onClick={() => setView('comment')}
-                    className={`${btnBase} ${btnEnabled}`}
-                    title="Add a comment"
-                >
-                    <StickyNote size={13} />
-                    <span>Add comment</span>
-                </button>
-
-                <div className="h-px bg-[var(--color-border-subtle)] mx-1" />
-
-                {/* Add to Vocabulary */}
-                <button
-                    onClick={handleVocabSubmit}
-                    disabled={isSavingVocab}
-                    className={`${btnBase} ${btnEnabled}`}
-                    title="Save this word"
-                >
-                    <NotebookPen size={13} />
-                    <span>{isSavingVocab ? 'Adding…' : 'Save word'}</span>
-                </button>
+    return createPortal(<div ref={popoverRef} style={style} className={`reader-selection-popover ${view === 'menu' ? 'reader-selection-menu' : 'reader-composer'}`} onMouseDown={event => { if (view === 'menu') event.preventDefault(); }}>
+        {view === 'menu' ? <>
+            <button className="reader-selection-primary" onClick={() => setView('compose')}><MessageSquare size={15} />Ask or comment</button>
+            <button onClick={() => { store.explanationStore.open(selectedText, page.title, sectionTitle); setView('hidden'); }}><Sparkles size={15} />Explain with AI</button>
+            <button onClick={() => { store.meaningStore.open(selectedText, page.title, sectionTitle); setView('hidden'); }}><BookOpen size={15} />Word meanings</button>
+            {isSingleWord(selectedText) && <button onClick={() => { store.dictionaryStore.open(selectedText); setView('hidden'); }}><BookOpen size={15} />Dictionary</button>}
+            <button disabled={savingWord} onClick={saveWord}><NotebookPen size={15} />{savingWord ? 'Saving…' : 'Save word'}</button>
+            <button onClick={copy}><Copy size={15} />Copy selection</button>
+            <details><summary>Explain elsewhere</summary><div className="reader-external-actions">
+                <button disabled={!canGoogle} onClick={() => window.open(googleUrl, '_blank', 'noopener,noreferrer')}>Google AI</button>
+                <button disabled={!canDuck} onClick={() => window.open(duckUrl, '_blank', 'noopener,noreferrer')}>DuckAI</button>
+                {(!canGoogle || !canDuck) && <small>Selection too long for some providers. Use Copy selection instead.</small>}
+            </div></details>
+        </> : <>
+            <div className="reader-composer-header"><strong><MessageSquare size={16} />Ask or comment</strong><ReaderActionButton tooltip="Back to selection tools" className="reader-icon-button" onClick={() => setView('menu')}><ArrowLeft size={16} /></ReaderActionButton></div>
+            <blockquote className="reader-composer-context">{selectedText}</blockquote>
+            <label className="sr-only" htmlFor="reader-selection-draft">Question or comment</label>
+            <textarea id="reader-selection-draft" autoFocus value={draft} onChange={event => { setDraft(event.target.value); setSaveError(''); }} placeholder="What would you like to understand or remember?" onKeyDown={event => {
+                if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); if (event.shiftKey) void save(); else ask(); }
+            }} />
+            <div className="reader-composer-options"><label><input type="checkbox" checked={isExplanation} onChange={event => setIsExplanation(event.target.checked)} />Include comment in my explanations</label><ReaderActionButton tooltip="Copy draft and selected passage" className="reader-icon-button" onClick={copy}><Copy size={15} /></ReaderActionButton></div>
+            {saveError && <p role="alert" className="reader-composer-error">{saveError}</p>}
+            {saved && <p role="status" className="reader-composer-saved"><Check size={13} />Saved to comments. Your text is ready to ask AI.</p>}
+            <div className="reader-composer-actions">
+                <button disabled={!body || saving || saved} onClick={() => void save()}><StickyNote size={15} />{saving ? 'Saving…' : saved ? 'Comment saved' : 'Save comment'}</button>
+                <button className="reader-composer-ask" disabled={!body || saving} onClick={ask}><Sparkles size={15} />Ask AI</button>
             </div>
-        ) : view === 'doubt' ? (
-            <div
-                ref={popoverRef}
-                style={style}
-                className="flex flex-col gap-2.5 rounded-xl bg-[var(--color-surface-raised)] p-3 shadow-xl ring-1 ring-[var(--color-border-subtle)] w-80"
-                onMouseDown={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                        <MessageSquare size={13} className="text-[var(--color-brand)]" />
-                        <span className="text-[11px] font-semibold text-[var(--color-text-strong)]">Ask a question</span>
-                    </div>
-                    <button
-                        onClick={() => setView('menu')}
-                        className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
-                    >
-                        <ArrowLeft size={11} />
-                        <span>Back</span>
-                    </button>
-                </div>
-
-                {/* Textarea */}
-                <textarea
-                    value={doubt}
-                    onChange={(e) => setDoubt(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask a question… (Ctrl+Enter to send)"
-                    className="w-full rounded-lg border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] px-3 py-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] focus:ring-1 focus:ring-[var(--color-brand)] resize-none h-20 transition-colors"
-                    autoFocus
-                />
-
-                {/* Character Counter Row */}
-                <div className="flex justify-between items-center text-[10px] text-[var(--color-text-subtle)] tabular-nums px-0.5 -mt-1">
-                    <span>{doubt.length} characters</span>
-                    <div className="flex gap-2">
-                        <span className={remainingGoogleChars < 0 ? 'text-[var(--color-text-error)] font-medium' : ''}>
-                            Google: {remainingGoogleChars >= 0 ? `${remainingGoogleChars} left` : 'Too long'}
-                        </span>
-                        <span className={remainingDuckChars < 0 ? 'text-[var(--color-text-error)] font-medium' : ''}>
-                            DuckAI: {remainingDuckChars >= 0 ? `${remainingDuckChars} left` : 'Too long'}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Ask AI in-app button */}
-                <button
-                    onClick={() => {
-                        store.doubtStore.open(doubt, trimmedText, page.title, sectionTitle);
-                    }}
-                    disabled={!doubt.trim()}
-                    className={`w-full flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition-all ${
-                        doubt.trim()
-                            ? 'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-hover)] cursor-pointer active:scale-95'
-                            : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] opacity-40 cursor-not-allowed'
-                    }`}
-                    title="Get an answer with AI"
-                >
-                    <Sparkles size={13} className="shrink-0" />
-                    <span>Ask AI</span>
-                </button>
-
-                {/* Linear Action Buttons */}
-                <div className="flex items-center gap-1.5 w-full">
-                    {/* Google */}
-                    <button
-                        onClick={handleGoogleSubmit}
-                        disabled={!canSubmitGoogle}
-                        className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[10px] font-semibold transition-all border ${
-                            canSubmitGoogle
-                                ? 'bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:border-[var(--color-text-muted)] cursor-pointer active:scale-95'
-                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] border-transparent opacity-40 cursor-not-allowed'
-                        }`}
-                        title={canSubmitGoogle ? 'Search with Google' : 'Too long for Google'}
-                    >
-                        <Globe size={12} className="shrink-0" />
-                        <span>Search Google</span>
-                    </button>
-
-                    {/* DuckAI */}
-                    <button
-                        onClick={handleDuckSubmit}
-                        disabled={!canSubmitDuck}
-                        className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[10px] font-semibold transition-all border ${
-                            canSubmitDuck
-                                ? 'bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:border-[var(--color-text-muted)] cursor-pointer active:scale-95'
-                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] border-transparent opacity-40 cursor-not-allowed'
-                        }`}
-                        title={canSubmitDuck ? 'Search with DuckAI' : 'Too long for DuckAI'}
-                    >
-                        <Sparkles size={12} className="shrink-0" />
-                        <span>Search DuckAI</span>
-                    </button>
-
-                    {/* Copy doubt */}
-                    <button
-                        onClick={handleCopyDoubt}
-                        disabled={!doubt.trim()}
-                        className={`flex-1 flex items-center justify-center gap-1 rounded-lg py-2 text-[10px] font-semibold transition-all border ${
-                            doubt.trim()
-                                ? 'bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] border-[var(--color-border-default)] hover:bg-[var(--color-surface-soft)] hover:border-[var(--color-text-muted)] cursor-pointer active:scale-95'
-                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-subtle)] border-transparent opacity-40 cursor-not-allowed'
-                        }`}
-                        title="Copy question and context"
-                    >
-                        {doubtCopied ? <Check size={12} className="text-[var(--color-brand)] shrink-0" /> : <Copy size={12} className="shrink-0" />}
-                        <span>{doubtCopied ? 'Copied' : 'Copy'}</span>
-                    </button>
-                </div>
-            </div>
-        ) : (
-            <div
-                ref={popoverRef}
-                style={style}
-                className="flex flex-col gap-2 rounded-lg bg-[var(--color-surface-raised)] p-2 shadow-lg ring-1 ring-[var(--color-border-subtle)] w-64"
-                onMouseDown={(e) => e.stopPropagation()}
-            >
-                <div className="flex items-center justify-between border-b border-[var(--color-border-subtle)] pb-1.5">
-                    <span className="text-[10px] font-bold text-[var(--color-text-subtle)] uppercase tracking-wider">Add comment</span>
-                    <button
-                        onClick={() => setView('menu')}
-                        className="flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs text-[var(--color-text-body)] hover:bg-[var(--color-surface-soft)] cursor-pointer"
-                    >
-                        <ArrowLeft size={12} />
-                        <span>Back</span>
-                    </button>
-                </div>
-
-                <textarea
-                    value={commentBody}
-                    onChange={(e) => setCommentBody(e.target.value)}
-                    onKeyDown={handleCommentKeyDown}
-                    placeholder="Write a comment… (Ctrl+Enter to save)"
-                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] resize-none h-20"
-                    autoFocus
-                />
-
-                <label className="flex items-center gap-1.5 -mt-0.5 cursor-pointer select-none">
-                    <input
-                        type="checkbox"
-                        checked={isExplanation}
-                        onChange={(e) => setIsExplanation(e.target.checked)}
-                        className="h-3 w-3 rounded border-[var(--color-border-default)] accent-[var(--color-brand)] cursor-pointer"
-                    />
-                    <span className="text-[10px] text-[var(--color-text-muted)]">Save to my explanations</span>
-                </label>
-
-                <div className="flex items-center justify-end mt-1">
-                    <button
-                        onClick={handleCommentSubmit}
-                        disabled={!commentBody.trim() || isSavingComment}
-                        className={`px-3 py-1.5 text-[10px] font-semibold rounded-md transition-colors ${
-                            commentBody.trim() && !isSavingComment
-                                ? 'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] cursor-pointer hover:bg-[var(--color-brand-hover)]'
-                                : 'bg-[var(--color-surface-soft)] text-[var(--color-text-body)] opacity-40 cursor-not-allowed'
-                        }`}
-                    >
-                        {isSavingComment ? 'Saving…' : 'Save comment'}
-                    </button>
-                </div>
-            </div>
-        ),
-        document.body,
-    );
+            <div className="reader-composer-hint">Ctrl / ⌘ + Enter to ask · add Shift to save</div>
+            <details><summary><Globe size={13} />Ask elsewhere</summary><div className="reader-external-actions">
+                <button disabled={!body || !canGoogle} onClick={() => window.open(googleUrl, '_blank', 'noopener,noreferrer')}>Google AI ↗</button>
+                <button disabled={!body || !canDuck} onClick={() => window.open(duckUrl, '_blank', 'noopener,noreferrer')}>DuckAI ↗</button>
+                {(!canGoogle || !canDuck) && <small>This passage is too long for some external links. Copy it to use elsewhere.</small>}
+            </div></details>
+        </>}
+    </div>, document.body);
 }
