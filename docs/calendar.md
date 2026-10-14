@@ -100,8 +100,24 @@ The command accepts only that guarded path and creates its own randomly named lo
 | Subscriptions and file exchange | SSRF/DNS pinning/redirect unit tests; iCalendar timezone, exception and boundary tests; packaged worker/export smoke | Service path verified. Actual browser file-picker import and download completion remain unverified because of the automation restrictions recorded above. |
 | Reminders | Due-time/receipt/retry tests, explicit opt-in UI, saved reminder fields | Open-page behavior implemented; OS notification delivery was not exercised because notification permission was not granted. |
 | Existing data and production safety | Disposable upgrades and before/after snapshots, additive SQL inspection, production profile replacement in package smoke | Local upgrades preserve representative records. No production migration/deployment has run. |
-| Release artifact | Fresh extracted production-mode install/startup and API/assets/import checks | Passed for the 02:48 package; rebuild/recheck after subsequent UI fixes before release. Destination Linux hosting remains unverified. |
+| Release artifact | Fresh extracted production-mode install/startup and API/assets/import checks | Final code package passed after the task deep-link fix (`releases/calendar-final-package-check.log`). Destination Linux hosting remains unverified. |
 
 ### Outstanding release gates
 
-The work is being preserved on `codex/calendar-tasks` as a development checkpoint, not a production release. Finish browser file import/download verification and the notification delivery check; resolve any findings, then verify the final artifact. A separate full-workspace clean-install attempt was rejected by automatic approval review before execution, with no reason beyond “blocked by policy”; it was not retried through another mechanism. The isolated production runtime installation did pass. Production migration/deployment still requires the separate authorization recorded above.
+The implementation is committed and pushed as `373ce22` on `codex/calendar-tasks`. It remains a development checkpoint, not a production release. Finish browser file import/download verification and the notification delivery check; resolve any findings and rebuild if application code changes. A separate full-workspace clean-install attempt was rejected by automatic approval review before execution, with no reason beyond “blocked by policy”; it was not retried through another mechanism. The isolated production runtime installation did pass. Production migration/deployment still requires the separate authorization recorded above.
+
+### Final code package — 15 October 2026, 02:57 IST
+
+`releases/do100x-20261014T212600742Z-77651f09.zip` contains the application code from `373ce22`, including the task deep-link context fix. Its SHA-256 is `fadbc70be86b0e016243be88dc558cf395659596449ef27bd57d5639b91dfe40`. The ZIP is private because it contains production configuration. Do not attach it to a public release.
+
+The package built successfully (`releases/calendar-final-package-build.log`) and passed the extracted production-mode installation and startup checks (`releases/calendar-final-package-check.log`). This run verified frontend assets, authentication and origin checks, linked-task completion, atomic task creation with retry, the import worker and export response. Existing seeded records stayed unchanged, and the disposable verification database was removed. No production connection or migration was used.
+
+### Browser checks requiring a person
+
+The local preview is available at `http://127.0.0.1:5184/calendar` while `node scripts/habits-test-db.cjs --calendar --preview --seed` is running. It uses a separate disposable database; changes there do not affect the user's actual records. Its current browser tab is left on **Calendars & files** (`releases/calendar-release-handoff.png`).
+
+1. Import `D:\PersonalProjects\reader\releases\calendar-review.ics` through the file chooser. Confirm **Reading club** appears on October 15, 22, 29 and November 5, 2026, from 15:30 to 16:30 in Asia/Kolkata.
+2. Export that imported calendar and confirm the browser saves a readable `.ics` file. Also use **Download .ics** to export native events for a selected range and confirm the saved file contains those events.
+3. Close the file dialog, enable reminders through the visible button and personally handle the browser permission prompt. Create a disposable event a few minutes ahead with **At start time**, keep Calendar open, and confirm a desktop notification arrives once.
+
+The actual file chooser remains unavailable to automation under the installed extension permissions. The browser download UI and OS notification delivery cannot be inferred from successful service/unit tests. Browser security settings have not been modified to bypass these limits. Record pass/fail results for these steps before claiming release completion.
