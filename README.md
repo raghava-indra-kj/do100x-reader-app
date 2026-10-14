@@ -1,13 +1,15 @@
 # do100x
 
-Reader, Finance and Tasks are part of the do100x application and share Google-only
+Reader, Finance, Tasks and Habits are part of the do100x application and share Google-only
 sign-in. The home page provides quick access to each app. No Firebase, usernames,
 or passwords.
 
 ## Run the full application
 
 Requires Node.js 22 or newer and MySQL. Configure `reader-backend/.env` using
-`reader-backend/.env.example`; use a **new empty database** for this release.
+`reader-backend/.env.example`. Use a **new empty database** for a first installation.
+For an existing installation, preserve its database and review pending migrations
+before upgrading; never reset or reinitialize existing data.
 Google credentials and complete configuration are covered in
 [Google sign-in setup](docs/google-sign-in.md).
 
@@ -40,7 +42,7 @@ publish or share it. See [configuration and deployment instructions](docs/shared
 
 ## Application routes
 
-`/` is the do100x launcher. Apps live at `/reader`, `/finance` and `/tasks`;
+`/` is the do100x launcher. Apps live at `/reader`, `/finance`, `/tasks` and `/habits`;
 Reader documents and public share links use `/reader/pages/:id`. Google sign-in
 and shared account settings use `/login` and `/settings`.
 
@@ -69,10 +71,12 @@ in `APP_ORIGINS`. Vite proxies `/backend-api` to the backend on port 3000.
 - [Quizzes and feedback](docs/quizzes.md)
 - [Google sign-in architecture and checks](docs/google-sign-in.md)
 - [Finance: accounts, plans, statements and MCP](docs/finance.md)
+- [Habits: schedules, check-ins, progress and safe deployment](docs/habits.md)
 
 ```powershell
 npm test --workspace @reader/md-ast
 npm test --workspace @reader/finance-core
+npm test --workspace @reader/habit-core
 npm test --workspace reader-frontend
 npm test --workspace reader-backend
 ```

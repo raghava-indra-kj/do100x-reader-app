@@ -16,6 +16,7 @@ describe('suite navigation', () => {
         expect(html).toMatch(/<a(?=[^>]*href="\/finance")(?=[^>]*aria-current="page")[^>]*>/);
         expect(html).toContain('href="/reader"');
         expect(html).toContain('href="/tasks"');
+        expect(html).toContain('href="/habits"');
         expect(html).toContain('Home');
         expect(html).not.toContain('All applications');
         expect(html).not.toContain('Your do100x tools');
@@ -28,6 +29,7 @@ describe('suite navigation', () => {
         expect(html).toContain('href="/reader"');
         expect(html).toContain('href="/finance"');
         expect(html).toContain('href="/tasks"');
+        expect(html).toContain('href="/habits"');
     });
     it('uses a keyboard-accessible local home link and locally served official logo', () => {
         const html = renderToStaticMarkup(<MemoryRouter><AppBarLogo compact /></MemoryRouter>);

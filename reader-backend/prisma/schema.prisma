@@ -19,6 +19,51 @@ model appuser {
   identities auth_identity[]
   readerPreferences reader_preferences?
   financeBooks finance_book[]
+  habits habit[]
+}
+
+// Habits are private account data, independent of Reader, Finance and Tasks.
+// Plans preserve effective-dated schedule/goal history; date keys use the habit's timezone.
+model habit {
+  id String @id @default(uuid()) @db.VarChar(36)
+  userId String @db.VarChar(36)
+  requestKey String @db.VarChar(36)
+  requestHash String @db.Char(64)
+  name String @db.VarChar(160)
+  description String @db.VarChar(1000)
+  icon String @db.VarChar(30)
+  color String @db.VarChar(20)
+  section String @db.VarChar(80)
+  timezone String @db.VarChar(100)
+  sortOrder Int @default(0)
+  version Int @default(1)
+  plans Json
+  pauses Json
+  archivedAt DateTime? @db.DateTime(6)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  user appuser @relation(fields: [userId], references: [id], onDelete: Restrict)
+  logs habit_log[]
+  @@unique([userId, requestKey])
+  @@unique([userId, id])
+  @@index([userId, sortOrder])
+}
+
+model habit_log {
+  id String @id @default(uuid()) @db.VarChar(36)
+  habitId String @db.VarChar(36)
+  userId String @db.VarChar(36)
+  date String @db.Char(10)
+  value Decimal @db.Decimal(12, 3)
+  status String @db.VarChar(12)
+  note String @db.Text
+  mood Int? @db.UnsignedTinyInt
+  version Int @default(1)
+  createdAt DateTime @default(now()) @db.DateTime(6)
+  updatedAt DateTime @updatedAt @db.DateTime(6)
+  habit habit @relation(fields: [userId, habitId], references: [userId, id], onDelete: Cascade)
+  @@unique([habitId, date])
+  @@index([userId, date])
 }
 
 // Finance is independent of Reader pages and Tasks. All child references include

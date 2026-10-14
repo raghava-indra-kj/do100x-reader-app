@@ -48,7 +48,7 @@
 .suite-home-apps-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 18px; }
 .suite-home-apps-heading > h2 { font-size: 19px; font-weight: 700; }
 .suite-home-apps-heading > p { color: var(--color-text-muted); font-size: 13px; }
-.suite-home-apps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; scroll-margin-top: 24px; }
+.suite-home-apps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; scroll-margin-top: 24px; }
 .suite-home-card { display: flex; flex-direction: column; gap: 14px; padding: 24px; border: 1px solid var(--color-border-subtle); border-radius: 14px; background: var(--color-surface-raised); min-width: 0; transition: border-color 140ms, box-shadow 140ms; }
 .suite-home-card:hover { border-color: var(--color-brand); box-shadow: 0 5px 20px color-mix(in srgb, var(--color-text-strong) 6%, transparent); }
 .suite-home-card-top { display: flex; align-items: center; justify-content: space-between; }
@@ -118,3 +118,5 @@
     .suite-home-preview-bill { flex-wrap: wrap; gap: 3px; }
 }
 @media (prefers-reduced-motion: reduce) { .suite-home :is(a, button) { transition: none; } }
+
+.suite-home-card-habits .suite-home-icon { background:var(--color-success-soft); color:var(--color-success-on-soft); }

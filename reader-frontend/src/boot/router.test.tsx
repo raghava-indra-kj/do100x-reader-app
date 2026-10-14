@@ -16,9 +16,9 @@ describe('do100x browser route contract', () => {
     const resolve = (path: string) => matchRoutes(routes, path)!.at(-1)!;
 
     it('registers only current suite routes and a not-found screen', () => {
-        expect(routes.map(route => route.path)).toEqual(['/', '/reader/pages/:id', '/login', '/reader', '/reader/captures', '/reader/capture', '/reader/vocabulary', '/settings', '/tasks', '/finance', '*']);
+        expect(routes.map(route => route.path)).toEqual(['/', '/reader/pages/:id', '/login', '/reader', '/reader/captures', '/reader/capture', '/reader/vocabulary', '/settings', '/tasks', '/finance', '/habits', '*']);
     });
-    it.each(['/reader', '/reader/capture', '/reader/captures', '/finance', '/tasks', '/settings'])('keeps the private app %s behind the existing guard', path => {
+    it.each(['/reader', '/reader/capture', '/reader/captures', '/finance', '/tasks', '/habits', '/settings'])('keeps the private app %s behind the existing guard', path => {
         const element = resolve(path).route.element;
         expect(isValidElement(element) && element.type).toBe(AuthGuard);
     });

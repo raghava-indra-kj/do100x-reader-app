@@ -2,7 +2,7 @@ import { lazy } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { AuthProvider, AuthGuard } from '@modules/auth/provider';
 import { MotivationPreferencesProvider } from '@modules/core/preferences/motivation-preferences';
-import { financePageRoute, homePageRoute, loginPageRoute, readerPageWithIdRoute, readerPageRoute, vocabularyPageRoute, settingsPageRoute, tasksPageRoute } from './routes';
+import { financePageRoute, habitsPageRoute, homePageRoute, loginPageRoute, readerPageWithIdRoute, readerPageRoute, vocabularyPageRoute, settingsPageRoute, tasksPageRoute } from './routes';
 
 const HomePage = lazy(() => import('../modules/home/page'));
 const NotFoundPage = lazy(() => import('../modules/home/not-found'));
@@ -13,6 +13,7 @@ const PagePage = lazy(() => import('../modules/page/page'));
 const SettingsPage = lazy(() => import('../modules/settings/page'));
 const TasksPage = lazy(() => import('../modules/tasks/page'));
 const FinancePage = lazy(() => import('../modules/finance/page'));
+const HabitsPage = lazy(() => import('../modules/habits/page'));
 const CapturesPage = lazy(() => import('../modules/reader/captures/page'));
 const CaptureImportPage = lazy(() => import('../modules/reader/captures/import-page'));
 
@@ -29,6 +30,7 @@ export function ApplicationRoutes() {
         <Route path={settingsPageRoute} element={<AuthGuard><SettingsPage /></AuthGuard>} />
         <Route path={tasksPageRoute} element={<AuthGuard><TasksPage /></AuthGuard>} />
         <Route path={financePageRoute} element={<AuthGuard><FinancePage /></AuthGuard>} />
+        <Route path={habitsPageRoute} element={<AuthGuard><HabitsPage /></AuthGuard>} />
         <Route path="*" element={<NotFoundPage />} />
     </Routes>;
 }

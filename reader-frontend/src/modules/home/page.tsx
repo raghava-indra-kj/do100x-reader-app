@@ -12,6 +12,7 @@ const appFeatures = {
     reader: ['Organize pages and subpages', 'Save words to learn', 'Check your understanding with quizzes'],
     finance: ['Keep your accounts together', 'Record income and expenses', 'Plan bills and forecast cash flow'],
     tasks: ['Organize tasks into lists', 'Set priorities and due dates', 'Track time spent on each task'],
+    habits: ['Build habits around your schedule', 'Log progress and personal notes', 'Review streaks and check-in history'],
 } satisfies Record<typeof suiteApps[number]['id'], string[]>;
 
 /** An illustrative preview only, never a summary of the user's private data. */
@@ -53,9 +54,9 @@ export default observer(function HomePage() {
             <div className="suite-home-content suite-home-landing-content">
                 {marketing ? <section className="suite-home-hero" aria-labelledby="suite-home-title">
                     <div className="suite-home-hero-copy">
-                        <p className="suite-home-eyebrow">Reader · Tasks · Finance</p>
+                        <p className="suite-home-eyebrow">Reader · Finance · Tasks · Habits</p>
                         <h1 id="suite-home-title">Read better.<br />Plan your day.<br /><span>Track your money.</span></h1>
-                        <p className="suite-home-description">Keep your reading, to-dos and finances organized—with a clear place for each.</p>
+                        <p className="suite-home-description">Keep your reading, finances, tasks and daily habits organized—with a clear place for each.</p>
                         <div className="suite-home-hero-actions">
                             <Link to={loginPageRoute} className="suite-home-sign-in">Sign in to get started <ArrowRight size={18} aria-hidden="true" /></Link>
                             <a href="#home-tools" className="suite-home-explore">Explore tools <ArrowRight size={15} aria-hidden="true" /></a>

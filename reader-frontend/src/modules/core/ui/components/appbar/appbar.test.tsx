@@ -40,7 +40,7 @@ describe('homepage app bar account identity', () => {
         expect(html).not.toContain(auth.currentUser.label);
         auth.isAuthenticated = true;
     });
-    it.each([['/finance', 'Finance'], ['/tasks', 'Tasks'], ['/reader/pages/example', 'Reader']])('uses the shared header and control order for %s', (path, name) => {
+    it.each([['/finance', 'Finance'], ['/tasks', 'Tasks'], ['/habits', 'Habits'], ['/reader/pages/example', 'Reader']])('uses the shared header and control order for %s', (path, name) => {
         const html = renderToStaticMarkup(<MemoryRouter initialEntries={[path]}><AppBar /></MemoryRouter>);
         expect(html.match(/class="suite-appbar"/g)).toHaveLength(1);
         expect(html).toContain(`class="suite-appbar-name">${name}</span>`);
