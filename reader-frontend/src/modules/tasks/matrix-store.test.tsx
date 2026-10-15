@@ -8,6 +8,7 @@ vi.mock('@domain/tasks/services/task-service', () => services);
 vi.mock('@modules/core/ui/primitives/toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 import { TasksStore } from './store';
 import { matrixCreationDate } from './matrix-settings';
+import { moveMatrixTask } from './matrix-drag';
 import { MatrixView } from './components/matrix-view';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { autorun } from 'mobx';
@@ -395,5 +396,36 @@ describe('matrix store and rendered controls', () => {
       resolve(failure()); await saving; expect(store.matrixQ1Tasks).toHaveLength(1); expect(store.matrixQ3Tasks).toHaveLength(0);
       expect(counts).toEqual([1, 0, 1]);
     } finally { dispose(); }
+  });
+});
+
+
+describe('priority drag saves', () => {
+  it('moves optimistically and saves only priority with the current version', async () => {
+    const item = task('drag-me', 2); item.version = 7;
+    store.tasks = [item]; store.matrixSettings = { ...store.matrixSettings, date: 'all' };
+    let finish!: (result: ReturnType<typeof ok<any>>) => void;
+    services.updateTask.mockReturnValueOnce(new Promise(resolve => { finish = resolve; }));
+    services.getTasks.mockResolvedValue(ok([item]));
+    const moving = moveMatrixTask(store, item.id, 1);
+    expect(store.matrixQ1Tasks.map(task => task.id)).toEqual(['drag-me']);
+    expect(services.updateTask).toHaveBeenCalledWith('drag-me', { priority: 1, expectedVersion: 7 });
+    expect(await moveMatrixTask(store, item.id, 3)).toBe(false);
+    finish(ok({ ...item, version: 8 }));
+    expect(await moving).toBe(true);
+    expect(item.version).toBe(8);
+  });
+  it('restores the previous priority after a failed save', async () => {
+    const item = task('keep-me', 3); store.tasks = [item];
+    store.matrixSettings = { ...store.matrixSettings, date: 'all' };
+    services.updateTask.mockResolvedValueOnce(failure());
+    expect(await moveMatrixTask(store, item.id, 1)).toBe(false);
+    expect(item.priority).toBe(3); expect(item.status).toBe('todo');
+  });
+  it('ignores invalid, stale and same-group drops', async () => {
+    store.tasks = [task('unchanged', 2)]; store.matrixSettings = { ...store.matrixSettings, date: 'all' };
+    for (const priority of [0, 5, 1.5, 2]) expect(await moveMatrixTask(store, 'unchanged', priority)).toBe(false);
+    expect(await moveMatrixTask(store, 'missing', 1)).toBe(false);
+    expect(services.updateTask).not.toHaveBeenCalled();
   });
 });

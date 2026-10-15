@@ -29,17 +29,20 @@ export function TimeGrid(props: Props & { days: string[]; clock: Date }) {
   useEffect(() => { if (scroll.current) scroll.current.scrollTop = Math.max(0, preferences.workStart * 52 - 20); }, [days[0], preferences.workStart]);
   useEffect(() => {
     const container = scroll.current;
-    if (container && container.clientWidth <= 600 && days.length > 1) container.scrollLeft = Math.max(0, days.indexOf(props.date)) * 160;
+    if (container && container.clientWidth <= 700 && days.length > 1) {
+      const dayWidth = container.querySelector('.calendar-day-headings > button')?.getBoundingClientRect().width ?? 145;
+      container.scrollLeft = Math.max(0, days.indexOf(props.date)) * dayWidth;
+    }
   }, [props.date, days[0], days.length]);
   const now = wallAt(props.clock, preferences.timeZone), currentMinute = Number(now.slice(11, 13)) * 60 + Number(now.slice(14));
   return <div className="calendar-time-view" ref={scroll} style={{ '--calendar-days': days.length } as CSSProperties}>
     <div className="calendar-day-headings"><span className="calendar-zone-label">{preferences.timeZone.split('/').pop()?.replaceAll('_', ' ')}</span>{days.map(date => {
       const minutes = plannedMinutes(items, date, preferences);
-      return <button key={date} className={date === props.today ? 'is-today' : ''} onClick={() => props.onDay(date)}><span>{formatDate(date, { weekday: 'short' })}</span><strong>{formatDate(date, { day: 'numeric' })}</strong><small>{minutes ? `${formatTrackedDuration(minutes * 60)} planned` : 'Open day'}</small></button>;
+      return <button key={date} className={`${date === props.today ? 'is-today' : ''} ${date === props.date ? 'is-selected' : ''}`} onClick={() => props.onDay(date)}><span>{formatDate(date, { weekday: 'short' })}</span><strong>{formatDate(date, { day: 'numeric' })}</strong><small>{minutes ? `${formatTrackedDuration(minutes * 60)} planned` : 'Open day'}</small></button>;
     })}</div>
     <div className="calendar-all-day"><span>All day</span>{days.map(date => <div key={date} {...dropProps(props, `${date}T00:00`, true)}>{itemsOn(items, date).filter(item => item.allDay).map(item => <ItemChip key={item.key} item={item} onOpen={props.onOpen} disabled={props.disabled} />)}<button className="calendar-add-day" aria-label={`Add all-day event on ${formatDate(date)}`} disabled={props.disabled} onClick={() => props.onCreate(`${date}T00:00`, true)}>+</button></div>)}</div>
     <div className="calendar-time-scroll"><div className="calendar-time-columns"><div className="calendar-hours" aria-hidden="true">{Array.from({ length: 24 }, (_, hour) => <span key={hour} style={{ top: `${hour * 52}px` }}>{String(hour).padStart(2, '0')}:00</span>)}</div>
-      {days.map(date => <div key={date} className={`calendar-time-day ${preferences.workDays.includes(weekday(date)) ? '' : 'is-offday'}`}>
+      {days.map(date => <div key={date} className={`calendar-time-day ${date === props.today ? 'is-today' : ''} ${preferences.workDays.includes(weekday(date)) ? '' : 'is-offday'}`}>
         <div className="calendar-working-hours" style={{ top: preferences.workStart * 52, height: (preferences.workEnd - preferences.workStart) * 52 }} />
         <div className="calendar-time-slots">{Array.from({ length: 48 }, (_, slot) => {
           const time = `${String(Math.floor(slot / 2)).padStart(2, '0')}:${slot % 2 ? '30' : '00'}`, wall = `${date}T${time}`;
