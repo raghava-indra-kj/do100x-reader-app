@@ -6,6 +6,7 @@ const net = require('node:net');
 const assert = require('node:assert/strict');
 const { createHmac, randomUUID } = require('node:crypto');
 const { spawn } = require('node:child_process');
+const { createRequire } = require('node:module');
 const { root } = require('./environment.cjs');
 const { run } = require('./commands.cjs');
 
@@ -81,6 +82,7 @@ async function verifyCalendarRelease(directory, testEnv, db) {
     const exported = await request(`/backend-api/calendar/sources/${source.id}/export`, { headers: { Cookie: cookie } });
     assert.equal(exported.status, 200); assert.equal(await exported.text(), content);
     assert.match(exported.headers.get('content-disposition'), /attachment/);
+    await verifyPackagedMcp(release, base, user.id, db, json, source.id, content);
     console.log('Packaged release passed: startup, frontend assets, session/origin guards, task scheduling/completion and atomic creation, import worker and file export.');
   } catch (error) {
     console.error(output.replace(/mysql:\/\/[^\s]+/g, '[database connection]'));
@@ -88,6 +90,56 @@ async function verifyCalendarRelease(directory, testEnv, db) {
   } finally {
     if (child.exitCode === null && !processError) child.kill();
     await closed;
+  }
+}
+
+async function verifyPackagedMcp(release, base, userId, db, json, sourceId, sourceContent) {
+  const runtimeRequire = createRequire(path.join(release, 'reader-backend/package.json'));
+  const { Client } = runtimeRequire('@modelcontextprotocol/sdk/client/index.js');
+  const { SSEClientTransport } = runtimeRequire('@modelcontextprotocol/sdk/client/sse.js');
+  const client = new Client({ name: 'packaged-release-check', version: '1' });
+  const transport = new SSEClientTransport(new URL(`${base}/mcp/sse/${userId}`));
+  const call = async (name, args = {}) => {
+    const result = await client.callTool({ name, arguments: args }, undefined, { timeout: 10000 });
+    assert.ok(!result.isError, `${name} failed in the packaged server`);
+    return JSON.parse(result.content[0].text);
+  };
+  try {
+    assert.equal((await fetch(`${base}/mcp/sse`, { signal: AbortSignal.timeout(10000) })).status, 401);
+    await client.connect(transport, { timeout: 10000 });
+    const { tools } = await client.listTools();
+    const featureTools = tools.filter(tool => tool.annotations?.openWorldHint !== undefined && /habit|calendar|capture|unscheduled|task_schedules/.test(tool.name));
+    assert.equal(featureTools.length, 34, 'The release must contain all Habits, Calendar and capture MCP tools.');
+
+    const today = new Date().toISOString().slice(0, 10);
+    const habit = await call('reader_create_habit', { habit: { requestKey: randomUUID(), name: 'Packaged MCP reading', description: '', icon: 'book', color: 'green', section: 'Learning', timezone: 'UTC', plan: { startDate: today, endDate: null, frequency: 'DAILY', weekdays: [], intervalDays: 1, weeklyTarget: 3, goalType: 'COUNT', target: 10, unit: 'pages', step: 1, reminders: [] } } });
+    await call('reader_record_habit', { habitId: habit.id, date: today, log: { expectedVersion: 0, habitVersion: habit.version, value: 12, status: 'RECORDED', note: 'Transport verified', mood: 4 } });
+    assert.equal((await json(`/habits/${habit.id}`)).logs[0].value, 12);
+    assert.equal((await call('reader_get_habit_progress', { habitId: habit.id, range: { from: today, to: today } })).stats.completed, 1);
+
+    const event = await call('reader_create_calendar_event', { event: { requestKey: randomUUID(), title: 'Packaged MCP event', description: '', location: '', color: 'blue', timeZone: 'UTC', start: `${today}T15:00`, end: `${today}T16:00`, allDay: false, repeat: null, taskId: null, habitId: null, reminders: [], newTask: { listId: null, priority: 2 } } });
+    assert.equal((await json(`/tasks/${event.taskId}`)).dueTime, '15:00');
+    await call('reader_save_calendar_occurrence', { eventId: event.id, date: today, occurrence: { eventVersion: event.version, expectedVersion: 0, start: null, end: null, allDay: null, completed: true, cancelled: false } });
+    assert.equal((await json(`/tasks/${event.taskId}`)).status, 'done');
+    assert.equal((await call('reader_export_calendar_source', { sourceId })).content, sourceContent);
+
+    const input = { captureKey: randomUUID(), title: 'Packaged MCP capture', content: '# Saved through MCP\n\nKeep this.', sourceUrl: 'https://example.com/article?private=value' };
+    const capture = await call('reader_create_capture', { capture: input });
+    assert.equal((await call('reader_create_capture', { capture: input })).id, capture.id);
+    assert.equal((await call('reader_get_capture', { captureId: capture.id })).captureSourceUrl, 'https://example.com/article');
+    assert.ok((await json('/reader/captures')).items.some(item => item.id === capture.id));
+    const destination = await db.page.create({ data: { userId, title: 'Packaged destination', content: '', sortOrder: 0, childrenCount: 0, createdAt: new Date(), updatedAt: new Date() } });
+    await call('reader_keep_capture', { captureId: capture.id, parentPageId: destination.id });
+    assert.equal((await call('reader_get_page', { pageId: capture.id })).parentPageId, destination.id);
+    assert.equal((await call('reader_list_captures')).items.length, 0);
+    const discarded = await call('reader_create_capture', { capture: { ...input, captureKey: randomUUID() } });
+    await call('reader_discard_capture', { captureId: discarded.id });
+    const missing = await client.callTool({ name: 'reader_get_capture', arguments: { captureId: discarded.id } }, undefined, { timeout: 10000 });
+    assert.equal(missing.isError, true);
+    console.log('Packaged MCP passed over SSE: authenticated discovery of all 34 tools, habit check-in/progress, task scheduling/completion, original ICS export, and capture create/read/retry/Keep/Discard with HTTP parity.');
+  } finally {
+    await client.close();
+    await transport.close();
   }
 }
 

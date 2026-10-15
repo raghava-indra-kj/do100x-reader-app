@@ -102,7 +102,8 @@ The command accepts only that guarded path and creates its own randomly named lo
 | Subscriptions and file exchange | SSRF/DNS pinning/redirect unit tests; iCalendar timezone, exception and boundary tests; packaged worker/export smoke | Service path verified. Actual browser file-picker import and download completion remain unverified because of the automation restrictions recorded above. |
 | Reminders | Due-time/receipt/retry tests, explicit opt-in UI, saved reminder fields | Open-page behavior implemented; OS notification delivery was not exercised because notification permission was not granted. |
 | Existing data and production safety | Disposable upgrades and before/after snapshots, additive SQL inspection, production profile replacement in package smoke | Local upgrades preserve representative records. No production migration/deployment has run. |
-| Release artifact | Fresh extracted production-mode install/startup and API/assets/import checks | Final code package passed after the task deep-link fix (`releases/calendar-final-package-check.log`). Destination Linux hosting remains unverified. |
+| MCP feature coverage | 34 registered tools, transport/schema tests, isolated database lifecycles and packaged SSE calls | Habits, Calendar and temporary capture operations are exposed. Existing Reader tools work with captures, and expired comment resources are filtered. See `docs/mcp-features.md`. |
+| Release artifact | Fresh extracted production-mode install/startup and API/assets/import/MCP checks | Updated MCP package passed, including actual SSE transport (`releases/calendar-mcp-package-check.log`). Destination Linux hosting remains unverified. |
 
 ### Outstanding release gates
 
@@ -113,6 +114,14 @@ The implementation is committed and pushed as `373ce22` on `codex/calendar-tasks
 `releases/do100x-20261014T212600742Z-77651f09.zip` contains the application code from `373ce22`, including the task deep-link context fix. Its SHA-256 is `fadbc70be86b0e016243be88dc558cf395659596449ef27bd57d5639b91dfe40`. The ZIP is private because it contains production configuration. Do not attach it to a public release.
 
 The package built successfully (`releases/calendar-final-package-build.log`) and passed the extracted production-mode installation and startup checks (`releases/calendar-final-package-check.log`). This run verified frontend assets, authentication and origin checks, linked-task completion, atomic task creation with retry, the import worker and export response. Existing seeded records stayed unchanged, and the disposable verification database was removed. No production connection or migration was used.
+
+### Updated package with MCP — 15 October 2026, 05:47 IST
+
+`releases/do100x-20261015T001714261Z-4b889c6a.zip` supersedes the package above and contains application code from `92ab0cc`. SHA-256: `7204bd2c6c61b485e5e62447a208c996d9c88e8934b1023d88e41a7027f15146`. Keep this ZIP private: it contains production configuration.
+
+The rebuilt frontend/backend package passed fresh runtime installation, generated Prisma, compiled-server startup, assets, session/origin checks, Tasks synchronization, atomic scheduling, imported-calendar parsing and original export. The verifier now also connects the installed SDK to the compiled server through its real SSE endpoint. It verifies unauthenticated rejection, discovery of all 34 added tools, habit check-ins/progress, calendar task completion, source ICS export and capture create/read/retry/Keep/Discard, with HTTP persistence parity. Evidence: `releases/calendar-mcp-package-build.log` and `releases/calendar-mcp-package-check.log`.
+
+Before any extracted startup code ran, its production profile was replaced with the guarded disposable localhost profile. The existing-record snapshot stayed unchanged and `do100x_calendar_test_7feb74c45e0a` was removed. No production migration or deployment ran. This strengthens runtime/MCP evidence but does not close the separate browser file and notification gates below.
 
 ### Browser checks requiring a person
 
