@@ -13,7 +13,7 @@ import { LogForm } from '@modules/habits/log-form';
 import '@modules/habits/habits.css';
 import { calendarApi, type CalendarRange, type CalendarTask, type CalendarView } from './api';
 import { calendarItems, defaultPreferences, eventDraft, formatDate, movePeriod, taskScheduleTarget, viewLabels, viewRange, type CalendarItem } from './model';
-import { CalendarDialog, CalendarSelect, IconButton } from './ui';
+import { CalendarDialog, CalendarPlanningPanel, CalendarPlanningRoot, CalendarSelect, IconButton } from './ui';
 import { EventForm, type EventEditor } from './event-form';
 import { CalendarSettings } from './settings';
 import { CalendarSources } from './sources';
@@ -36,18 +36,25 @@ function CalendarApp({ userId }: { userId: string }) {
   const mutation = useRef(false), traySequence = useRef(0), mounted = useRef(true);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 700px)').matches);
+  const [mobileSidebar, setMobileSidebar] = useState(() => window.matchMedia('(max-width: 899px)').matches);
+  const planningTrigger = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 700px)');
-    const update = () => { setCompact(media.matches); if (media.matches) setShowSidebar(false); };
+    const update = () => setCompact(media.matches);
     media.addEventListener('change', update);
     return () => media.removeEventListener('change', update);
   }, []);
   useEffect(() => {
-    if (!showSidebar) return;
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setShowSidebar(false); };
-    window.addEventListener('keydown', close);
-    return () => window.removeEventListener('keydown', close);
-  }, [showSidebar]);
+    const media = window.matchMedia('(max-width: 899px)');
+    const update = () => {
+      setMobileSidebar(media.matches);
+      // Do not mount a new modal drawer over an editor already open on desktop.
+      // Planning can be reopened explicitly after entering the compact layout.
+      if (media.matches) setShowSidebar(false);
+    };
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
   const subscriptionIds = (data?.sources ?? []).filter(source => source.enabled && source.kind === 'subscription').map(source => source.id).join(',');
   const refreshData = useCallback(() => setRefresh(value => value + 1), []);
   const reminders = useCalendarReminders(userId, preferences.timeZone, setNotice);
@@ -115,7 +122,7 @@ function CalendarApp({ userId }: { userId: string }) {
       const day = task.dueDate?.slice(0, 10) ?? today;
       const target = taskScheduleTarget(events), event = target?.event, occurrence = target?.occurrence;
       setDate(occurrence ? (occurrence.allDay ? occurrence.start : wallAt(occurrence.startInstant, preferences.timeZone)).slice(0, 10) : day);
-      setEditor(event ? { event, ...(occurrence ? { occurrence } : {}), draft: { ...event, ...(occurrence ? { start: occurrence.start, end: occurrence.end, allDay: occurrence.allDay } : {}) } } : { draft: eventDraft(`${day}T${task.dueTime || '09:00'}`, preferences, task) });
+      setEditor(previous => previous ?? (event ? { event, ...(occurrence ? { occurrence } : {}), draft: { ...event, ...(occurrence ? { start: occurrence.start, end: occurrence.end, allDay: occurrence.allDay } : {}) } } : { draft: eventDraft(`${day}T${task.dueTime || '09:00'}`, preferences, task) }));
       setParams(previous => { const next = new URLSearchParams(previous); next.delete('task'); return next; }, { replace: true });
     }).catch(error => { if (!controller.signal.aborted) setError(error instanceof Error ? error.message : 'Couldn’t load this task.'); });
     return () => controller.abort();
@@ -169,19 +176,18 @@ function CalendarApp({ userId }: { userId: string }) {
     finally { if (mounted.current && sequence === traySequence.current) setTrayLoading(false); }
   }
   const title = view === 'year' ? date.slice(0, 4) : view === 'day' ? formatDate(date, { weekday: 'long', month: 'long', day: 'numeric' }) : view === 'month' ? formatDate(date, { month: 'long', year: 'numeric' }) : `${formatDate(range.from)} – ${formatDate(addDays(range.to, -1), { month: 'short', day: 'numeric', year: 'numeric' })}`;
-  return <div className="calendar-page"><AppBar /><div className={`calendar-workspace ${showSidebar ? 'has-sidebar' : ''}`}>
-    {showSidebar && <button className="calendar-sidebar-backdrop" aria-label="Close planning sidebar" onClick={() => setShowSidebar(false)} />}
-    {showSidebar && <aside className="calendar-sidebar" aria-label="Calendar planning"><div className="calendar-sidebar-heading"><CalendarDays size={19} /><strong>Planning</strong><IconButton label="Hide planning sidebar" onClick={() => setShowSidebar(false)}><PanelLeftClose size={16} /></IconButton></div><label className="calendar-jump-date"><span>Jump to date</span><input type="date" aria-label="Go to date" min="1901-01-01" max="9997-01-01" value={date} onChange={e => { if (validDate(e.currentTarget.value) && e.currentTarget.value >= '1901-01-01' && e.currentTarget.value <= '9997-01-01') setDate(e.currentTarget.value); }} /></label>
+  return <CalendarPlanningRoot open={mobileSidebar && showSidebar} onClose={() => setShowSidebar(false)}><div className="calendar-page"><AppBar /><div className={`calendar-workspace ${showSidebar && !mobileSidebar ? 'has-sidebar' : ''}`}>
+    {showSidebar && <CalendarPlanningPanel mobile={mobileSidebar} returnFocus={planningTrigger}><div className="calendar-sidebar-heading"><CalendarDays size={19} /><strong>Planning</strong><IconButton label="Hide planning sidebar" onClick={() => setShowSidebar(false)}><PanelLeftClose size={16} /></IconButton></div><label className="calendar-jump-date"><span>Jump to date</span><input type="date" aria-label="Go to date" min="1901-01-01" max="9997-01-01" value={date} onChange={e => { if (validDate(e.currentTarget.value) && e.currentTarget.value >= '1901-01-01' && e.currentTarget.value <= '9997-01-01') setDate(e.currentTarget.value); }} /></label>
       <nav className="calendar-app-links" aria-label="Planning apps"><Link to="/tasks"><ListTodo size={16} />Tasks</Link><Link to="/habits"><Sprout size={16} />Habits</Link></nav>
       <div className="calendar-filter-heading"><span>My calendar</span><IconButton label="Calendars & files" disabled={!ready} onClick={() => setSourcesOpen(true)}><CalendarDays size={16} /></IconButton></div><div className="calendar-type-filters">{([['event', 'Events', CalendarDays], ['task', 'Tasks', ListTodo], ['habit', 'Habits', Sprout], ['focus', 'Focus history', Clock3]] as const).map(([kind, label, Icon]) => <label key={kind} className={`calendar-filter-${kind} ${kinds[kind] ? 'is-enabled' : ''}`}><input type="checkbox" checked={kinds[kind]} onChange={e => setKinds(previous => ({ ...previous, [kind]: e.target.checked }))} /><Icon size={15} />{label}</label>)}<label className="calendar-completed-filter"><input type="checkbox" checked={showCompleted} onChange={e => setShowCompleted(e.target.checked)} />Include completed</label></div>
       <CalendarSelect label="Filter task list" value={list} items={{ all: 'All calendars & lists', inbox: 'Inbox tasks', ...Object.fromEntries((data?.lists ?? []).map(list => [list.id, list.name])) }} onChange={setList} />
       <div className="calendar-tray-heading"><h2>Unscheduled <span>{tray.length}{cursor ? '+' : ''}</span></h2><small>Drag a task onto your calendar.</small></div><div className="calendar-search"><Search size={14} /><input aria-label="Find unscheduled tasks" placeholder="Find a task…" value={taskSearch} maxLength={200} onChange={e => setTaskSearch(e.target.value)} /></div>
       <div className="calendar-tray" aria-busy={trayLoading}>{trayError ? <p role="alert" className="calendar-error">{trayError}<button onClick={refreshData}>Retry</button></p> : tray.filter(task => list === 'all' || task.listId === (list === 'inbox' ? null : list)).map(task => <div className="calendar-tray-task" key={task.id} draggable={!disabled && !trayLoading} onDragStart={event => beginDrag(event, `unscheduled/${task.id}`)}><GripVertical size={14} /><div><Link to={`/tasks?task=${task.id}`}>{task.title}</Link><small>{data?.lists.find(list => list.id === task.listId)?.name ?? 'Inbox'}</small></div><IconButton label={`Schedule ${task.title}`} disabled={disabled || trayLoading} onClick={() => newEvent(`${date}T09:00`, false, task)}><Plus size={15} /></IconButton></div>)}{trayLoading && <p className="calendar-help" role="status">Loading tasks…</p>}{!trayLoading && !trayError && !tray.length && <p className="calendar-help">{taskSearch ? 'No matching tasks.' : 'Everything has a date. New undated tasks will appear here.'}</p>}{cursor && <button className="calendar-more" onClick={() => void moreTasks()} disabled={trayLoading}>Load more tasks</button>}</div>
       <div className="calendar-sidebar-footer"><button onClick={() => void reminders.toggle()}>{reminders.enabled ? <Bell size={15} /> : <BellOff size={15} />}{reminders.enabled ? 'Reminders on' : 'Enable reminders'}</button><small>Notifications while Calendar is open.</small></div>
-    </aside>}
+    </CalendarPlanningPanel>}
     <main className="calendar-main"><header className="calendar-toolbar">
       <div className="calendar-date-navigation">
-        {!showSidebar && <IconButton label="Show planning sidebar" onClick={() => setShowSidebar(true)}><PanelLeftOpen size={18} /></IconButton>}
+        {(!showSidebar || mobileSidebar) && <Button ref={planningTrigger} type="button" size="sm" variant="ghost" iconOnly tooltip="Show planning sidebar" aria-label="Show planning sidebar" aria-expanded={showSidebar} onClick={() => setShowSidebar(true)}><PanelLeftOpen size={18} /></Button>}
         <div className="calendar-period-title"><h1>{view === 'week' ? formatDate(date, { month: 'long', year: 'numeric' }) : title}</h1>{view === 'week' && <span>{formatDate(range.from)} – {formatDate(addDays(range.to, -1))}</span>}</div>
       </div>
       <div className="calendar-toolbar-actions">
@@ -196,7 +202,7 @@ function CalendarApp({ userId }: { userId: string }) {
       <div className="calendar-content" aria-busy={loading || busy}>{loading && <div className="calendar-loading" role="status">Loading calendar…</div>}{currentData && (view === 'day' || view === 'week' ? <TimeGrid {...viewProps} days={datesBetween(range.from, addDays(range.to, -1))} clock={clock} /> : view === 'month' ? <MonthView {...viewProps} /> : view === 'year' ? <YearView {...viewProps} /> : <AgendaView {...viewProps} days={datesBetween(range.from, addDays(range.to, -1))} />)}</div>
     </main>
   </div>
-  {editor && <EventForm editor={editor} lists={data?.lists ?? []} onClose={() => setEditor(null)} onSaved={refreshData} />}
+  {editor && <EventForm editor={editor} lists={data?.lists ?? []} onClose={() => setEditor(current => current === editor ? null : current)} onSaved={refreshData} />}
   {sourcesOpen && <CalendarSources timeZone={preferences.timeZone} from={range.from} to={range.to} onClose={() => setSourcesOpen(false)} onChanged={refreshData} />}
   {settings && <CalendarSettings preferences={preferences} version={settingsVersion} onClose={() => setSettings(false)} onSaved={(value, version) => { setPreferences(value); setSettingsVersion(version); setKinds(previous => ({ ...previous, habit: value.showHabits, focus: value.showFocus })); setShowCompleted(value.showCompleted); refreshData(); }} />}
   {inspected && <CalendarDialog title={inspected.title} busy={busy} onClose={() => setInspected(null)}><div className="calendar-form"><p className="calendar-help">{formatDate(inspected.start.slice(0, 10), { dateStyle: 'full' })} · {inspected.allDay ? 'All day' : inspected.start.slice(11)}{inspected.habit ? ` · ${inspected.habit.timezone}` : ''}</p>
@@ -204,6 +210,6 @@ function CalendarApp({ userId }: { userId: string }) {
     {inspected.kind === 'focus' ? <><p>{formatTrackedDuration(inspected.durationSeconds ?? 0)} of logged focus.</p><p className="calendar-note">{inspected.notes || 'No session note.'}</p><Link to="/tasks">Open time reports in Tasks</Link></> : inspected.task ? <><p className="calendar-note">{inspected.task.description || 'This task has a deadline, with no reserved duration.'}</p><Link to={`/tasks?task=${inspected.task.id}`}>Open task details</Link><Button variant="outlined" disabled={busy} onClick={() => void run(async () => { await calendarApi.updateTask(inspected.task!, { status: inspected.completed ? 'todo' : 'done' }); setInspected(null); }, 'Task updated.')}>{inspected.completed ? 'Reopen task' : 'Complete task'}</Button><Button disabled={busy} onClick={() => { newEvent(`${inspected.start.slice(0, 10)}T${inspected.task!.dueTime || '09:00'}`, false, inspected.task); setInspected(null); }}>Reserve time</Button></> : inspected.habit && <><p className="calendar-help">A time reservation plans your day. Progress is recorded in the original habit check-in.</p><Button disabled={busy || inspected.habitDate! > localDate(inspected.habit.timezone, clock) || !planOn(inspected.habit, inspected.habitDate!)} onClick={() => { setLog({ habit: inspected.habit!, date: inspected.habitDate!, revision: 0 }); setInspected(null); }}>Record progress</Button><Button variant="outlined" onClick={() => { if (inspected.event && inspected.occurrence) setEditor({ event: inspected.event, occurrence: inspected.occurrence, draft: { ...inspected.event, start: inspected.occurrence.start, end: inspected.occurrence.end, allDay: inspected.occurrence.allDay } }); else newEvent(`${inspected.habitDate}T09:00`, false, undefined, inspected.habit); setInspected(null); }}>{inspected.event ? 'Edit reservation' : 'Reserve time'}</Button><Link to={`/habits?habit=${inspected.habit.id}`}>Open habit history</Link></>}
   </div></CalendarDialog>}
   {log && <LogForm key={`${log.habit.id}/${log.date}/${log.revision}`} habit={log.habit} date={log.date} onClose={() => setLog(null)} onSave={async value => { await habitsApi.record(log.habit, log.date, value); refreshData(); }} onReload={async () => { const habit = await habitsApi.get(log.habit.id); setLog(previous => previous ? { ...previous, habit, revision: previous.revision + 1 } : null); refreshData(); }} />}
-  </div>;
+  </div></CalendarPlanningRoot>;
 }
 export default observer(function CalendarPage() { const auth = useAuthStore(); return <CalendarApp key={auth.currentUser.id} userId={auth.currentUser.id} />; });

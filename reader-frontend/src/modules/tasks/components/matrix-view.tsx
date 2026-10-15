@@ -10,9 +10,9 @@ import type { Task } from '@domain/tasks/models/task';
 import { dueDateLabel, completionDateLabel } from '../matrix-settings';
 
 const priorities = [
-  { priority: 1, name: 'Urgent', color: 'text-red-600 dark:text-red-400', border: 'border-t-red-500' },
-  { priority: 2, name: 'High', color: 'text-amber-600 dark:text-amber-400', border: 'border-t-amber-500' },
-  { priority: 3, name: 'Medium', color: 'text-blue-600 dark:text-blue-400', border: 'border-t-blue-500' },
+  { priority: 1, name: 'Urgent', color: 'text-[var(--color-error-on-soft)]', border: 'border-t-red-500' },
+  { priority: 2, name: 'High', color: 'text-[var(--color-warning-on-soft)]', border: 'border-t-amber-500' },
+  { priority: 3, name: 'Medium', color: 'text-[var(--color-info-on-soft)]', border: 'border-t-blue-500' },
   { priority: 4, name: 'Low', color: 'text-[var(--color-text-muted)]', border: 'border-t-slate-400' },
 ];
 
@@ -23,15 +23,15 @@ const MatrixTask = observer(({ task, store }: { task: Task; store: TasksStore })
   return (
     <div ref={setNodeRef} data-matrix-task={task.id} style={{ opacity: isDragging ? 0.35 : 1 }} className={`rounded-lg border p-2 ${store.selectedTaskId === task.id ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)]' : 'border-transparent hover:border-[var(--color-border-subtle)] hover:bg-[var(--color-surface-soft)]'}`}>
       <div className="flex items-start gap-2">
-        <Tooltip content="Drag to change priority · Space to pick up, arrow keys to move"><button ref={setActivatorNodeRef} type="button" aria-label={`Move ${task.title}`} disabled={pending} {...attributes} {...listeners} className="flex h-6 w-5 items-center justify-center shrink-0 touch-none cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] rounded focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] disabled:opacity-40"><GripVertical size={15} /></button></Tooltip>
-        <button type="button" aria-label={`${task.isDone ? 'Reopen' : 'Complete'} ${task.title}`} onClick={() => void store.toggleTaskStatus(task)} className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border cursor-pointer ${task.isDone ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-[var(--color-border-strong)] hover:border-[var(--color-brand)]'}`}>
-          {task.isDone && <Check className="h-3 w-3" />}
+        <Tooltip content="Drag to change priority · Space to pick up, arrow keys to move"><button ref={setActivatorNodeRef} type="button" aria-label={`Move ${task.title}`} disabled={pending} {...attributes} {...listeners} className="flex h-8 w-7 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9 items-center justify-center shrink-0 touch-none cursor-grab active:cursor-grabbing text-[var(--color-text-muted)] rounded focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] disabled:opacity-40"><GripVertical size={15} /></button></Tooltip>
+        <button type="button" aria-label={`${task.isDone ? 'Reopen' : 'Complete'} ${task.title}`} aria-pressed={task.isDone} disabled={pending} onClick={() => void store.toggleTaskStatus(task)} className="flex h-8 w-7 [@media(pointer:coarse)]:h-9 [@media(pointer:coarse)]:w-9 shrink-0 items-center justify-center rounded cursor-pointer focus-visible:outline-2 focus-visible:outline-[var(--color-brand)] disabled:opacity-40">
+          <span className={`flex h-4 w-4 items-center justify-center rounded border ${task.isDone ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-[var(--color-border-strong)] hover:border-[var(--color-brand)]'}`}>{task.isDone && <Check className="h-3 w-3" />}</span>
         </button>
         <button type="button" aria-label={`Open ${task.title}`} onClick={() => void store.selectTask(task.id)} className="min-w-0 flex-1 text-left cursor-pointer">
           <span className={`block text-xs leading-relaxed font-medium break-words ${task.isDone ? 'line-through text-[var(--color-text-muted)]' : ''}`}>{task.title}</span>
           <span className="mt-1 block truncate text-[10px] text-[var(--color-text-muted)]" title={[task.list?.name ?? 'Inbox', task.parentTitle].filter(Boolean).join(' › ')}>{task.list?.name ?? 'Inbox'}{task.parentId && ` › ${task.parentTitle ?? 'Subtask'}`}</span>
         </button>
-        <select aria-label={`Priority for ${task.title}`} value={task.priority} disabled={pending} onChange={event => void store.updateTaskProperties(task.id, { priority: Number(event.target.value) })} className="shrink-0 max-w-[72px] rounded border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-0.5 text-[10px] cursor-pointer">
+        <select aria-label={`Priority for ${task.title}`} value={task.priority} disabled={pending} onChange={event => void store.updateTaskProperties(task.id, { priority: Number(event.target.value) })} className="shrink-0 min-h-7 [@media(pointer:coarse)]:min-h-8 max-w-[72px] rounded border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] px-1 py-0.5 text-[10px] cursor-pointer">
           {priorities.map(priority => <option key={priority.priority} value={priority.priority}>P{priority.priority} {priority.name}</option>)}
         </select>
       </div>
@@ -45,30 +45,24 @@ const MatrixTask = observer(({ task, store }: { task: Task; store: TasksStore })
 
 const Quadrant = observer(({ store, meta, tasks }: { store: TasksStore; meta: typeof priorities[number]; tasks: Task[] }) => {
   const { setNodeRef, isOver } = useDroppable({ id: `priority-${meta.priority}`, data: { priority: meta.priority } });
-  const [title, setTitle] = useState('');
-  const [saving, setSaving] = useState(false);
-  const add = async () => {
-    if (!title.trim() || saving) return;
-    setSaving(true);
-    try { if (await store.createMatrixTask(title, meta.priority)) setTitle(''); }
-    finally { setSaving(false); }
-  };
+  const { title, saving, error } = store.matrixQuickDrafts[meta.priority];
   return (
-    <section ref={setNodeRef} aria-label={`P${meta.priority} ${meta.name}`} className={`${isOver ? 'ring-2 ring-[var(--color-brand)] bg-[var(--color-brand-soft)]' : ''} flex flex-col min-h-[220px] min-w-0 overflow-hidden rounded-xl border border-[var(--color-border-subtle)] border-t-2 ${meta.border} bg-[var(--color-surface-raised)]`}>
+    <section ref={setNodeRef} aria-label={`P${meta.priority} ${meta.name}`} className={`${isOver ? 'ring-2 ring-[var(--color-brand)] bg-[var(--color-brand-soft)]' : ''} flex flex-col min-h-0 md:min-h-[220px] min-w-0 overflow-hidden rounded-xl border border-[var(--color-border-subtle)] border-t-2 ${meta.border} bg-[var(--color-surface-raised)]`}>
       <header className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-[var(--color-border-subtle)]">
         <h2 className={`text-sm font-semibold ${meta.color}`}>P{meta.priority} · {meta.name}</h2>
         <span aria-label={`${tasks.length} tasks`} className="text-xs tabular-nums text-[var(--color-text-muted)]">{tasks.length}</span>
       </header>
       {store.matrixSettings.status !== 'completed' && (
-        <form className="flex gap-2 p-2 border-b border-[var(--color-border-subtle)]" onSubmit={event => { event.preventDefault(); void add(); }}>
-          <input aria-label={`New P${meta.priority} task title`} placeholder="Add task…" value={title} disabled={saving} onChange={event => setTitle(event.target.value)} className="min-w-0 flex-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] px-2 py-1.5 text-xs outline-none focus:border-[var(--color-brand)]" />
-          <button type="submit" aria-label={`Add P${meta.priority} task`} disabled={!title.trim() || saving} className="rounded-md p-1.5 bg-[var(--color-brand)] text-white disabled:opacity-35 cursor-pointer disabled:cursor-default">
+        <form className="flex gap-2 p-2 border-b border-[var(--color-border-subtle)]" onSubmit={event => { event.preventDefault(); void store.createMatrixTask(meta.priority); }}>
+          <input aria-label={`New P${meta.priority} task title`} aria-describedby={error ? `matrix-quick-error-${meta.priority}` : undefined} placeholder="Add task…" value={title} onChange={event => store.setMatrixQuickTitle(meta.priority, event.target.value)} className="min-w-0 flex-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-canvas)] px-2 py-1.5 text-xs outline-none focus:border-[var(--color-brand)]" />
+          <button type="submit" aria-label={`Add P${meta.priority} task`} aria-busy={saving} disabled={!title.trim() || saving} className="min-h-8 min-w-8 [@media(pointer:coarse)]:min-h-9 [@media(pointer:coarse)]:min-w-9 flex items-center justify-center rounded-md p-1.5 bg-[var(--color-brand)] text-[var(--color-text-on-brand)] disabled:opacity-35 cursor-pointer disabled:cursor-default">
             {saving ? <Loader size={14} /> : <Plus className="h-4 w-4" />}
           </button>
         </form>
       )}
-      <div className="flex-1 space-y-1 overflow-y-auto p-2">
-        {!tasks.length && <p className="px-2 py-8 text-center text-xs text-[var(--color-text-muted)]">No {store.matrixSettings.status === 'completed' ? 'completed ' : ''}tasks for this view.</p>}
+      {error && store.matrixSettings.status !== 'completed' && <p id={`matrix-quick-error-${meta.priority}`} role="alert" className="px-3 py-2 text-xs text-[var(--color-error-on-soft)]">{error}</p>}
+      <div className="flex-1 space-y-1 md:overflow-y-auto p-2">
+        {!tasks.length && <p className="px-2 py-4 md:py-8 text-center text-xs text-[var(--color-text-muted)]">No {store.matrixSettings.status === 'completed' ? 'completed ' : ''}tasks for this view.</p>}
         {tasks.map(task => <MatrixTask key={task.id} task={task} store={store} />)}
       </div>
     </section>
@@ -126,7 +120,7 @@ export const MatrixView = observer(({ store }: { store: TasksStore }) => {
       </header>
       {store.isLoadingTasks ? <div role="status" className="flex-1 flex items-center justify-center gap-2 text-xs text-[var(--color-text-muted)]"><Loader size={20} />Loading tasks…</div>
         : store.tasksError ? <div role="alert" className="flex-1 flex flex-col items-center justify-center gap-3 p-4 text-sm"><p>{store.tasksError}</p><button type="button" className="text-[var(--color-brand)] cursor-pointer" onClick={() => void store.loadTasks()}>Try again</button></div>
-        : <div className="flex-1 min-h-0 overflow-y-auto p-3 grid grid-cols-1 md:grid-cols-2 gap-3 md:grid-rows-2">{priorities.map((priority, index) => <Quadrant key={priority.priority} store={store} meta={priority} tasks={groups[index]} />)}</div>}
+        : <div className="flex-1 min-h-0 overflow-y-auto p-3 grid grid-cols-1 md:grid-cols-2 content-start md:content-stretch auto-rows-max md:auto-rows-auto gap-3 md:grid-rows-2">{priorities.map((priority, index) => <Quadrant key={priority.priority} store={store} meta={priority} tasks={groups[index]} />)}</div>}
     </div>
     <div role="status" className="sr-only">{announcement}</div>
     <DragOverlay dropAnimation={null}>{dragged && <div className="max-w-72 rounded-lg border border-[var(--color-brand)] bg-[var(--color-surface-raised)] px-3 py-2 text-sm shadow-lg">{dragged.title}</div>}</DragOverlay>

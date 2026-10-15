@@ -313,21 +313,85 @@ describe('matrix store and rendered controls', () => {
     vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(2026, 11, 31, 23));
     services.createTask.mockResolvedValue(ok(task('new')));
     store.setMatrixQuickList('list-a'); store.matrixSettings.date = 'tomorrow';
-    expect(await store.createMatrixTask('  New task  ', 2)).toBe(true);
+    store.setMatrixQuickTitle(2, '  New task  '); expect(await store.createMatrixTask(2)).toBe(true);
     expect(services.createTask).toHaveBeenLastCalledWith({ title: 'New task', priority: 2, listId: 'list-a', dueDate: '2027-01-01' });
-    store.matrixSettings.date = 'today'; await store.createMatrixTask('Today', 1);
+    store.matrixSettings.date = 'today'; store.setMatrixQuickTitle(1, 'Today'); await store.createMatrixTask(1);
     expect(services.createTask.mock.lastCall?.[0].dueDate).toBe(matrixCreationDate('today'));
     store.matrixSettings.date = 'all'; store.setMatrixQuickList('inbox'); store.quickTaskDueDate = '2027-10-01';
-    await store.createMatrixTask('Any time', 4);
+    store.setMatrixQuickTitle(4, 'Any time'); await store.createMatrixTask(4);
     expect(services.createTask).toHaveBeenLastCalledWith({ title: 'Any time', priority: 4, listId: null, dueDate: null });
     expect(store.selectedTaskId).toBeNull();
   });
   it('failed/blank quick-add is not reported as success and does not reload', async () => {
     services.createTask.mockResolvedValue(failure());
-    expect(await store.createMatrixTask(' ', 1)).toBe(false);
+    store.setMatrixQuickTitle(1, ' '); expect(await store.createMatrixTask(1)).toBe(false);
     expect(services.createTask).not.toHaveBeenCalled();
-    expect(await store.createMatrixTask('Keep draft', 1)).toBe(false);
+    store.setMatrixQuickTitle(1, 'Keep draft'); expect(await store.createMatrixTask(1)).toBe(false);
+    expect(store.matrixQuickDrafts[1]).toMatchObject({ title: 'Keep draft', saving: false, error: 'Offline' });
     expect(services.getTasks).not.toHaveBeenCalled();
+  });
+  it('retains all four matrix drafts through refresh, search, date/status and view changes', async () => {
+    for (const priority of [1, 2, 3, 4]) store.setMatrixQuickTitle(priority, `P${priority} draft`);
+    await store.refreshWorkspace();
+    store.setSearchQuery('new filter'); store.setMatrixSettings({ date: 'today', status: 'completed' });
+    store.setCurrentView('inbox'); store.setCurrentView('matrix');
+    await store.loadTasks(); store.setMatrixSettings({ status: 'active' }); await store.loadTasks();
+    expect(Object.values(store.matrixQuickDrafts).map(draft => draft.title)).toEqual(['P1 draft', 'P2 draft', 'P3 draft', 'P4 draft']);
+    const html = renderToStaticMarkup(<MatrixView store={store} />);
+    for (const priority of [1, 2, 3, 4]) expect(html).toContain(`value="P${priority} draft"`);
+    expect(services.createTask).not.toHaveBeenCalled();
+  });
+  it('deduplicates a priority submission across remounts and snapshots its list/date independently', async () => {
+    let resolve!: (value: ReturnType<typeof ok<Task>>) => void;
+    services.createTask.mockReturnValueOnce(new Promise(value => { resolve = value; }));
+    store.matrixQuickListId = 'work'; store.matrixSettings.date = 'tomorrow'; store.setMatrixQuickTitle(2, 'Original title');
+    const dueDate = matrixCreationDate('tomorrow');
+    const pending = store.createMatrixTask(2);
+    await store.loadTasks();
+    expect(renderToStaticMarkup(<MatrixView store={store} />)).toMatch(/aria-label="Add P2 task" aria-busy="true" disabled=""/);
+    expect(await store.createMatrixTask(2)).toBe(false);
+    store.setMatrixQuickTitle(2, 'Next title'); store.setMatrixQuickList('personal'); store.matrixSettings.date = 'all';
+    expect(services.createTask).toHaveBeenCalledOnce();
+    expect(services.createTask).toHaveBeenCalledWith({ title: 'Original title', priority: 2, listId: 'work', dueDate });
+    resolve(ok(task('created', 2))); expect(await pending).toBe(true);
+    expect(store.matrixQuickDrafts[2]).toMatchObject({ title: 'Next title', saving: false, error: '' });
+  });
+  it('lets another priority save independently without clearing neighboring drafts', async () => {
+    let resolve!: (value: ReturnType<typeof ok<Task>>) => void;
+    services.createTask.mockReturnValueOnce(new Promise(value => { resolve = value; })).mockResolvedValueOnce(ok(task('second', 3)));
+    store.setMatrixQuickTitle(1, 'Pending urgent'); store.setMatrixQuickTitle(3, 'Save medium'); store.setMatrixQuickTitle(4, 'Keep low');
+    const urgent = store.createMatrixTask(1);
+    expect(await store.createMatrixTask(3)).toBe(true);
+    expect(store.matrixQuickDrafts[3].title).toBe('');
+    expect(store.matrixQuickDrafts[1]).toMatchObject({ title: 'Pending urgent', saving: true });
+    expect(store.matrixQuickDrafts[4].title).toBe('Keep low');
+    resolve(ok(task('first', 1))); await urgent;
+  });
+  it('retains failed input on thrown transport errors and can retry after acknowledgment', async () => {
+    store.setMatrixQuickTitle(2, 'Keep for retry'); services.createTask.mockRejectedValueOnce(new Error('Network failed'));
+    expect(await store.createMatrixTask(2)).toBe(false);
+    expect(store.matrixQuickDrafts[2]).toMatchObject({ title: 'Keep for retry', saving: false, error: 'Network failed' });
+    expect(renderToStaticMarkup(<MatrixView store={store} />)).toContain('Network failed');
+    services.createTask.mockResolvedValueOnce(ok(task('created', 2))); expect(await store.createMatrixTask(2)).toBe(true);
+    expect(store.matrixQuickDrafts[2]).toMatchObject({ title: '', saving: false, error: '' });
+  });
+  it('ignores a create completion after its account workspace was disposed', async () => {
+    let resolve!: (value: ReturnType<typeof ok<Task>>) => void;
+    services.createTask.mockReturnValueOnce(new Promise(value => { resolve = value; }));
+    store.setMatrixQuickTitle(4, 'Old account draft'); const pending = store.createMatrixTask(4); store.destroy();
+    const nextAccount = new TasksStore();
+    resolve(ok(task('created', 4))); expect(await pending).toBe(false);
+    expect(services.getTasks).not.toHaveBeenCalled(); expect(services.getTaskLists).not.toHaveBeenCalled();
+    expect(nextAccount.matrixQuickDrafts[4].title).toBe('');
+    expect(store.matrixQuickDrafts[4].title).toBe('Old account draft');
+    nextAccount.destroy();
+  });
+  it('does not report an acknowledged create as failed if subsequent refresh rejects', async () => {
+    store.setMatrixQuickTitle(3, 'Created once'); services.createTask.mockResolvedValueOnce(ok(task('created', 3)));
+    services.getTasks.mockRejectedValueOnce(new Error('Refresh unavailable'));
+    expect(await store.createMatrixTask(3)).toBe(true);
+    expect(store.matrixQuickDrafts[3]).toMatchObject({ title: '', saving: false, error: '' });
+    expect(services.createTask).toHaveBeenCalledOnce();
   });
   it('group counts match visible active/completed/search rows and include subtasks', () => {
     const child = task('Child', 1); child.parentId = 'root'; child.parentTitle = 'Project'; child.list = { id: 'list-a', name: 'Data Agent' };

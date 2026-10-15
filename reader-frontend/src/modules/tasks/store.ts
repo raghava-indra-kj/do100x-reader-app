@@ -32,6 +32,8 @@ import {
 } from '@domain/tasks/services/task-service';
 
 export type TaskViewMode = 'inbox' | 'today' | 'next7' | 'matrix' | 'analytics' | 'completed' | string;
+interface MatrixQuickDraft { title: string; revision: number; saving: boolean; error: string }
+const emptyMatrixQuickDrafts = (): Record<number, MatrixQuickDraft> => Object.fromEntries([1, 2, 3, 4].map(priority => [priority, { title: '', revision: 0, saving: false, error: '' }]));
 
 export class TasksStore {
   // Navigation & View
@@ -41,6 +43,8 @@ export class TasksStore {
   isReorderingTasks = false;
   matrixSettings: MatrixSettings = readMatrixSettings();
   matrixQuickListId: string = 'inbox';
+  matrixQuickDrafts = emptyMatrixQuickDrafts();
+  private matrixDraftLifetime = 0;
   tasksError: string | null = null;
   private taskRequestId = 0;
   private detailRequestId = 0;
@@ -140,6 +144,7 @@ export class TasksStore {
       isReorderingTasks: observable,
       matrixSettings: observable,
       matrixQuickListId: observable,
+      matrixQuickDrafts: observable.ref,
       tasksError: observable,
       lists: observable,
       inboxCounts: observable,
@@ -211,6 +216,7 @@ export class TasksStore {
       setTaskSort: action,
       setMatrixSettings: action,
       setMatrixQuickList: action,
+      setMatrixQuickTitle: action,
       createMatrixTask: action,
       setQuickTaskTitle: action,
       setQuickTaskPriority: action,
@@ -276,6 +282,8 @@ export class TasksStore {
 
   destroy() {
     this.disposed = true;
+    this.matrixDraftLifetime++;
+    runInAction(() => { this.matrixQuickDrafts = Object.fromEntries(Object.entries(this.matrixQuickDrafts).map(([priority, draft]) => [priority, { ...draft, saving: false }])); });
     this.taskRequestId++; this.detailRequestId++; this.listRequestId++; this.timerRequestId++; this.analyticsRequestId++;
     if (this.timerInterval) {
       clearInterval(this.timerInterval);
@@ -373,13 +381,44 @@ export class TasksStore {
 
   setMatrixQuickList(listId: string) { this.matrixQuickListId = listId; }
 
-  async createMatrixTask(title: string, priority: number): Promise<boolean> {
-    if (!title.trim()) return false;
-    const listId = this.matrixQuickListId === 'inbox' ? null : this.matrixQuickListId;
-    const res = await createTask({ title: title.trim(), priority, listId, dueDate: matrixCreationDate(this.matrixSettings.date) });
-    if (!res.ok) { toast.error(res.error.message); return false; }
+  setMatrixQuickTitle(priority: number, title: string) {
+    const draft = this.matrixQuickDrafts[priority];
+    if (!draft || this.disposed) return;
+    this.matrixQuickDrafts = { ...this.matrixQuickDrafts, [priority]: { ...draft, title, revision: draft.revision + 1, error: '' } };
+  }
+
+  async createMatrixTask(priority: number): Promise<boolean> {
+    const draft = this.matrixQuickDrafts[priority];
+    if (this.disposed || !draft?.title.trim() || draft.saving) return false;
+    const lifetime = this.matrixDraftLifetime;
+    // Capture the complete destination before filters, list or title can change.
+    const payload = { title: draft.title.trim(), priority, listId: this.matrixQuickListId === 'inbox' ? null : this.matrixQuickListId, dueDate: matrixCreationDate(this.matrixSettings.date) };
+    this.matrixQuickDrafts = { ...this.matrixQuickDrafts, [priority]: { ...draft, saving: true, error: '' } };
+    let res: Awaited<ReturnType<typeof createTask>>;
+    try { res = await createTask(payload); }
+    catch (error) {
+      if (this.disposed || lifetime !== this.matrixDraftLifetime) return false;
+      const message = error instanceof Error && error.message ? error.message : 'Couldn’t add this task. Your draft is still here.';
+      runInAction(() => {
+        const current = this.matrixQuickDrafts[priority];
+        this.matrixQuickDrafts = { ...this.matrixQuickDrafts, [priority]: { ...current, saving: false, error: current.revision === draft.revision ? message : '' } };
+      });
+      toast.error(message); return false;
+    }
+    if (this.disposed || lifetime !== this.matrixDraftLifetime) return false;
+    runInAction(() => {
+      const current = this.matrixQuickDrafts[priority];
+      const matches = current.revision === draft.revision;
+      this.matrixQuickDrafts = { ...this.matrixQuickDrafts, [priority]: {
+        ...current, saving: false,
+        ...(res.ok && matches ? { title: '', revision: current.revision + 1 } : {}),
+        error: !res.ok && matches ? res.error.message || 'Couldn’t add this task. Your draft is still here.' : '',
+      } };
+    });
+    if (!res.ok) { toast.error(res.error.message || 'Couldn’t add this task. Your draft is still here.'); return false; }
     toast.success('Task added');
-    await Promise.all([this.refreshCurrentView(), this.loadLists()]);
+    // A refresh failure cannot turn an acknowledged create into a failed create.
+    await Promise.allSettled([this.refreshCurrentView(), this.loadLists()]);
     return true;
   }
 
