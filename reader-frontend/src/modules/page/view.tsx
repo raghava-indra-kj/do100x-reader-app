@@ -32,22 +32,29 @@ import { READER_COMPACT_QUERY } from './reader-layout';
 
 const SCROLL_STEP = 80;
 
-function PageProvider({ pageId, children }: { pageId: string; children: React.ReactNode }) {
-    const store = useMemo(() => new PageStore({ pageId }), [pageId]);
+export const PageProvider = observer(function PageProvider({ pageId, children }: { pageId: string; children: React.ReactNode }) {
+    const auth = useAuthStore();
+    const identity = auth.optCurrentUser?.id ?? 'anonymous';
+    const store = useMemo(() => new PageStore({ pageId }), [pageId, identity]);
 
     useEffect(() => {
         store.mount();
         const refreshCollection = () => store.bumpSubpagesVersion();
         window.addEventListener('focus', refreshCollection);
-        return () => window.removeEventListener('focus', refreshCollection);
+        return () => {
+            window.removeEventListener('focus', refreshCollection);
+            store.meaningStore.dispose();
+            store.explanationStore.dispose();
+            store.doubtStore.dispose();
+        };
     }, [store]);
 
     return (
-        <PageContext.Provider value={store}>
+        <PageContext.Provider key={`${identity}:${pageId}`} value={store}>
             {children}
         </PageContext.Provider>
     );
-}
+});
 
 export function PageView({ pageId }: { pageId: string }) {
     return (
@@ -100,6 +107,11 @@ const PageContent = observer(function PageContent() {
     const contentPanelRef = usePanelRef();
     const scrollRef = useRef<HTMLElement>(null);
     const isOpen = uiSettings.sidebarPanelOpen && !uiSettings.focusMode;
+    const expandedAi = isOpen && (
+        (uiSettings.sidebarPanel === 'meaning' && store.meaningStore.isExpanded) ||
+        (uiSettings.sidebarPanel === 'doubt' && store.doubtStore.isExpanded) ||
+        (uiSettings.sidebarPanel === 'explanation' && store.explanationStore.isExpanded)
+    );
     const [compact, setCompact] = useState(() => window.matchMedia(READER_COMPACT_QUERY).matches);
     useEffect(() => {
         const media = window.matchMedia(READER_COMPACT_QUERY);
@@ -268,11 +280,11 @@ const PageContent = observer(function PageContent() {
             <div className="flex-1 overflow-hidden">
                 <div className="flex h-full relative">
                     {!uiSettings.focusMode && <NavRail />}
-                    {compact && isOpen && <aside className="reader-mobile-sidebar" aria-label="Reader sidebar">
+                    {compact && isOpen && !expandedAi && <aside className="reader-mobile-sidebar" aria-label="Reader sidebar">
                         <div className="reader-mobile-sidebar-close"><ReaderActionButton tooltip="Close reader sidebar" className="reader-icon-button" onClick={() => uiSettings.setSidebarPanelOpen(false)}><X size={16} /></ReaderActionButton></div>
                         <div className="reader-mobile-sidebar-body"><SidebarPanel /></div>
                     </aside>}
-                    <Group orientation="horizontal" {...useDefaultLayout({ id: "page-sidebar" })}>
+                    <Group inert={expandedAi ? true : undefined} aria-hidden={expandedAi || undefined} orientation="horizontal" {...useDefaultLayout({ id: "page-sidebar" })}>
                         <Panel
                             panelRef={contentPanelRef}
                             defaultSize={320}
@@ -284,7 +296,7 @@ const PageContent = observer(function PageContent() {
                             }}
                             className="bg-[var(--color-surface-raised)]"
                         >
-                            {isOpen && !compact && <SidebarPanel />}
+                            {isOpen && !compact && !expandedAi && <SidebarPanel />}
                         </Panel>
                         {!compact && <Separator className="w-px bg-[var(--color-border-default)] hover:bg-[var(--color-brand)] active:bg-[var(--color-brand)] transition-colors cursor-col-resize relative">
                             <div className="absolute inset-y-0 -left-1 -right-1" />
@@ -295,29 +307,11 @@ const PageContent = observer(function PageContent() {
                             </main>
                         </Panel>
                     </Group>
+                    {expandedAi && <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)]">
+                        <SidebarPanel />
+                    </div>}
                     <Observer>
-                        {() => !uiSettings.focusMode && store.meaningStore.isExpanded ? (
-                            <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
-                                <PageMeaningPanel />
-                            </div>
-                        ) : null}
-                    </Observer>
-                    <Observer>
-                        {() => !uiSettings.focusMode && store.doubtStore.isExpanded ? (
-                            <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
-                                <PageDoubtPanel />
-                            </div>
-                        ) : null}
-                    </Observer>
-                    <Observer>
-                        {() => !uiSettings.focusMode && store.explanationStore.isExpanded ? (
-                            <div className="absolute inset-y-0 left-12 right-0 bg-[var(--color-surface-canvas)] z-20 flex flex-col h-full overflow-hidden border-l border-[var(--color-border-default)] animate-in fade-in slide-in-from-left duration-150">
-                                <PageExplanationPanel />
-                            </div>
-                        ) : null}
-                    </Observer>
-                    <Observer>
-                        {() => !uiSettings.focusMode && store.dictionaryStore.isOpen ? (
+                        {() => !uiSettings.focusMode && !expandedAi && store.dictionaryStore.isOpen ? (
                             <div className={`${compact ? 'absolute inset-y-0 left-12 right-0 z-40' : 'w-80 shrink-0'} border-l border-[var(--color-border-default)] bg-[var(--color-surface-raised)] h-full overflow-hidden`}>
                                 <DictionaryPanel />
                             </div>

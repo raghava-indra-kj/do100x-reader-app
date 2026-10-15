@@ -16,6 +16,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { readerPageWithIdRouteValue, loginPageRoute } from '@boot/routes';
 import { MarkdownRenderer } from '@reader/md-view';
 import { commentInFilter, commentSourceLabel, type CommentFilter } from './comment-state';
+import { commentPanelSession } from './comment-panel-session';
+import { copyReaderText } from './reader-clipboard';
+import './comment-actions.css';
 import '@reader/md-view/md-view.css';
 
 function formatRelativeTime(date: Date): string {
@@ -44,7 +47,7 @@ function formatCommentForCopy(comment: Comment): string {
     return parts.join('\n');
 }
 
-function CommentCard({
+const CommentCard = observer(function CommentCard({
     comment,
     isExpanded,
     onToggleExpand,
@@ -59,15 +62,26 @@ function CommentCard({
 }) {
     const navigate = useNavigate();
     const store = usePageStore();
-    const [isEditing, setIsEditing] = useState(false);
-    const [editBody, setEditBody] = useState(comment.body);
-    const [isSaving, setIsSaving] = useState(false);
+    const session = commentPanelSession(store);
+    const [isEditing, setIsEditing] = useState(() => session.edits.has(comment.id));
+    const [editBody, setEditBody] = useState(() => session.edits.get(comment.id)?.body ?? comment.body);
+    const isSaving = session.pendingSaves.has(comment.id);
     const [isLinking, setIsLinking] = useState(false);
     const [linkPageId, setLinkPageId] = useState(comment.linkedPageId ?? '');
     const [isSavingLink, setIsSavingLink] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const [error, setError] = useState('');
     const [resolving, setResolving] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const deletingRef = useRef(false);
+    const editActionRef = useRef<HTMLButtonElement>(null);
+    const returnToEdit = useRef(false);
+    const discardEdit = () => { session.discard(comment.id); returnToEdit.current = true; setIsEditing(false); setEditBody(comment.body); setError(''); };
+    const hasEditDraft = session.edits.has(comment.id);
+    useEffect(() => { if (!hasEditDraft && !isSaving) setIsEditing(false); }, [hasEditDraft, isSaving]);
+    useEffect(() => { if (!isEditing && returnToEdit.current) { returnToEdit.current = false; editActionRef.current?.focus(); } }, [isEditing]);
     const sourceLabel = commentSourceLabel(comment);
     const hasSource = Boolean(comment.anchor?.segments.length && comment.anchorRevision === store.optCurrentPage?.contentVersion);
 
@@ -90,49 +104,52 @@ function CommentCard({
     }, [isEditing]);
 
     const handleSave = useCallback(async () => {
-        if (!editBody.trim() || isSaving) return;
-        setIsSaving(true);
-        const result = await editComment({ commentId: comment.id, body: editBody.trim() });
-        setIsSaving(false);
-        if (result.ok) {
-            setIsEditing(false);
-            onEdited();
-        } else setError(result.error.message);
-    }, [comment.id, editBody, isSaving, onEdited]);
+        if (!editBody.trim() || !session.beginSave(comment.id)) return;
+        setError('');
+        const submitted = session.edits.get(comment.id);
+        try {
+            const result = await editComment({ commentId: comment.id, body: editBody.trim() });
+            if (result.ok) {
+                session.finishSave(comment.id, submitted);
+                setIsEditing(false);
+                onEdited();
+            } else session.finishSave(comment.id, submitted, result.error.message);
+        } catch { session.finishSave(comment.id, submitted, 'Couldn’t save your edit. Your draft is still here. Try again.'); }
+    }, [comment.id, editBody, session, onEdited]);
 
     const handleDelete = useCallback(async () => {
-        const result = await deleteComment({ commentId: comment.id });
-        if (result.ok) {
-            onDeleted(comment.id);
-        }
-    }, [comment.id, onDeleted]);
+        if (deletingRef.current) return;
+        deletingRef.current = true; setIsDeleting(true); setDeleteError(null);
+        try {
+            const result = await deleteComment({ commentId: comment.id });
+            if (result.ok) {
+                session.discard(comment.id);
+                setDeleteOpen(false); onDeleted(comment.id);
+            } else setDeleteError(result.error.message);
+        } catch { setDeleteError('Couldn’t delete the comment. Try again.'); }
+        finally { deletingRef.current = false; setIsDeleting(false); }
+    }, [comment.id, session, onDeleted]);
 
     const handleSaveLink = useCallback(async () => {
         if (isSavingLink) return;
         setIsSavingLink(true);
         const newLinkedPageId = linkPageId.trim() || null;
-        const result = await editComment({
-            commentId: comment.id,
-            body: comment.body,
-            linkedPageId: newLinkedPageId,
-        });
-        setIsSavingLink(false);
-        if (result.ok) {
-            setIsLinking(false);
-            onEdited();
-        }
+        setError('');
+        try {
+            const result = await editComment({ commentId: comment.id, linkedPageId: newLinkedPageId });
+            if (result.ok) { setIsLinking(false); onEdited(); }
+            else setError(result.error.message);
+        } catch { setError('Couldn’t link that page. Check the page ID and try again.'); }
+        finally { setIsSavingLink(false); }
     }, [comment.id, comment.body, linkPageId, isSavingLink, onEdited]);
 
     const handleUnlink = useCallback(async () => {
-        const result = await editComment({
-            commentId: comment.id,
-            body: comment.body,
-            linkedPageId: null,
-        });
-        if (result.ok) {
-            setLinkPageId('');
-            onEdited();
-        }
+        setError('');
+        try {
+            const result = await editComment({ commentId: comment.id, linkedPageId: null });
+            if (result.ok) { setLinkPageId(''); onEdited(); }
+            else setError(result.error.message);
+        } catch { setError('Couldn’t remove the link. Try again.'); }
     }, [comment.id, comment.body, onEdited]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -141,8 +158,9 @@ function CommentCard({
             handleSave();
         }
         if (e.key === 'Escape') {
+            e.stopPropagation();
+            returnToEdit.current = true;
             setIsEditing(false);
-            setEditBody(comment.body);
         }
     };
 
@@ -200,7 +218,7 @@ function CommentCard({
                         <button onClick={() => store.setCommentToReattach(comment)}><Crosshair size={13} />Reattach</button>
                         <ReaderActionButton tooltip={comment.resolvedAt ? 'Reopen comment' : 'Resolve comment'} className="reader-icon-button" disabled={resolving} onClick={() => void toggleResolved()}>{comment.resolvedAt ? <Undo2 size={13} /> : <Check size={13} />}</ReaderActionButton>
                     </div>
-                    {error && <p role="alert" className="reader-composer-error">{error}</p>}
+                    {(error || session.saveErrors.get(comment.id)) && <p role="alert" className="reader-composer-error">{error || session.saveErrors.get(comment.id)}</p>}
 
                     {/* Comment body */}
                     {isEditing ? (
@@ -209,17 +227,20 @@ function CommentCard({
                                 ref={textareaRef}
                                 aria-label="Edit comment"
                                 value={editBody}
-                                onChange={(e) => setEditBody(e.target.value)}
+                                onChange={(e) => { setEditBody(e.target.value); session.setEdit(comment.id, { body: e.target.value, originalBody: session.edits.get(comment.id)?.originalBody ?? comment.body }); setError(''); }}
                                 onKeyDown={handleKeyDown}
+                                disabled={isSaving}
                                 className="w-full rounded-[var(--radius-md)] border border-[var(--color-border-default)] bg-[var(--color-surface-canvas)] p-2 text-xs text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] focus:outline-none focus:border-[var(--color-brand)] resize-none h-20"
                             />
+                            {session.edits.get(comment.id)?.originalBody !== undefined && session.edits.get(comment.id)?.originalBody !== comment.body && <p role="status" className="reader-panel-meta">This comment changed while you were editing. Review your draft before saving.</p>}
                             <div className="flex items-center justify-end gap-1">
                                 <button
-                                    onClick={() => { setIsEditing(false); setEditBody(comment.body); }}
+                                    onClick={discardEdit}
+                                    disabled={isSaving}
                                     className="flex items-center gap-1 rounded px-2 py-1 text-[10px] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
                                 >
                                     <X size={11} />
-                                    <span>Cancel</span>
+                                    <span>Discard edit</span>
                                 </button>
                                 <button
                                     onClick={handleSave}
@@ -241,8 +262,11 @@ function CommentCard({
 
                     {/* Linked page */}
                     {isLinking ? (
-                        <div className="flex items-center gap-1.5 mt-2">
+                        <div className="reader-comment-link-editor">
+                            <label htmlFor={`comment-link-${comment.id}`}>Link to a page ID</label>
+                            <div className="flex items-center gap-1.5">
                             <Input
+                                id={`comment-link-${comment.id}`}
                                 size="sm"
                                 value={linkPageId}
                                 onChange={(e) => setLinkPageId(e.target.value)}
@@ -267,6 +291,7 @@ function CommentCard({
                             >
                                 <X size={12} />
                             </ReaderActionButton>
+                            </div>
                         </div>
                     ) : comment.linkedPageId ? (
                         <div className="flex items-center gap-1.5 mt-2">
@@ -280,7 +305,7 @@ function CommentCard({
                             </ReaderActionButton>
                             <ReaderActionButton
                                 onClick={handleUnlink}
-                                className="p-0.5 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                                className="reader-icon-button hover:text-[var(--color-text-error)]"
                                 tooltip="Remove link"
                             >
                                 <Unlink size={11} />
@@ -304,9 +329,10 @@ function CommentCard({
                                         <LinkIcon size={12} />
                                     </button>
                                 </Tooltip>
-                                <Tooltip content="Edit comment">
-                                    <button aria-label="Edit comment"
-                                        onClick={() => { setEditBody(comment.body); setIsEditing(true); }}
+                                <Tooltip content={session.edits.has(comment.id) ? 'Resume comment edit' : 'Edit comment'}>
+                                    <button aria-label={session.edits.has(comment.id) ? 'Resume comment edit' : 'Edit comment'}
+                                        ref={editActionRef}
+                                        onClick={() => { const existing = session.edits.get(comment.id); setEditBody(existing?.body ?? comment.body); if (!existing) session.setEdit(comment.id, { body: comment.body, originalBody: comment.body }); setIsEditing(true); }}
                                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
                                     >
                                         <Pencil size={12} />
@@ -314,7 +340,7 @@ function CommentCard({
                                 </Tooltip>
                                 <Tooltip content="Delete comment">
                                     <button aria-label="Delete comment"
-                                        onClick={handleDelete}
+                                        onClick={() => { setDeleteError(null); setDeleteOpen(true); }}
                                         className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-error)] hover:bg-[var(--color-surface-soft)] transition-colors cursor-pointer"
                                     >
                                         <Trash2 size={12} />
@@ -325,20 +351,26 @@ function CommentCard({
                     </div>
                 </div>
             )}
+            <ConfirmationDialog open={deleteOpen} title="Delete this comment?" description="This comment will be permanently deleted. To keep it in History instead, choose Resolve comment."
+                confirmLabel="Delete comment" pending={isDeleting} error={deleteError}
+                onCancel={() => { setDeleteOpen(false); setDeleteError(null); }} onConfirm={() => void handleDelete()} />
         </div>
     );
-}
+});
 
 export const PageComments = observer(function PageComments() {
     const store = usePageStore();
     const authStore = useAuthStore();
+    const session = commentPanelSession(store);
     const [dataState, setDataState] = useState<DataState<Comment[]>>(DataState.init);
     const mountedRef = useRef(true);
     const requestRef = useRef(0);
-    const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+    const [expandedIds, setExpandedIds] = useState<Set<string>>(() => session.expanded);
     const [copyFeedback, setCopyFeedback] = useState(false);
-    const [query, setQuery] = useState('');
-    const [filter, setFilter] = useState<CommentFilter>('active');
+    const [query, setQuery] = useState(() => session.query);
+    const [filter, setFilter] = useState<CommentFilter>(() => session.filter);
+    useEffect(() => { session.setExpanded(expandedIds); }, [session, expandedIds]);
+    useEffect(() => { session.setView(query, filter); }, [session, query, filter]);
 
     const commentsVersion = store.commentsVersion;
     const contentVersion = store.optCurrentPage?.contentVersion;
@@ -413,6 +445,7 @@ export const PageComments = observer(function PageComments() {
             const result = await deleteAllComments({ pageId });
             if (!mountedRef.current || pageId !== store.pageId) return;
             if (result.ok) {
+                session.clear();
                 setDataState(DataState.data([]));
                 setDeleteAllPageId(null);
                 store.bumpCommentsVersion();
@@ -425,12 +458,14 @@ export const PageComments = observer(function PageComments() {
         }
     }, [deleteAllPageId, isDeletingAll, store]);
 
-    const handleCopyAll = useCallback(() => {
+    const handleCopyAll = useCallback(async () => {
         if (comments.length === 0) return;
         const text = comments.map(formatCommentForCopy).join('\n\n---\n\n');
-        navigator.clipboard.writeText(text);
-        setCopyFeedback(true);
-        setTimeout(() => setCopyFeedback(false), 1500);
+        if (await copyReaderText(text, 'Comments copied')) {
+            if (!mountedRef.current) return;
+            setCopyFeedback(true);
+            setTimeout(() => { if (mountedRef.current) setCopyFeedback(false); }, 1500);
+        }
     }, [comments]);
 
     return (

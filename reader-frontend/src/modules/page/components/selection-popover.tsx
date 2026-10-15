@@ -7,14 +7,15 @@ import { usePageStore } from '../store';
 import { createComment } from '@domain/comment/services/comments-service';
 import { createVocabulary } from '@domain/vocabulary/services/vocabulary-service';
 import { toast } from '@modules/core/ui/primitives/toast/toast';
-import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote, Copy, Check, NotebookPen } from 'lucide-react';
+import { BookOpen, Globe, ArrowLeft, MessageSquare, Sparkles, StickyNote, Copy, Check, NotebookPen, X } from 'lucide-react';
 import { ReaderActionButton } from './reader-action-button';
 import { observer } from 'mobx-react-lite';
 import { createBlocksAnchor } from '@reader/md-ast';
 import { editComment } from '@domain/comment/services/comments-service';
-import { captureCommentTarget, type CommentTarget, type BlockCommentSelection } from './comment-target';
+import { captureCommentTarget, type BlockCommentSelection } from './comment-target';
 import { MarkdownRenderer } from '@reader/md-view';
 import './reader-experience.css';
+import './selection-drafts.css';
 
 const POPOVER_OFFSET = 10;
 const GOOGLE_URL_MAX = 2048;
@@ -60,49 +61,93 @@ function buildDuckDoubtUrl(pageTitle: string, sectionTitle: string, selectedText
 
 export const SelectionPopover = observer(function SelectionPopover({ containerRef, page, section, blockSelection, onClearBlocks }: SelectionPopoverProps) {
     const popoverRef = useRef<HTMLDivElement>(null);
+    const recoveryRef = useRef<HTMLDivElement>(null);
     const store = usePageStore();
+    const drafts = store.commentDrafts;
     const selection = useTextSelection(containerRef, popoverRef);
-    const selectedText = blockSelection?.anchor.quote ?? selection?.text.trim() ?? '';
-    const sectionTitle = section.title ?? section.rawTitle ?? '';
-    const [view, setView] = useState<'menu' | 'compose' | 'hidden'>('menu');
-    const [draft, setDraft] = useState('');
-    const [isExplanation, setIsExplanation] = useState(false);
-    const [saving, setSaving] = useState(false);
-    const [savedDrafts, setSavedDrafts] = useState<string[]>([]);
-    const [saveError, setSaveError] = useState('');
+    const [view, setView] = useState<'menu' | 'compose' | 'hidden'>('hidden');
+    const [activeId, setActiveId] = useState<string | null>(null);
+    const activeIdRef = useRef(activeId);
+    activeIdRef.current = activeId;
+    const [showDrafts, setShowDrafts] = useState(false);
+    const [rect, setRect] = useState<DOMRect | null>(null);
+    const [reattaching, setReattaching] = useState(false);
+    const [reattachError, setReattachError] = useState('');
     const [savingWord, setSavingWord] = useState(false);
     const [height, setHeight] = useState(240);
     const [viewport, setViewport] = useState({ width: 1024, height: 768 });
     const savingRef = useRef(false);
-    const selectionVersion = useRef(0);
-    const [target, setTarget] = useState<CommentTarget | null>(null);
-    const [pageNote, setPageNote] = useState(false);
     const [preview, setPreview] = useState(false);
     const captured = useRef<unknown>(null);
+    const focusMenu = useRef(false);
+    const active = drafts.get(activeId);
+    const selectedText = active?.selectedText ?? '';
+    const sectionTitle = active?.sectionTitle ?? '';
+    const draft = active?.body ?? '';
+    const isExplanation = active?.isExplanation ?? false;
+    const target = active?.target;
+    const pageNote = active?.pageNote ?? false;
+    const saving = active?.savingRevision != null || reattaching;
+    const saveError = active?.error || reattachError;
+    const returnToReading = () => {
+        const node = containerRef.current;
+        if (node) { if (!node.hasAttribute('tabindex')) node.tabIndex = -1; node.focus({ preventScroll: true }); }
+    };
+    const dismiss = (returnFocus = false) => {
+        drafts.park(activeIdRef.current);
+        captured.current = null;
+        selection?.dismiss?.();
+        setActiveId(null); setView('hidden'); setShowDrafts(false);
+        window.getSelection()?.removeAllRanges();
+        onClearBlocks?.();
+        if (returnFocus) returnToReading();
+    };
 
     useEffect(() => {
-        if (!blockSelection) return;
-        const dismiss = () => { setView('hidden'); onClearBlocks?.(); };
-        const outside = (event: PointerEvent) => { if (!popoverRef.current?.contains(event.target as Node)) dismiss(); };
-        const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') dismiss(); };
-        document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
-        return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
-    }, [blockSelection, onClearBlocks]);
+        if (view === 'hidden' && !showDrafts) return;
+        const outside = (event: PointerEvent) => {
+            if (!popoverRef.current?.contains(event.target as Node) && !recoveryRef.current?.contains(event.target as Node)) dismiss();
+        };
+        const escape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); window.getSelection()?.removeAllRanges(); dismiss(true); }
+        };
+        document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape, true);
+        return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape, true); };
+    }, [view, showDrafts, drafts, onClearBlocks]);
+
+    useEffect(() => () => drafts.park(activeIdRef.current), [drafts]);
 
     useEffect(() => {
         if (selection?.range) onClearBlocks?.();
     }, [selection?.range]);
 
     useEffect(() => {
-        const identity = blockSelection ?? selection?.range;
+        const identity = blockSelection ?? selection?.range ?? null;
         if (captured.current === identity) return;
         captured.current = identity;
-        setPageNote(false);
+        drafts.park(activeIdRef.current);
         setPreview(false);
-        setTarget(blockSelection
+        setReattachError('');
+        if (!identity) { setActiveId(null); setView('hidden'); return; }
+        const target = blockSelection
             ? { anchor: blockSelection.anchor, contentVersion: blockSelection.contentVersion, document: page.document, blockIds: [] }
-            : selection ? captureCommentTarget(containerRef.current?.querySelector<HTMLElement>('.md-view') ?? null, page.document, page.contentVersion, selection.range) : null);
-    }, [selection?.range, blockSelection, page, containerRef]);
+            : captureCommentTarget(containerRef.current?.querySelector<HTMLElement>('.md-view') ?? null, page.document, page.contentVersion, selection!.range);
+        const id = drafts.begin({ pageId: page.id, pageTitle: page.title, sectionId: section.id, sectionTitle: section.title ?? section.rawTitle ?? '', selectedText: blockSelection?.anchor.quote ?? selection!.text.trim(), target });
+        setActiveId(id); setView('menu'); setShowDrafts(false);
+        setRect(blockSelection?.rect ?? selection!.rect);
+        focusMenu.current = Boolean(blockSelection || selection?.keyboard);
+    }, [selection?.range, blockSelection, page, containerRef, drafts, section]);
+
+    useEffect(() => {
+        if (view === 'menu' && focusMenu.current) {
+            focusMenu.current = false;
+            popoverRef.current?.querySelector<HTMLButtonElement>('.reader-selection-primary:not(:disabled)')?.focus();
+        }
+    }, [view, activeId]);
+
+    useEffect(() => {
+        if (selection?.range === captured.current) setRect(selection?.rect ?? null);
+    }, [selection?.rect]);
 
     useEffect(() => {
         const resize = () => setViewport({ width: window.innerWidth, height: window.visualViewport?.height ?? window.innerHeight });
@@ -116,15 +161,6 @@ export const SelectionPopover = observer(function SelectionPopover({ containerRe
     }, []);
 
     useEffect(() => {
-        selectionVersion.current += 1;
-        setView('menu');
-        setDraft('');
-        setIsExplanation(false);
-        setSavedDrafts([]);
-        setSaveError('');
-    }, [selection?.range, blockSelection, page.id]);
-
-    useEffect(() => {
         const node = popoverRef.current;
         if (!node) return;
         const observer = new ResizeObserver(() => setHeight(node.getBoundingClientRect().height));
@@ -132,10 +168,22 @@ export const SelectionPopover = observer(function SelectionPopover({ containerRe
         return () => observer.disconnect();
     }, [selectedText, view]);
 
-    if ((!selection && !blockSelection) || view === 'hidden') return null;
-    const rect = blockSelection?.rect ?? selection!.rect;
+    const parked = drafts.recoverable(page.id).filter(item => view === 'hidden' || item.id !== activeId);
+    const resume = (id: string) => {
+        drafts.park(activeId);
+        captured.current = null;
+        selection?.dismiss?.();
+        onClearBlocks?.();
+        setActiveId(id); setView('compose'); setShowDrafts(false); setPreview(false); setReattachError('');
+        setRect(new DOMRect(viewport.width / 2, viewport.height / 2, 0, 0));
+    };
+    const recovery = parked.length ? createPortal(<div ref={recoveryRef} className="reader-comment-drafts" data-md-ui>
+        <button className="reader-comment-drafts-trigger" aria-expanded={showDrafts} onClick={() => parked.length === 1 ? resume(parked[0].id) : setShowDrafts(!showDrafts)}><MessageSquare size={14} />{parked.length === 1 ? 'Resume comment' : `Drafts (${parked.length})`}</button>
+        {showDrafts && <section className="reader-comment-draft-list" aria-label="Unsent comments"><strong>Unsent comments</strong><small>Kept while this page stays open.</small>{parked.map(item => <div key={item.id}><button onClick={() => resume(item.id)}><small>{item.sectionTitle || item.pageTitle}</small><blockquote>{item.selectedText}</blockquote><span>{item.body}</span></button><ReaderActionButton tooltip="Discard draft" disabled={item.savingRevision !== null} className="reader-icon-button" onClick={() => drafts.discard(item.id)}><X size={14} /></ReaderActionButton></div>)}</section>}
+    </div>, document.body) : null;
+    if (!active || active.pageId !== page.id || !rect || view === 'hidden') return recovery;
     const body = draft.trim();
-    const saved = savedDrafts.includes(JSON.stringify([body, isExplanation]));
+    const saved = active.savedRevision === active.revision;
     const width = Math.min(view === 'menu' ? 230 : 400, viewport.width - 24);
     const idealTop = rect.top > height + POPOVER_OFFSET
         ? rect.top - height - POPOVER_OFFSET : rect.bottom + POPOVER_OFFSET;
@@ -145,51 +193,47 @@ export const SelectionPopover = observer(function SelectionPopover({ containerRe
         top: Math.max(12, Math.min(idealTop, viewport.height - height - 12)),
         maxHeight: viewport.height - 24, overflowY: 'auto',
     };
-    const googleUrl = view === 'menu' ? buildGoogleExplainUrl(page.title, sectionTitle, selectedText) : buildGoogleDoubtUrl(page.title, sectionTitle, selectedText, body);
-    const duckUrl = view === 'menu' ? buildDuckExplainUrl(page.title, sectionTitle, selectedText) : buildDuckDoubtUrl(page.title, sectionTitle, selectedText, body);
+    const googleUrl = view === 'menu' ? buildGoogleExplainUrl(active.pageTitle, sectionTitle, selectedText) : buildGoogleDoubtUrl(active.pageTitle, sectionTitle, selectedText, body);
+    const duckUrl = view === 'menu' ? buildDuckExplainUrl(active.pageTitle, sectionTitle, selectedText) : buildDuckDoubtUrl(active.pageTitle, sectionTitle, selectedText, body);
     const canGoogle = googleUrl.length <= GOOGLE_URL_MAX;
     const canDuck = duckUrl.length <= DUCK_URL_MAX;
     const ask = () => {
         if (!body || saving) return;
-        store.doubtStore.open(body, selectedText, page.title, sectionTitle, !pageNote && target?.anchor ? { anchor: target.anchor, contentVersion: target.contentVersion } : undefined);
-        setView('hidden');
+        store.doubtStore.open(body, selectedText, active.pageTitle, sectionTitle, !pageNote && target?.anchor ? { anchor: target.anchor, contentVersion: target.contentVersion } : undefined);
+        dismiss(true);
     };
     const save = async () => {
-        if (!body || savingRef.current || saved || (!target?.anchor && !pageNote)) return;
-        const version = selectionVersion.current;
-        const savedKey = JSON.stringify([body, isExplanation]);
-        savingRef.current = true;
-        setSaving(true);
-        setSaveError('');
+        const submission = drafts.submit(active.id);
+        if (!submission) return;
+        const snapshot = submission.draft;
         try {
-            const result = await createComment({ pageId: page.id, pageTitle: page.title, sectionTitle: sectionTitle || null, selectedText, body, isExplanation,
-                ...(!pageNote && target?.anchor ? { anchor: target.anchor, contentVersion: target.contentVersion } : {}) });
+            const result = await createComment({ pageId: snapshot.pageId, pageTitle: snapshot.pageTitle, sectionTitle: snapshot.sectionTitle || null, selectedText: snapshot.selectedText, body: snapshot.body.trim(), isExplanation: snapshot.isExplanation,
+                ...(!snapshot.pageNote && snapshot.target.anchor ? { anchor: snapshot.target.anchor, contentVersion: snapshot.target.contentVersion } : {}) });
             if (!result.ok) throw result.error;
             store.bumpCommentsVersion();
-            if (version === selectionVersion.current) setSavedDrafts(previous => [...previous, savedKey]);
+            drafts.complete(submission);
             toast.success('Comment saved. You can also ask AI about it.');
         } catch (error) {
-            if (version === selectionVersion.current) setSaveError(error instanceof Error ? error.message : 'Couldn’t save your comment. Your draft is still here; try again.');
-        } finally {
-            savingRef.current = false;
-            setSaving(false);
+            drafts.complete(submission, error instanceof Error ? error.message : 'Couldn’t save your comment. Your draft is still here; try again.');
         }
     };
     const reattach = async () => {
         const comment = store.commentToReattach;
         if (!comment || !target?.anchor || savingRef.current) return;
-        savingRef.current = true; setSaving(true); setSaveError('');
+        const submittedId = active.id;
+        savingRef.current = true; setReattaching(true); setReattachError('');
         try {
             const result = await editComment({ commentId: comment.id, anchor: target.anchor, contentVersion: target.contentVersion });
             if (!result.ok) throw result.error;
-            store.setCommentToReattach(null); store.bumpCommentsVersion(); setView('hidden');
+            store.setCommentToReattach(null); store.bumpCommentsVersion();
+            if (activeIdRef.current === submittedId) dismiss(true);
             toast.success('Comment attached to this selection.');
-        } catch (error) { setSaveError(error instanceof Error ? error.message : 'Couldn’t attach the comment. Select the passage again.'); }
-        finally { savingRef.current = false; setSaving(false); }
+        } catch (error) { if (activeIdRef.current === submittedId) setReattachError(error instanceof Error ? error.message : 'Couldn’t attach the comment. Select the passage again.'); }
+        finally { savingRef.current = false; setReattaching(false); }
     };
     const copy = async () => {
         try {
-            await navigator.clipboard.writeText(`Page: ${page.title}\nSection: ${sectionTitle}\n\n${selectedText}\n\n${body}`);
+            await navigator.clipboard.writeText(`Page: ${active.pageTitle}\nSection: ${sectionTitle}\n\n${selectedText}\n\n${body}`);
             toast.success('Text and context copied');
         } catch { toast.error('Couldn’t copy. Please try again.'); }
     };
@@ -204,14 +248,15 @@ export const SelectionPopover = observer(function SelectionPopover({ containerRe
         } catch { toast.error('Couldn’t save this word. Please try again.'); }
         finally { setSavingWord(false); }
     };
-    return createPortal(<div ref={popoverRef} style={style} className={`reader-selection-popover ${view === 'menu' ? 'reader-selection-menu' : 'reader-composer'}`} onMouseDown={event => { if (view === 'menu') event.preventDefault(); }}>
+    return <>{recovery}{createPortal(<div ref={popoverRef} role="region" aria-label={view === 'menu' ? 'Selection tools' : 'Ask or comment'} style={style} className={`reader-selection-popover ${view === 'menu' ? 'reader-selection-menu' : 'reader-composer'}`} onMouseDown={event => { if (view === 'menu') event.preventDefault(); }}>
         {view === 'menu' ? <>
+            <div className="reader-selection-tools-heading"><span>Selection tools</span><ReaderActionButton tooltip="Close selection tools" className="reader-icon-button" onClick={() => dismiss(true)}><X size={15} /></ReaderActionButton></div>
             {store.commentToReattach && <button className="reader-selection-primary" disabled={!target?.anchor || saving} onClick={() => void reattach()}><MessageSquare size={15} />{saving ? 'Attaching…' : 'Attach comment here'}</button>}
             {saveError && <p role="alert" className="reader-composer-error">{saveError}</p>}
             <button className="reader-selection-primary" onClick={() => setView('compose')}><MessageSquare size={15} />Ask or comment</button>
-            <button onClick={() => { store.explanationStore.open(selectedText, page.title, sectionTitle); setView('hidden'); }}><Sparkles size={15} />Explain with AI</button>
-            <button onClick={() => { store.meaningStore.open(selectedText, page.title, sectionTitle); setView('hidden'); }}><BookOpen size={15} />Word meanings</button>
-            {isSingleWord(selectedText) && <button onClick={() => { store.dictionaryStore.open(selectedText); setView('hidden'); }}><BookOpen size={15} />Dictionary</button>}
+            <button onClick={() => { store.explanationStore.open(selectedText, active.pageTitle, sectionTitle); dismiss(true); }}><Sparkles size={15} />Explain with AI</button>
+            <button onClick={() => { store.meaningStore.open(selectedText, active.pageTitle, sectionTitle); dismiss(true); }}><BookOpen size={15} />Word meanings</button>
+            {isSingleWord(selectedText) && <button onClick={() => { store.dictionaryStore.open(selectedText); dismiss(true); }}><BookOpen size={15} />Dictionary</button>}
             <button disabled={savingWord} onClick={saveWord}><NotebookPen size={15} />{savingWord ? 'Saving…' : 'Save word'}</button>
             <button onClick={copy}><Copy size={15} />Copy selection</button>
             <div className="reader-external-options" role="group" aria-label="Explain elsewhere"><div className="reader-external-label">Explain elsewhere</div><div className="reader-external-actions">
@@ -220,19 +265,20 @@ export const SelectionPopover = observer(function SelectionPopover({ containerRe
                 {(!canGoogle || !canDuck) && <small>Selection too long for some providers. Use Copy selection instead.</small>}
             </div></div>
         </> : <>
-            <div className="reader-composer-header"><strong><MessageSquare size={16} />Ask or comment</strong><ReaderActionButton tooltip="Back to selection tools" className="reader-icon-button" onClick={() => setView('menu')}><ArrowLeft size={16} /></ReaderActionButton></div>
+            <div className="reader-composer-header"><strong><MessageSquare size={16} />Ask or comment</strong><div className="reader-composer-header-actions"><ReaderActionButton tooltip="Back to selection tools" className="reader-icon-button" onClick={() => { focusMenu.current = true; setView('menu'); }}><ArrowLeft size={16} /></ReaderActionButton><ReaderActionButton tooltip="Close and keep draft" className="reader-icon-button" onClick={() => dismiss(true)}><X size={16} /></ReaderActionButton></div></div>
+            <small className="reader-comment-draft-context">{active.sectionTitle || active.pageTitle}</small>
             <blockquote className="reader-composer-context">{selectedText}</blockquote>
             {target?.error && <div className="reader-comment-target-warning"><p>{target.error}</p>
-                {target.blockIds.length > 0 && target.document && <button onClick={() => setTarget({ ...target, anchor: createBlocksAnchor(target.document!, target.blockIds), error: undefined })}>Attach to whole {target.blockIds.length === 1 ? 'block' : 'blocks'}</button>}
-                <label><input type="checkbox" checked={pageNote} onChange={event => setPageNote(event.target.checked)} />Save as a page note without a highlight</label>
+                {target.blockIds.length > 0 && target.document && <button onClick={() => drafts.update(active.id, { target: { ...target, anchor: createBlocksAnchor(target.document!, target.blockIds), error: undefined } })}>Attach to whole {target.blockIds.length === 1 ? 'block' : 'blocks'}</button>}
+                <label><input type="checkbox" checked={pageNote} onChange={event => drafts.update(active.id, { pageNote: event.target.checked })} />Save as a page note without a highlight</label>
             </div>}
             {target?.anchor && <small className="reader-composer-hint">{target.anchor.kind === 'blocks' ? `${target.anchor.segments.length} block${target.anchor.segments.length === 1 ? '' : 's'} selected` : 'Attached to selected text'}</small>}
             <label className="sr-only" htmlFor="reader-selection-draft">Question or comment</label>
-            {preview ? <div className="reader-comment-markdown reader-comment-preview"><MarkdownRenderer markdown={draft || '*Your preview will appear here.*'} /></div> : <textarea id="reader-selection-draft" autoFocus value={draft} onChange={event => { setDraft(event.target.value); setSaveError(''); }} placeholder="What would you like to understand or remember? Markdown and LaTeX supported." onKeyDown={event => {
+            {preview ? <div className="reader-comment-markdown reader-comment-preview"><MarkdownRenderer markdown={draft || '*Your preview will appear here.*'} /></div> : <textarea id="reader-selection-draft" autoFocus value={draft} onChange={event => drafts.update(active.id, { body: event.target.value })} placeholder="What would you like to understand or remember? Markdown and LaTeX supported." onKeyDown={event => {
                 if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); if (event.shiftKey) void save(); else ask(); }
             }} />}
             <button className="reader-comment-preview-toggle" aria-pressed={preview} onClick={() => setPreview(!preview)}>{preview ? 'Write' : 'Preview Markdown & math'}</button>
-            <div className="reader-composer-options"><label><input type="checkbox" checked={isExplanation} onChange={event => setIsExplanation(event.target.checked)} />Include comment in my explanations</label><ReaderActionButton tooltip="Copy draft and selected passage" className="reader-icon-button" onClick={copy}><Copy size={15} /></ReaderActionButton></div>
+            <div className="reader-composer-options"><label><input type="checkbox" checked={isExplanation} onChange={event => drafts.update(active.id, { isExplanation: event.target.checked })} />Include comment in my explanations</label><ReaderActionButton tooltip="Copy draft and selected passage" className="reader-icon-button" onClick={copy}><Copy size={15} /></ReaderActionButton></div>
             {saveError && <p role="alert" className="reader-composer-error">{saveError}</p>}
             {saved && <p role="status" className="reader-composer-saved"><Check size={13} />Saved to comments. Your text is ready to ask AI.</p>}
             <div className="reader-composer-actions">
@@ -240,11 +286,12 @@ export const SelectionPopover = observer(function SelectionPopover({ containerRe
                 <button className="reader-composer-ask" disabled={!body || saving} onClick={ask}><Sparkles size={15} />Ask AI</button>
             </div>
             <div className="reader-composer-hint">Ctrl / ⌘ + Enter to ask · add Shift to save</div>
+            <div className="reader-comment-draft-footer"><span>Unsent text stays on this page until you leave or refresh.</span><button disabled={saving} onClick={() => { drafts.discard(active.id); dismiss(true); }}>Discard draft</button></div>
             <div className="reader-external-options" role="group" aria-label="Ask elsewhere"><div className="reader-external-label"><Globe size={13} />Ask elsewhere</div><div className="reader-external-actions">
                 <button disabled={!body || !canGoogle} onClick={() => window.open(googleUrl, '_blank', 'noopener,noreferrer')}>Google AI ↗</button>
                 <button disabled={!body || !canDuck} onClick={() => window.open(duckUrl, '_blank', 'noopener,noreferrer')}>DuckAI ↗</button>
                 {(!canGoogle || !canDuck) && <small>This passage is too long for some external links. Copy it to use elsewhere.</small>}
             </div></div>
         </>}
-    </div>, document.body);
+    </div>, document.body)}</>;
 });

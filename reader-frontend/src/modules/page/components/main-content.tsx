@@ -74,7 +74,7 @@ export const PageMain = observer(function PageMain() {
     const next = store.navigableSections[currentIndex + 1];
 
     return (
-        <><div ref={contentRef} className="reader-reading-surface" style={{ maxWidth: uiSettings.readingWidth === 'full' ? '100%' : uiSettings.readingWidth === 'wide' ? 1200 : 860 }}>
+        <><div ref={contentRef} tabIndex={-1} role="region" aria-label="Reading content" className="reader-reading-surface" style={{ maxWidth: uiSettings.readingWidth === 'full' ? '100%' : uiSettings.readingWidth === 'wide' ? 1200 : 860 }}>
             {!editing && <ReaderAnnotations page={page} containerRef={contentRef} onCompose={setBlockSelection} />}
             <SectionReader
                 key={`${section.id}:${page.contentVersion}`}

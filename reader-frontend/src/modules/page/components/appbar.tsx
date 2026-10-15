@@ -5,7 +5,7 @@ import { AppBarTools } from '@modules/core/ui/components/appbar/appbar-tools';
 import { ReaderPageSearch } from '@modules/reader/search/page-search';
 import { Button } from '@modules/core/ui/primitives/button';
 import { Select } from '@modules/core/ui/primitives/select';
-import { toast } from '@modules/core/ui/primitives/toast/toast';
+import { copyReaderText } from './reader-clipboard';
 import { 
     Minus, 
     Plus, 
@@ -174,12 +174,12 @@ export const PageAppbar = observer(function PageAppbar() {
                         const page = store.optCurrentPage;
                         return (<>
                                 {section && (
-                                    <Button variant="outlined" size="sm" iconOnly aria-label="Copy section" onClick={() => { navigator.clipboard.writeText(section.fullMarkdown); toast.success('Section copied'); }} tooltip="Copy section">
+                                    <Button variant="outlined" size="sm" iconOnly aria-label="Copy section" onClick={() => void copyReaderText(section.fullMarkdown, 'Section copied')} tooltip="Copy section">
                                         <Copy size={16} />
                                     </Button>
                                 )}
                                 {page && (
-                                    <Button variant="outlined" size="sm" iconOnly aria-label="Copy page" onClick={() => { navigator.clipboard.writeText(page.content); toast.success('Page copied'); }} tooltip="Copy page">
+                                    <Button variant="outlined" size="sm" iconOnly aria-label="Copy page" onClick={() => void copyReaderText(page.content, 'Page copied')} tooltip="Copy page">
                                         <ClipboardList size={16} />
                                     </Button>
                                 )}

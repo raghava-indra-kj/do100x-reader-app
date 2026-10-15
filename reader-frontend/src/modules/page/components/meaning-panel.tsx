@@ -7,7 +7,7 @@ export const PageMeaningPanel = observer(function PageMeaningPanel() {
     return (
         <PageAiLookupPanel
             title="Word meanings"
-            onStart={text => store.meaningStore.open(text, store.optCurrentPage?.title ?? '', store.currentSection?.title ?? '')}
+            onStart={(text, context) => store.meaningStore.open(text, context.pageTitle, context.sectionTitle)}
             startLabel="Look up"
             startPlaceholder="Enter a word or phrase…"
             storeInstance={store.meaningStore}

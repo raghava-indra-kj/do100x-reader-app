@@ -7,7 +7,7 @@ export const PageExplanationPanel = observer(function PageExplanationPanel() {
     return (
         <PageAiLookupPanel
             title="Explanations"
-            onStart={text => store.explanationStore.open(text, store.optCurrentPage?.title ?? '', store.currentSection?.title ?? '')}
+            onStart={(text, context) => store.explanationStore.open(text, context.pageTitle, context.sectionTitle)}
             startLabel="Explain"
             startPlaceholder="Paste a passage to understand…"
             useSection

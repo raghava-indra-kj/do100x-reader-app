@@ -16,6 +16,7 @@ import { ExplanationStore } from './explanation-store';
 import type { Comment } from '@domain/comment/models/comment';
 import { documentMetadata } from '@reader/md-ast';
 import { READER_COMPACT_QUERY } from './reader-layout';
+import { CommentDraftStore } from './comment-draft-store';
 
 export interface Motivation {
     quote: string;
@@ -44,6 +45,7 @@ function flattenSections(sections: Section[]): Section[] {
 }
 
 export class PageStore {
+    readonly commentDrafts = new CommentDraftStore();
     readonly pageId: string;
     initDataState: DataState<void>;
     uiSettingsStore: PageUiSettingsStore;

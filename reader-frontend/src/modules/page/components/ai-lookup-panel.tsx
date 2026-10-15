@@ -2,14 +2,15 @@ import { SidebarHeader, SidebarEmpty } from './sidebar-ui';
 import { Select } from '@modules/core/ui/primitives/select';
 import { ReaderActionButton } from './reader-action-button';
 import { observer } from 'mobx-react-lite';
-import { useState, useEffect, useId } from 'react';
+import { useState, useLayoutEffect, useId, useRef } from 'react';
+import type { AiLookupContext, AiLookupDrafts } from '../ai-lookup-drafts';
 import { usePageStore } from '../store';
 import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
 import { MarkdownRenderer } from '@lib/markdown-renderer';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Button } from '@modules/core/ui/primitives/button';
-import { toast } from '@modules/core/ui/primitives/toast';
+import { copyReaderText } from './reader-clipboard';
 import { 
     X, Plus,
     Maximize2, 
@@ -36,6 +37,7 @@ import '@reader/md-view/md-view.css';
 import '@reader/md-view/md-view-hljs.css';
 
 export interface IAiLookupStore {
+    readonly drafts: AiLookupDrafts;
     history: any[];
     activeEntryId: string | null;
     activeEntry: any | null;
@@ -58,7 +60,7 @@ interface PageAiLookupPanelProps {
     rephrasePlaceholder: string;
     emptyStateLabel: string;
     loadingLabel: string;
-    onStart: (text: string) => void;
+    onStart: (text: string, context: AiLookupContext) => void;
     startLabel: string;
     startPlaceholder: string;
     useSection?: boolean;
@@ -112,12 +114,12 @@ function ErrorCard({
             : JSON.stringify(rawError, null, 2)
         : null;
 
-    const handleCopyJson = () => {
+    const handleCopyJson = async () => {
         if (!rawJsonStr) return;
-        navigator.clipboard.writeText(rawJsonStr);
-        setCopied(true);
-        toast.success('Error details copied');
-        setTimeout(() => setCopied(false), 1500);
+        if (await copyReaderText(rawJsonStr, 'Error details copied')) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        }
     };
 
     return (
@@ -202,11 +204,11 @@ function RawResponseViewer({ rawResponse }: { rawResponse: any }) {
     const usage = rawResponse.usage;
     const model = rawResponse.model;
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(rawJsonStr);
-        setCopied(true);
-        toast.success('Response JSON copied');
-        setTimeout(() => setCopied(false), 1500);
+    const handleCopy = async () => {
+        if (await copyReaderText(rawJsonStr, 'Response JSON copied')) {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        }
     };
 
     return (
@@ -268,56 +270,91 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
     const uiSettings = pageStore.uiSettingsStore;
     const schema = PageColorSchema.VALUES.find(s => s.id === themeStore.theme.value) || PageColorSchema.LIGHT;
     const activeEntry = storeInstance.activeEntry;
-    const [rephraseText, setRephraseText] = useState('');
-    const [draft, setDraft] = useState('');
-    const [composing, setComposing] = useState(false);
-    const followupId = useId();
+    const drafts = storeInstance.drafts;
+    const panelRef = useRef<HTMLDivElement>(null);
+    const editId = useId();
     const label = (entry: any): string => entry.searchTerm ?? entry.selectedText ?? '';
-    useEffect(() => {
-        setRephraseText(activeEntry ? label(activeEntry) : '');
-        setComposing(false);
-    }, [activeEntry?.id]);
-    const submit = () => { if (draft.trim()) { onStart(draft.trim()); setDraft(''); setComposing(false); } };
+    const rephraseText = activeEntry ? drafts.edits.get(activeEntry.id) ?? activeEntry.pendingText ?? label(activeEntry) : '';
+    const context: AiLookupContext = {
+        pageId: pageStore.pageId, pageTitle: pageStore.optCurrentPage?.title ?? '',
+        sectionId: pageStore.currentSection?.id ?? null, sectionTitle: pageStore.currentSection?.title ?? '',
+        sectionMarkdown: pageStore.currentSection?.fullMarkdown ?? '',
+    };
+    const pinnedContext = drafts.context ?? context;
+    const contextChanged = pinnedContext.sectionId !== context.sectionId || pinnedContext.sectionMarkdown !== context.sectionMarkdown;
+    useLayoutEffect(() => {
+        const panel = panelRef.current;
+        const target = drafts.takeFocus();
+        if (target) panel?.querySelector<HTMLElement>(`[data-ai-focus="${target}"]`)?.focus();
+        return () => {
+            const active = document.activeElement as HTMLElement | null;
+            if (active && panel?.contains(active) && active.dataset.aiFocus) drafts.restoreFocus(active.dataset.aiFocus);
+        };
+    }, [drafts]);
+    const submit = () => {
+        if (!drafts.text.trim()) return;
+        // Draft and context belong to this PageStore; never send a stale page's text.
+        if (pinnedContext.pageId !== pageStore.pageId) return;
+        onStart(drafts.text.trim(), pinnedContext);
+        drafts.submitted();
+    };
     const reask = () => { if (activeEntry && rephraseText.trim()) storeInstance.reask(activeEntry.id, rephraseText.trim()); };
+    const copyResponse = async () => {
+        await copyReaderText(activeEntry.responseMarkdown, 'Response copied');
+    };
+    const toggleExpand = () => { drafts.restoreFocus('expand'); storeInstance.toggleExpand(); };
+    const close = () => {
+        storeInstance.close();
+        requestAnimationFrame(() => document.querySelector<HTMLButtonElement>('nav button[aria-label="Contents"]')?.focus());
+    };
     const fontSizes = storeInstance.isExpanded ? uiSettings.fontSize.value : {
         ...uiSettings.fontSize.value, paragraph: 14, h1: 20, h2: 18, h3: 16, h4: 15, h5: 14, h6: 14,
         code: 12, equation: 14, blockquote: 13, callout: 14, listItem: 14, table: 12,
     };
-    return <div className="reader-panel reader-ai-panel">
+    return <div ref={panelRef} className="reader-panel reader-ai-panel" role="region" aria-label={title} onKeyDown={event => {
+        if (event.key === 'Escape' && storeInstance.isExpanded) { event.preventDefault(); event.stopPropagation(); toggleExpand(); }
+    }}>
         <SidebarHeader title={title} actions={<>
-            {storeInstance.history.length > 0 && <ReaderActionButton tooltip="New lookup" className="reader-icon-button" onClick={() => setComposing(value => !value)}><Plus size={15} /></ReaderActionButton>}
+            {storeInstance.history.length > 0 && <ReaderActionButton tooltip="New lookup" className="reader-icon-button" data-ai-focus="new" onClick={() => drafts.setComposing(!drafts.composing)}><Plus size={15} /></ReaderActionButton>}
             {storeInstance.history.length > 0 && <ReaderActionButton tooltip="Clear lookup history" className="reader-icon-button" onClick={() => storeInstance.clearHistory()}><Trash2 size={14} /></ReaderActionButton>}
-            <ReaderActionButton tooltip={storeInstance.isExpanded ? 'Restore sidebar' : 'Expand to full width'} className="reader-icon-button" onClick={() => storeInstance.toggleExpand()}>{storeInstance.isExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</ReaderActionButton>
-            <ReaderActionButton tooltip="Return to contents" className="reader-icon-button" onClick={() => storeInstance.close()}><X size={15} /></ReaderActionButton>
+            <ReaderActionButton tooltip={storeInstance.isExpanded ? 'Restore sidebar' : 'Expand to full width'} className="reader-icon-button" data-ai-focus="expand" onClick={toggleExpand}>{storeInstance.isExpanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</ReaderActionButton>
+            <ReaderActionButton tooltip="Return to contents" className="reader-icon-button" onClick={close}><X size={15} /></ReaderActionButton>
         </>} />
         {storeInstance.history.length > 0 && <div className="reader-panel-toolbar reader-ai-history-row">
-            <Select ariaLabel={`${title} history`} tooltip="Recent lookups" value={storeInstance.activeEntryId} onValueChange={id => { if (id) { storeInstance.setActiveEntry(id); setComposing(false); } }} className="reader-ai-history" items={Object.fromEntries([...storeInstance.history].reverse().map(entry => [entry.id, `${entry.isLoading ? 'Loading: ' : entry.error ? 'Retry: ' : ''}${label(entry).slice(0, 100)}`]))} />
+            <Select ariaLabel={`${title} history`} tooltip="Recent lookups" value={storeInstance.activeEntryId} onValueChange={id => { if (id) { storeInstance.setActiveEntry(id); drafts.setComposing(false); } }} className="reader-ai-history" items={Object.fromEntries([...storeInstance.history].reverse().map(entry => [entry.id, `${entry.isLoading ? 'Loading: ' : entry.error ? 'Retry: ' : ''}${label(entry).slice(0, 100)}`]))} />
             {activeEntry && <ReaderActionButton tooltip="Remove current lookup" className="reader-icon-button" onClick={() => storeInstance.removeEntry(activeEntry.id)}><X size={13} /></ReaderActionButton>}
         </div>}
         <div className="reader-panel-scroll">
-            {(!activeEntry || composing) && <>
+            {(!activeEntry || drafts.composing) && <>
                 <SidebarEmpty title={title === 'Questions' ? 'Ask about what you’re reading' : title === 'Word meanings' ? 'Understand a word in context' : 'Make an idea clearer'}>{emptyStateLabel}</SidebarEmpty>
                 <div className="reader-ai-compose">
-                    <textarea aria-label={startPlaceholder} placeholder={startPlaceholder} value={draft} onChange={event => setDraft(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); submit(); } }} />
-                    <div className="reader-ai-compose-footer">{useSection ? <button className="reader-inline-action" disabled={!pageStore.currentSection} onClick={() => setDraft(pageStore.currentSection?.fullMarkdown ?? '')}>Use current section</button> : <span>Includes page and section context</span>}<Button size="sm" disabled={!draft.trim()} onClick={submit}>{startLabel}</Button></div>
+                    <textarea aria-label={startPlaceholder} placeholder={startPlaceholder} data-ai-focus="new-text" value={drafts.text} onChange={event => drafts.setText(event.target.value, context)} onKeyDown={event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); submit(); } }} />
+                    <p className="reader-panel-meta break-words">Context: {pinnedContext.sectionTitle || pinnedContext.pageTitle || 'This page'}{contextChanged && ' · original section kept'}</p>
+                    <div className="reader-ai-compose-footer flex-wrap">
+                        {(useSection || contextChanged) && <button className="reader-inline-action" disabled={!pageStore.currentSection} onClick={() => drafts.useContext(context, useSection ? context.sectionMarkdown : drafts.text)}>Use current section</button>}
+                        {drafts.text && <button className="reader-inline-action" onClick={() => drafts.discard()}>Discard draft</button>}
+                        <Button size="sm" disabled={!drafts.text.trim()} onClick={submit}>{startLabel}</Button>
+                    </div>
                 </div>
             </>}
-            {activeEntry && !composing && <div className="reader-ai-body">
-                <div className="reader-ai-query"><span className="reader-panel-meta">{queryLabel}</span><blockquote className="reader-panel-quote">{label(activeEntry)}</blockquote></div>
-                {activeEntry.isLoading ? <div className="reader-ai-loading"><Loader size={20} /><span role="status">{loadingLabel}</span><Button size="sm" variant="ghost" onClick={() => storeInstance.cancel?.(activeEntry.id)}><Square size={12} />Cancel</Button></div> : activeEntry.error ? <ErrorCard errorDetails={activeEntry.errorDetails} fallbackError={activeEntry.error} onRetry={() => storeInstance.retry?.(activeEntry.id)} /> : <>
+            {activeEntry && !drafts.composing && <div className="reader-ai-body">
+                <div className="reader-ai-query"><span className="reader-panel-meta">{queryLabel}</span><blockquote className="reader-panel-quote">{activeEntry.pendingText ?? label(activeEntry)}</blockquote></div>
+                {activeEntry.isLoading ? <div className="reader-ai-loading"><Loader size={20} /><span role="status">{loadingLabel}</span><Button size="sm" variant="ghost" onClick={() => storeInstance.cancel?.(activeEntry.id)}><Square size={12} />Cancel</Button></div> : activeEntry.error ? <ErrorCard errorDetails={activeEntry.errorDetails} fallbackError={activeEntry.error} onRetry={() => storeInstance.retry?.(activeEntry.id)} /> : null}
+                {activeEntry.responseMarkdown && <>
+                    {(activeEntry.isLoading || activeEntry.error) && <p className="reader-panel-meta">Previous answer kept{activeEntry.pendingText && activeEntry.pendingText !== label(activeEntry) ? ` — ${label(activeEntry)}` : ''}</p>}
                     <div className="reader-ai-response-header"><span className="reader-panel-meta">AI response</span><div className="reader-panel-actions">
-                        {extraHeaderActions?.(activeEntry)}
-                        <ReaderActionButton tooltip="Regenerate response" className="reader-icon-button" onClick={() => storeInstance.retry?.(activeEntry.id)}><RotateCcw size={14} /></ReaderActionButton>
-                        <ReaderActionButton tooltip="Copy response" className="reader-icon-button" onClick={() => { void navigator.clipboard.writeText(activeEntry.responseMarkdown).then(() => toast.success('Response copied'), () => toast.error('Couldn’t copy this response.')); }}><Copy size={14} /></ReaderActionButton>
+                        {!activeEntry.isLoading && extraHeaderActions?.(activeEntry)}
+                        <ReaderActionButton tooltip="Regenerate response" disabled={activeEntry.isLoading} className="reader-icon-button" onClick={() => storeInstance.retry?.(activeEntry.id)}><RotateCcw size={14} /></ReaderActionButton>
+                        <ReaderActionButton tooltip="Copy response" className="reader-icon-button" onClick={copyResponse}><Copy size={14} /></ReaderActionButton>
                     </div></div>
                     <MarkdownRenderer markdown={activeEntry.responseMarkdown} colors={schema.value} fontSizes={fontSizes} fonts={uiSettings.fontFamilies.value} />
                     <RawResponseViewer rawResponse={activeEntry.rawResponse} />
                 </>}
-                {activeEntry.error && extraHeaderActions && <div className="reader-panel-actions">{extraHeaderActions(activeEntry)}</div>}
+                {activeEntry.error && !activeEntry.responseMarkdown && extraHeaderActions && <div className="reader-panel-actions">{extraHeaderActions(activeEntry)}</div>}
                 {!activeEntry.isLoading && <div className="reader-ai-compose reader-ai-followup">
-                    <label htmlFor={followupId}>{rephraseLabel}</label>
-                    <textarea id={followupId} value={rephraseText} onChange={event => setRephraseText(event.target.value)} placeholder={rephrasePlaceholder} onKeyDown={event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); reask(); } }} />
-                    <div className="reader-ai-compose-footer"><span>Ctrl / ⌘ + Enter</span><Button size="sm" variant="outlined" disabled={!rephraseText.trim()} onClick={reask}>Ask again</Button></div>
+                    <label htmlFor={editId}>{rephraseLabel}</label>
+                    <textarea id={editId} data-ai-focus="edit-text" value={rephraseText} onChange={event => drafts.edit(activeEntry.id, event.target.value)} placeholder={rephrasePlaceholder} onKeyDown={event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); reask(); } }} />
+                    <div className="reader-ai-compose-footer flex-wrap"><span>Replaces this response when successful</span><Button size="sm" variant="outlined" disabled={!rephraseText.trim()} onClick={reask}>Update answer</Button></div>
                 </div>}
             </div>}
         </div>

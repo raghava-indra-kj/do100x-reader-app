@@ -1,3 +1,4 @@
+import { AiLookupDrafts } from './ai-lookup-drafts';
 import { makeObservable, observable, action, computed, runInAction } from 'mobx';
 import { getModelConfig } from '@domain/settings/services/settings-service';
 import { getChatCompletion } from '@domain/chat/services/chat-service';
@@ -9,6 +10,7 @@ export interface AiExplanationEntry {
     selectedText: string;
     pageTitle: string;
     sectionTitle: string;
+    pendingText?: string;
     isLoading: boolean;
     responseMarkdown: string;
     rawResponse: any | null;
@@ -20,6 +22,7 @@ export class ExplanationStore {
     private readonly pageStore: PageStore;
     private abortControllers: Map<string, AbortController> = new Map();
 
+    readonly drafts = new AiLookupDrafts();
     history: AiExplanationEntry[] = [];
     activeEntryId: string | null = null;
     isExpanded: boolean = false;
@@ -42,6 +45,7 @@ export class ExplanationStore {
             reask: action,
             cancel: action,
             retry: action,
+            dispose: action,
         });
     }
 
@@ -57,10 +61,8 @@ export class ExplanationStore {
         const entry = this.history.find(e => e.id === entryId);
         if (!entry) return;
 
-        entry.selectedText = newSelectedText.trim();
+        entry.pendingText = newSelectedText.trim();
         entry.isLoading = true;
-        entry.responseMarkdown = '';
-        entry.rawResponse = null;
         entry.error = null;
         entry.errorDetails = null;
 
@@ -90,8 +92,6 @@ export class ExplanationStore {
         if (!entry) return;
 
         entry.isLoading = true;
-        entry.responseMarkdown = '';
-        entry.rawResponse = null;
         entry.error = null;
         entry.errorDetails = null;
 
@@ -105,8 +105,8 @@ export class ExplanationStore {
 
         // Check if matching entry already exists in history
         const existing = this.history.find(
-            e => e.selectedText.toLowerCase() === passage.toLowerCase() && 
-                 e.pageTitle.toLowerCase() === page.toLowerCase() && 
+            e => e.selectedText.toLowerCase() === passage.toLowerCase() &&
+                 e.pageTitle.toLowerCase() === page.toLowerCase() &&
                  e.sectionTitle.toLowerCase() === sec.toLowerCase()
         );
 
@@ -130,6 +130,7 @@ export class ExplanationStore {
             this.fetchExplanation(id);
         }
 
+        this.drafts.setComposing(false);
         this.pageStore.uiSettingsStore.setSidebarPanel('explanation');
     }
 
@@ -148,6 +149,7 @@ export class ExplanationStore {
 
     removeEntry(id: string) {
         this.cancel(id);
+        this.drafts.remove(id);
         const index = this.history.findIndex(e => e.id === id);
         if (index > -1) {
             this.history.splice(index, 1);
@@ -161,6 +163,7 @@ export class ExplanationStore {
         for (const entry of this.history) {
             this.cancel(entry.id);
         }
+        this.drafts.clearEdits();
         this.history = [];
         this.activeEntryId = null;
     }
@@ -168,8 +171,7 @@ export class ExplanationStore {
     async fetchExplanation(entryId: string) {
         const entry = this.history.find(e => e.id === entryId);
         if (!entry) return;
-
-
+        const requestedText = entry.pendingText ?? entry.selectedText;
 
         // Cancel previous inflight request if any
         const prevController = this.abortControllers.get(entryId);
@@ -178,81 +180,100 @@ export class ExplanationStore {
         }
         const controller = new AbortController();
         this.abortControllers.set(entryId, controller);
-        
+
         // 1. Fetch user's settings to get explanationModelId
-        const configRes = await getModelConfig();
-        if (!configRes.ok) {
-            this.abortControllers.delete(entryId);
-            runInAction(() => {
-                entry.isLoading = false;
-                entry.error = 'Set up your AI connection in settings.';
-                entry.errorDetails = {
-                    errorType: 'CONFIG_ERROR',
-                    message: 'AI connection needed',
-                    description: 'Add a provider URL and API key in settings.',
-                };
-            });
-            return;
-        }
+        try {
+            const configRes = await getModelConfig();
+            if (controller.signal.aborted || this.abortControllers.get(entryId) !== controller) return;
+            if (!configRes.ok) {
+                this.abortControllers.delete(entryId);
+                runInAction(() => {
+                    entry.isLoading = false;
+                    entry.error = 'Set up your AI connection in settings.';
+                    entry.errorDetails = {
+                        errorType: 'CONFIG_ERROR',
+                        message: 'AI connection needed',
+                        description: 'Add a provider URL and API key in settings.',
+                    };
+                });
+                return;
+            }
 
-        const modelId = configRes.data.explanationModelId;
-        if (!modelId) {
-            this.abortControllers.delete(entryId);
-            runInAction(() => {
-                entry.isLoading = false;
-                entry.error = 'Choose an explanation model in settings.';
-                entry.errorDetails = {
-                    errorType: 'CONFIG_ERROR',
-                    message: 'Choose an explanation model',
-                    description: 'Choose an explanation model in Settings → AI models.',
-                };
-            });
-            return;
-        }
+            const modelId = configRes.data.explanationModelId;
+            if (!modelId) {
+                this.abortControllers.delete(entryId);
+                runInAction(() => {
+                    entry.isLoading = false;
+                    entry.error = 'Choose an explanation model in settings.';
+                    entry.errorDetails = {
+                        errorType: 'CONFIG_ERROR',
+                        message: 'Choose an explanation model',
+                        description: 'Choose an explanation model in Settings → AI models.',
+                    };
+                });
+                return;
+            }
 
-        const contextInfo = entry.sectionTitle 
-            ? `under the section "${entry.sectionTitle}" of the page "${entry.pageTitle}"`
-            : `on the page "${entry.pageTitle}"`;
+            const contextInfo = entry.sectionTitle
+                ? `under the section "${entry.sectionTitle}" of the page "${entry.pageTitle}"`
+                : `on the page "${entry.pageTitle}"`;
 
-        const userPrompt = `I am reading text ${contextInfo}.
+            const userPrompt = `I am reading text ${contextInfo}.
 
 Please explain the following passage:
 """
-${entry.selectedText}
+${requestedText}
 """`;
 
-        // 2. Query chat endpoint
-        const chatRes = await getChatCompletion({
-            modelId,
-            systemPrompt: 'You are a learning assistant. Explain the selected passage in context, breaking down complex terms and helping the user understand it clearly. Return the output cleanly formatted in Markdown.',
-            userPrompt,
-            pageId: this.pageStore.pageId,
-            actionType: 'explanation',
-            signal: controller.signal,
-        });
+            // 2. Query chat endpoint
+            const chatRes = await getChatCompletion({
+                modelId,
+                systemPrompt: 'You are a learning assistant. Explain the selected passage in context, breaking down complex terms and helping the user understand it clearly. Return the output cleanly formatted in Markdown.',
+                userPrompt,
+                pageId: this.pageStore.pageId,
+                actionType: 'explanation',
+                signal: controller.signal,
+            });
 
-        this.abortControllers.delete(entryId);
+            if (controller.signal.aborted || this.abortControllers.get(entryId) !== controller) return;
+            this.abortControllers.delete(entryId);
 
-        runInAction(() => {
-            entry.isLoading = false;
-            if (chatRes.ok) {
-                entry.responseMarkdown = chatRes.data.response;
-                entry.rawResponse = chatRes.data.rawResponse ?? null;
-                entry.error = null;
-                entry.errorDetails = null;
-            } else {
-                if (chatRes.error instanceof ChatAppError) {
-                    entry.error = chatRes.error.details.message;
-                    entry.errorDetails = chatRes.error.details;
+            runInAction(() => {
+                entry.isLoading = false;
+                if (chatRes.ok) {
+                    entry.selectedText = requestedText;
+                    entry.pendingText = undefined;
+                    entry.responseMarkdown = chatRes.data.response;
+                    entry.rawResponse = chatRes.data.rawResponse ?? null;
+                    entry.error = null;
+                    entry.errorDetails = null;
                 } else {
-                    entry.error = chatRes.error.message || 'Couldn’t get an explanation. Try again.';
-                    entry.errorDetails = {
-                        errorType: 'UNKNOWN',
-                        message: chatRes.error.message || 'Couldn’t get a response. Try again.',
-                        rawError: chatRes.error,
-                    };
+                    if (chatRes.error instanceof ChatAppError) {
+                        entry.error = chatRes.error.details.message;
+                        entry.errorDetails = chatRes.error.details;
+                    } else {
+                        entry.error = chatRes.error.message || 'Couldn’t get an explanation. Try again.';
+                        entry.errorDetails = {
+                            errorType: 'UNKNOWN',
+                            message: chatRes.error.message || 'Couldn’t get a response. Try again.',
+                            rawError: chatRes.error,
+                        };
+                    }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            if (controller.signal.aborted || this.abortControllers.get(entryId) !== controller) return;
+            this.abortControllers.delete(entryId);
+            runInAction(() => {
+                entry.isLoading = false;
+                entry.error = error instanceof Error ? error.message : 'Couldn’t get a response. Try again.';
+                entry.errorDetails = { errorType: 'UNKNOWN', message: entry.error };
+            });
+        }
+    }
+
+    dispose() {
+        for (const controller of this.abortControllers.values()) controller.abort();
+        this.abortControllers.clear();
     }
 }

@@ -3,28 +3,12 @@ import { observer } from 'mobx-react-lite';
 import { usePageStore } from '../store';
 import { PageAiLookupPanel } from './ai-lookup-panel';
 import { FilePlus, Check, StickyNote } from 'lucide-react';
-import { useState } from 'react';
-import { createComment } from '@domain/comment/services/comments-service';
-import { toast } from '@modules/core/ui/primitives/toast';
-import type { AiDoubtEntry } from '../doubt-store';
+import type { AiDoubtEntry, DoubtStore } from '../doubt-store';
 
-export function SaveQuestionComment({ entry }: { entry: AiDoubtEntry }) {
-    const store = usePageStore();
-    const [saving, setSaving] = useState(false);
-    const [saved, setSaved] = useState(false);
-    return <ReaderActionButton tooltip={saved ? 'Question saved to comments' : entry.attachment ? 'Save question as comment' : 'Save question as page note'} disabled={saving || saved} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-brand)] disabled:opacity-50" onClick={async () => {
-        if (saving || saved) return;
-        setSaving(true);
-        try {
-            const result = await createComment({ pageId: entry.pageId, pageTitle: entry.pageTitle, sectionTitle: entry.sectionTitle || null, selectedText: entry.selectedText, body: entry.searchTerm, ...entry.attachment });
-            if (!result.ok) throw result.error;
-            setSaved(true);
-            store.bumpCommentsVersion();
-            toast.success('Question saved to comments');
-        } catch (error) { toast.error(error instanceof Error ? error.message : 'Couldn’t save this question. It remains in Questions; try again.'); }
-        finally { setSaving(false); }
-    }}>{saved ? <Check size={14} /> : <StickyNote size={14} />}</ReaderActionButton>;
-}
+export const SaveQuestionComment = observer(function SaveQuestionComment({ entry, store }: { entry: AiDoubtEntry; store: DoubtStore }) {
+    const state = store.questionCommentState(entry);
+    return <ReaderActionButton tooltip={state === 'saved' ? 'Question saved to comments' : state === 'saving' ? 'Saving question…' : entry.attachment ? 'Save question as comment' : 'Save question as page note'} disabled={state !== 'idle'} className="reader-icon-button disabled:opacity-50" onClick={() => void store.saveQuestionAsComment(entry.id)}>{state === 'saved' ? <Check size={14} /> : <StickyNote size={14} />}</ReaderActionButton>;
+});
 
 export const PageDoubtPanel = observer(function PageDoubtPanel() {
     const store = usePageStore();
@@ -32,7 +16,7 @@ export const PageDoubtPanel = observer(function PageDoubtPanel() {
 
     const renderHeaderActions = (activeEntry: AiDoubtEntry) => {
         return (
-            <><SaveQuestionComment key={`${activeEntry.id}:${activeEntry.searchTerm}`} entry={activeEntry} />{activeEntry.responseMarkdown && !activeEntry.isLoading && <ReaderActionButton
+            <><SaveQuestionComment entry={activeEntry} store={doubtStore} />{activeEntry.responseMarkdown && !activeEntry.isLoading && <ReaderActionButton
                 onClick={() => doubtStore.saveAsSubPage(activeEntry.id)}
                 disabled={activeEntry.isSaved || activeEntry.isSavingPage}
                 className={`p-1 transition-colors cursor-pointer ${
@@ -56,13 +40,13 @@ export const PageDoubtPanel = observer(function PageDoubtPanel() {
     return (
         <PageAiLookupPanel
             title="Questions"
-            onStart={text => store.doubtStore.open(text, store.currentSection?.fullMarkdown ?? '', store.optCurrentPage?.title ?? '', store.currentSection?.title ?? '')}
+            onStart={(text, context) => store.doubtStore.open(text, context.sectionMarkdown, context.pageTitle, context.sectionTitle)}
             startLabel="Ask AI"
             startPlaceholder="Ask about this section…"
             storeInstance={store.doubtStore}
             queryLabel="Question"
             rephraseLabel="Edit your question"
-            rephrasePlaceholder="Edit your question or ask a follow-up…"
+            rephrasePlaceholder="Edit the question to generate a replacement answer…"
             emptyStateLabel="Select a passage and choose “Ask or comment”, or ask AI from a saved comment."
             loadingLabel="Getting an answer…"
             extraHeaderActions={renderHeaderActions}

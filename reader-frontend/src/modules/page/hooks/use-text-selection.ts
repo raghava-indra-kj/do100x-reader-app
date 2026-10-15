@@ -7,6 +7,10 @@ export interface TextSelection {
     rect: DOMRect;
     /** The actual selection range, to compute updated rects on scroll */
     range: Range;
+    /** Keyboard selection should hand focus into its newly opened tools. */
+    keyboard?: boolean;
+    /** Clear the hook state when a tool is explicitly closed or a draft resumed. */
+    dismiss?: () => void;
 }
 
 /**
@@ -25,7 +29,7 @@ export function useTextSelection(
 
     const dismiss = useCallback(() => setSelection(null), []);
 
-    const checkSelection = useCallback(() => {
+    const checkSelection = useCallback((keyboard = false) => {
         const container = containerRef.current;
         if (!container) {
             setSelection(null);
@@ -61,8 +65,8 @@ export function useTextSelection(
             return;
         }
 
-        setSelection({ text, rect, range });
-    }, [containerRef]);
+        setSelection({ text, rect, range, keyboard, dismiss });
+    }, [containerRef, dismiss]);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -70,16 +74,17 @@ export function useTextSelection(
 
         // mouseup is the primary trigger — fires after click, drag-select, double/triple click
         let selectionFrame = 0;
-        const handleMouseUp = () => {
+        const scheduleSelection = (keyboard = false) => {
             // Small delay to let the browser finalize the selection
             cancelAnimationFrame(selectionFrame);
             selectionFrame = requestAnimationFrame(() => {
-                checkSelection();
+                checkSelection(keyboard);
             });
         };
+        const handleMouseUp = () => scheduleSelection();
         const handleKeyUp = (event: KeyboardEvent) => {
             if (event.target instanceof Element && event.target.closest('input,textarea,[contenteditable="true"]')) return;
-            if (event.shiftKey && /^(Arrow|Home|End|Page)/.test(event.key) || (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') handleMouseUp();
+            if (event.shiftKey && /^(Arrow|Home|End|Page)/.test(event.key) || (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') scheduleSelection(true);
         };
 
         // Dismiss on Escape
@@ -95,6 +100,7 @@ export function useTextSelection(
             if (selection) {
                 const rect = selection.range.getBoundingClientRect();
                 setSelection({
+                    ...selection,
                     text: selection.text,
                     range: selection.range,
                     rect,

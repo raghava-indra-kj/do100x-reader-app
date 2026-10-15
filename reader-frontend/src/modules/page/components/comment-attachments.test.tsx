@@ -9,8 +9,9 @@ import { Page } from '@domain/page/models/page';
 import { Section } from '@domain/page/models/section';
 import { captureCommentTarget } from './comment-target';
 import { commentInFilter, commentSourceLabel } from './comment-state';
+import { CommentDraftStore } from '../comment-draft-store';
 
-const fixture = vi.hoisted(() => ({ selection: null as any, create: vi.fn(), edit: vi.fn(), store: { bumpCommentsVersion: vi.fn(), bumpVocabVersion: vi.fn(), commentToReattach: null as any, setCommentToReattach: vi.fn(), doubtStore: { open: vi.fn() } } }));
+const fixture = vi.hoisted(() => ({ selection: null as any, create: vi.fn(), edit: vi.fn(), store: { commentDrafts: null as unknown as CommentDraftStore, bumpCommentsVersion: vi.fn(), bumpVocabVersion: vi.fn(), commentToReattach: null as any, setCommentToReattach: vi.fn(), doubtStore: { open: vi.fn() } } }));
 vi.mock('../hooks/use-text-selection', () => ({ useTextSelection: () => fixture.selection }));
 vi.mock('../store', () => ({ usePageStore: () => fixture.store }));
 vi.mock('@domain/comment/services/comments-service', () => ({ createComment: fixture.create, editComment: fixture.edit }));
@@ -24,6 +25,7 @@ const roots: ReturnType<typeof createRoot>[] = [];
 beforeEach(() => {
     vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
     fixture.selection = null; fixture.store.commentToReattach = null; fixture.create.mockReset(); fixture.edit.mockReset(); fixture.store.doubtStore.open.mockReset();
+    fixture.store.commentDrafts = new CommentDraftStore();
     fixture.create.mockResolvedValue({ ok: true, data: 'comment' });
 });
 afterEach(async () => { for (const root of roots.splice(0)) await act(async () => root.unmount()); document.body.innerHTML = ''; vi.unstubAllGlobals(); });
@@ -45,7 +47,7 @@ async function mount(page = makePage()) {
     const root = createRoot(host); roots.push(root);
     const render = (value: Page) => root.render(<SelectionPopover page={value} section={section} containerRef={{ current: content }} />);
     await act(async () => render(page));
-    return { page, content, range, render };
+    return { page, content, range, render, root };
 }
 async function click(label: string) {
     const button = [...document.querySelectorAll('button')].find(node => node.textContent === label || node.getAttribute('aria-label') === label);
@@ -95,17 +97,99 @@ describe('Reader attachments', () => {
         expect(document.querySelector('textarea')?.value).toBe('');
     });
     it('renders math in preview and reattaches without replacing the note body', async () => {
-        await mount(); await click('Ask or comment'); await typeDraft('Energy is $E=mc^2$.'); await click('Preview Markdown & math');
+        const { page, render } = await mount(); await click('Ask or comment'); await typeDraft('Energy is $E=mc^2$.'); await click('Preview Markdown & math');
         expect(document.querySelector('.reader-comment-preview .katex')).toBeTruthy();
         await click('Back to selection tools');
         fixture.store.commentToReattach = { id: 'old' };
         // Trigger a normal render, just as the observable store does in the app.
-        const { page, render } = await mount();
         fixture.edit.mockResolvedValue({ ok: true });
         await act(async () => render(page));
         await click('Attach comment here');
         expect(fixture.edit).toHaveBeenCalledWith(expect.objectContaining({ commentId: 'old', contentVersion: 3, anchor: expect.any(Object) }));
         expect(fixture.edit.mock.calls[0][0]).not.toHaveProperty('body');
+    });
+    it('parks on Escape, returns focus to reading, and resumes the same occurrence and revision', async () => {
+        const { page, content, render } = await mount();
+        await click('Ask or comment'); await typeDraft('Keep the second occurrence');
+        await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+        expect(document.querySelector('textarea')).toBeNull();
+        expect(document.activeElement).toBe(content);
+        fixture.selection = null;
+        await act(async () => render(makePage('Updated page content', 4)));
+        await click('Resume comment');
+        expect(document.querySelector('textarea')?.value).toBe('Keep the second occurrence');
+        expect(document.querySelector('textarea')).toBe(document.activeElement);
+        await click('Save comment');
+        expect(fixture.create.mock.calls[0][0]).toMatchObject({ contentVersion: 3, anchor: { segments: [{ blockId: page.document!.blocks[2].id }] }, body: 'Keep the second occurrence' });
+    });
+    it('keeps separate drafts for identical passages and permits explicit discard', async () => {
+        const { content, page, render } = await mount();
+        await click('Ask or comment'); await typeDraft('Second occurrence');
+        const range = document.createRange(); range.selectNodeContents(content.querySelector('strong')!.firstChild!);
+        fixture.selection = { ...fixture.selection, range };
+        await act(async () => render(page));
+        await click('Ask or comment'); await typeDraft('First occurrence');
+        await click('Close and keep draft');
+        await click('Drafts (2)');
+        const entries = document.querySelectorAll('.reader-comment-draft-list > div > button:first-child');
+        expect(entries).toHaveLength(2);
+        await act(async () => (entries[0] as HTMLButtonElement).click());
+        expect(document.querySelector('textarea')?.value).toBe('Second occurrence');
+        await click('Discard draft');
+        await click('Resume comment');
+        expect(document.querySelector('textarea')?.value).toBe('First occurrence');
+        await click('Save comment');
+        expect(fixture.create.mock.calls[0][0].anchor.segments[0].blockId).toBe(page.document!.blocks[1].id);
+    });
+    it('preserves unsaved text after Ask AI or an outside pointer dismissal', async () => {
+        await mount(); await click('Ask or comment'); await typeDraft('A question to keep');
+        await click('Ask AI');
+        await click('Resume comment');
+        expect(document.querySelector('textarea')?.value).toBe('A question to keep');
+        await act(async () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })));
+        expect(document.querySelector('textarea')).toBeNull();
+        await click('Resume comment');
+        expect(document.querySelector('textarea')?.value).toBe('A question to keep');
+    });
+    it('keeps save failure recoverable without marking a different active draft saved', async () => {
+        const { content, page, render } = await mount();
+        let finish!: (value: unknown) => void;
+        fixture.create.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+        await click('Ask or comment'); await typeDraft('Submitted second occurrence'); await click('Save comment');
+        const range = document.createRange(); range.selectNodeContents(content.querySelector('strong')!.firstChild!);
+        fixture.selection = { ...fixture.selection, range };
+        await act(async () => render(page));
+        await click('Ask or comment'); await typeDraft('New first occurrence');
+        await act(async () => finish({ ok: false, error: new Error('Connection failed') }));
+        expect(document.querySelector('textarea')?.value).toBe('New first occurrence');
+        expect(document.querySelector('[role=alert]')).toBeNull();
+        await click('Close and keep draft'); await click('Drafts (2)');
+        await act(async () => (document.querySelector('.reader-comment-draft-list > div > button') as HTMLButtonElement).click());
+        expect(document.querySelector('textarea')?.value).toBe('Submitted second occurrence');
+        expect(document.querySelector('[role=alert]')?.textContent).toContain('Connection failed');
+    });
+    it('focuses keyboard selection tools without stealing focus on pointer selection', async () => {
+        const { page, render } = await mount();
+        expect(document.activeElement).toBe(document.body);
+        fixture.selection = { ...fixture.selection, range: fixture.selection.range.cloneRange(), keyboard: true };
+        await act(async () => render(page));
+        expect(document.querySelector('[role=region][aria-label="Selection tools"]')).toBeTruthy();
+        expect(document.activeElement?.textContent).toBe('Ask or comment');
+    });
+    it('recovers after the composer unmounts without leaking drafts into another page', async () => {
+        const { page, content, root } = await mount();
+        await click('Ask or comment'); await typeDraft('Preserve across the editor');
+        await act(async () => root.unmount()); roots.splice(roots.indexOf(root), 1);
+        fixture.selection = null;
+        const host = document.createElement('div'); document.body.append(host);
+        const replacement = createRoot(host); roots.push(replacement);
+        await act(async () => replacement.render(<SelectionPopover page={page} section={section} containerRef={{ current: content }} />));
+        await click('Resume comment');
+        expect(document.querySelector('textarea')?.value).toBe('Preserve across the editor');
+        const other = new Page({ ...page, id: 'other-page' });
+        await act(async () => replacement.render(<SelectionPopover page={other} section={section} containerRef={{ current: content }} />));
+        expect(document.querySelector('textarea')).toBeNull();
+        expect(document.querySelector('.reader-comment-drafts')).toBeNull();
     });
     it('archives removed targets independently of resolved status and preserves the quote', () => {
         const doc = createDocument('Selected text');
