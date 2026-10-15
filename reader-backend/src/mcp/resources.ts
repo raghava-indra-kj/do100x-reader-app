@@ -1,6 +1,7 @@
 import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { prisma } from "../prisma";
 import { listVocabulary } from "../vocabulary-service";
+import { withoutExpiredCaptureComments } from '../reader/capture-comment-access';
 
 export function registerResources(server: McpServer, userId: string) {
   // 1. All Pages Index
@@ -103,7 +104,7 @@ updatedAt: ${page.updatedAt.toISOString()}
           {
             uri: uri.href,
             mimeType: "application/json",
-            text: JSON.stringify(comments, null, 2),
+            text: JSON.stringify(await withoutExpiredCaptureComments(prisma, comments), null, 2),
           },
         ],
       };

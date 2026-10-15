@@ -15,6 +15,7 @@ const { PrismaClient } = requireBackend('@prisma/client');
 
 async function main() {
   const calendar = process.argv.includes('--calendar');
+  if (process.argv.includes('--mcp') && !calendar) throw new Error('--mcp requires --calendar so all three feature schemas are available.');
   const releaseIndex = process.argv.indexOf('--release-dir');
   const releaseDirectory = releaseIndex >= 0 ? process.argv[releaseIndex + 1] : null;
   if (releaseIndex >= 0 && (!calendar || !releaseDirectory || releaseDirectory.startsWith('--') || process.argv.includes('--preview'))) throw new Error('--release-dir needs a directory and --calendar, without --preview.');
@@ -69,7 +70,7 @@ async function main() {
     } else if (releaseDirectory) {
       await require('./verify-calendar-release.cjs').verifyCalendarRelease(releaseDirectory, env, fixtureDb);
     } else {
-      runNpm(['run', 'test', '--workspace=reader-backend', '--', ...(calendar ? ['src/calendar/calendar.database.test.ts', 'src/timer.database.test.ts'] : ['src/habits/habit.database.test.ts'])], env);
+      runNpm(['run', 'test', '--workspace=reader-backend', '--', ...(calendar ? ['src/calendar/calendar.database.test.ts', 'src/timer.database.test.ts'] : ['src/habits/habit.database.test.ts']), ...(process.argv.includes('--mcp') ? ['src/mcp/tools/features.database.test.ts'] : [])], { ...env, MCP_FEATURE_DATABASE_TEST: calendar && process.argv.includes('--mcp') ? '1' : '0' });
       if (process.argv.includes('--contracts')) runNpm(['run', 'test', '--workspace=reader-backend', '--', 'src/auth/auth-router.database.test.ts', 'src/finance/adapters.database.test.ts', 'src/finance/import-service.database.test.ts', 'src/finance/ledger-service.database.test.ts', 'src/quiz/quiz-router.database.test.ts', 'src/mcp/tools/quizzes.database.test.ts'], { ...env, RUN_DATABASE_TESTS: '1', APP_ORIGINS: 'http://localhost:3000' });
     }
     assert.equal(await snapshot(), before, 'Feature operations must not modify the preserved existing app records.');

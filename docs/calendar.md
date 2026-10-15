@@ -1,5 +1,7 @@
 # Calendar and Tasks work record
 
+Calendar operations are also exposed through 17 MCP tools. See [MCP feature coverage](mcp-features.md) for scheduling, recurrence, task/habit integration, imports/exports and verification.
+
 The requested outcome is a complete calendar integrated with Tasks and Habits, plus an evidence-led audit and repair of existing task workflows. Work is in progress; this document is not a release-completion claim.
 
 ## Product requirements and verification gates

@@ -26,6 +26,24 @@ export function sourceAddress(value: string | null): string | null {
   return url.href;
 }
 
+export async function listCaptures(db: PrismaClient, userId: string, search = '', now = new Date()) {
+  const rows = await db.page.findMany({ where: { userId, deletedAt: null, captureExpiresAt: { gt: now }, ...(search ? { OR: [{ title: { contains: search } }, { captureSourceUrl: { contains: search } }] } : {}) }, select: metadata, orderBy: [{ captureExpiresAt: 'asc' }, { id: 'asc' }], take: MAX_ACTIVE_CAPTURES });
+  return { items: rows, lifetimeDays: 7, limit: MAX_ACTIVE_CAPTURES };
+}
+
+export async function getCapture(db: PrismaClient, userId: string, id: string, now = new Date()) {
+  const page = await db.page.findFirst({ where: { id, userId, deletedAt: null, captureExpiresAt: { gt: now } }, select: { ...metadata, content: true, contentVersion: true, updatedAt: true } });
+  if (!page) throw new CaptureError(404, 'Active capture not found. It may have expired, been kept, or been discarded.');
+  return page;
+}
+
+export async function discardCapture(db: PrismaClient, userId: string, id: string, now = new Date()) {
+  // The atomic predicate protects permanent/kept pages, including a racing Keep.
+  const result = await db.page.updateMany({ where: { id, userId, captureExpiresAt: { not: null } }, data: { captureExpiresAt: now, deletedAt: now } });
+  if (!result.count) throw new CaptureError(404, 'Capture not found.');
+  return { id, discarded: true };
+}
+
 export async function createCapture(db: PrismaClient, userId: string, raw: unknown, now = new Date()) {
   const input = captureInput.parse(raw);
   const sourceUrl = sourceAddress(input.sourceUrl);
@@ -74,9 +92,9 @@ export function createCapturesRouter(db: PrismaClient) {
   const router = Router();
   router.use(requireSession);
   router.use((_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
-  router.get('/', async (_req, res) => {
-    const rows = await db.page.findMany({ where: { userId: res.locals.userId, deletedAt: null, captureExpiresAt: { gt: new Date() } }, select: metadata, orderBy: [{ captureExpiresAt: 'asc' }, { id: 'asc' }], take: MAX_ACTIVE_CAPTURES });
-    res.json({ items: rows, lifetimeDays: 7, limit: MAX_ACTIVE_CAPTURES });
+  router.get('/', async (_req, res, next) => {
+    try { res.json(await listCaptures(db, res.locals.userId)); }
+    catch (error) { handleError(error, res, next); }
   });
   router.post('/', async (req, res, next) => {
     try { res.status(201).json(await createCapture(db, res.locals.userId, req.body)); }
@@ -91,8 +109,7 @@ export function createCapturesRouter(db: PrismaClient) {
   router.delete('/:id', async (req, res, next) => {
     try {
       const id = z.string().uuid().parse(req.params.id);
-      const result = await db.page.updateMany({ where: { id, userId: res.locals.userId, captureExpiresAt: { not: null } }, data: { captureExpiresAt: new Date(), deletedAt: new Date() } });
-      if (!result.count) { res.status(404).json({ message: 'Capture not found.' }); return; }
+      await discardCapture(db, res.locals.userId, id);
       res.status(204).send();
     } catch (error) { handleError(error, res, next); }
   });

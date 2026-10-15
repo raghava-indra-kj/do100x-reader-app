@@ -23,6 +23,8 @@ The destination is fixed at build time (default `https://www.do100x.com`). Only 
 
 ## Storage and expiry
 
+The capture lifecycle now has five MCP tools. Existing Reader tools work with the same page ID, and Keep preserves notes/quizzes. See [MCP feature coverage](mcp-features.md) for tool names, expiry boundaries and current verification; the results at the end of this document describe the original implementation checkpoint.
+
 Three nullable columns on `page` hold `captureExpiresAt`, `captureKey` and `captureSourceUrl`. All existing rows retain a null expiry and remain permanent. A unique account/capture-key index makes save retries idempotent; an expiry index supports bounded cleanup. No content backfill or deletion is in the migration.
 
 Captures are private and rootless, and are excluded from saved-page collections, search and home-page choices. Direct page access is allowed only before expiry. Shared Prisma query middleware enforces this across ordinary HTTP and MCP page operations; lifecycle operations deliberately supply an explicit expiry filter. Future raw SQL or nested relation queries must preserve this boundary. Temporary captures cannot be shared, made the Reader home, or used as parents until kept.

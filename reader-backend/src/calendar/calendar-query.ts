@@ -8,14 +8,16 @@ import { listCalendarSources, sourceOccurrences } from './calendar-sources';
 
 export const defaultCalendarPreferences = (timeZone = 'UTC'): z.infer<typeof preferencesInput> => ({ timeZone, firstDay: 1, defaultView: 'week', workStart: 8, workEnd: 20, workDays: [1, 2, 3, 4, 5], defaultMinutes: 30, showHabits: true, showFocus: false, showCompleted: true, colorBy: 'event' });
 const listInput = z.union([z.string().uuid(), z.literal('inbox')]).optional();
-const rangeInput = z.object({ from: calendarDateInput, to: calendarDateInput, timeZone: z.string().max(100).refine(validZone), listId: listInput }).strict().refine(value => value.from < value.to && diffDays(value.from, value.to) <= 370, 'Choose a calendar range of up to 370 days.');
+export const rangeInput = z.object({ from: calendarDateInput, to: calendarDateInput, timeZone: z.string().max(100).refine(validZone), listId: listInput }).strict().refine(value => value.from < value.to && diffDays(value.from, value.to) <= 370, 'Choose a calendar range of up to 370 days.');
+export const savePreferencesInput = z.object({ preferences: preferencesInput, expectedVersion: z.number().int().nonnegative() }).strict();
+export const unscheduledTasksInput = z.object({ cursor: z.string().uuid().optional(), search: z.string().max(200).default(''), listId: listInput }).strict();
 const taskSelect = { id: true, title: true, description: true, status: true, priority: true, listId: true, parentId: true, dueDate: true, dueTime: true, version: true, updatedAt: true } as const;
 export async function calendarPreferences(db: PrismaClient, userId: string, timeZone = 'UTC') {
   const row = await db.calendar_settings.findUnique({ where: { userId } });
   return { preferences: row ? preferencesInput.parse(row.preferences) : defaultCalendarPreferences(timeZone), version: row?.version ?? 0 };
 }
 export async function saveCalendarPreferences(db: PrismaClient, userId: string, raw: unknown) {
-  const { preferences, expectedVersion } = z.object({ preferences: preferencesInput, expectedVersion: z.number().int().nonnegative() }).strict().parse(raw);
+  const { preferences, expectedVersion } = savePreferencesInput.parse(raw);
   return calendarTransaction(db, userId, async tx => {
     const current = await tx.calendar_settings.findUnique({ where: { userId } });
     if ((current?.version ?? 0) !== expectedVersion) throw new CalendarError(409, 'Calendar preferences changed in another tab. Reload before saving.');
@@ -24,7 +26,7 @@ export async function saveCalendarPreferences(db: PrismaClient, userId: string, 
   });
 }
 export async function unscheduledTasks(db: PrismaClient, userId: string, raw: unknown) {
-  const { cursor, search, listId } = z.object({ cursor: z.string().uuid().optional(), search: z.string().max(200).default(''), listId: listInput }).strict().parse(raw);
+  const { cursor, search, listId } = unscheduledTasksInput.parse(raw);
   const rows = await db.task.findMany({ where: { userId, deletedAt: null, status: { in: ['todo', 'in_progress'] }, dueDate: null, calendarEvents: { none: { deletedAt: null } }, ...(listId ? { listId: listId === 'inbox' ? null : listId } : {}), ...(search ? { title: { contains: search } } : {}), ...(cursor ? { id: { gt: cursor } } : {}) }, select: taskSelect, orderBy: { id: 'asc' }, take: 101 });
   return { items: rows.slice(0, 100), nextCursor: rows.length > 100 ? rows[99].id : null };
 }

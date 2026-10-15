@@ -8,8 +8,8 @@ import { feedUrl, fetchCalendarFeed, type FeedResponse } from './feed-fetch';
 import type { ExternalOccurrence } from './ical-parser';
 
 const fields = z.object({ name: z.string().trim().min(1).max(100), color: z.enum(['orange', 'green', 'blue', 'violet', 'rose', 'teal']), timeZone: z.string().max(100).refine(validZone) });
-const createInput = fields.extend({ url: z.string().max(4000).optional(), content: z.string().max(1024 * 1024).optional() }).strict().refine(value => Boolean(value.url) !== Boolean(value.content), 'Choose a calendar file or a subscription URL.');
-const updateInput = fields.extend({ enabled: z.boolean(), expectedVersion: z.number().int().positive() }).strict();
+export const createSourceInput = fields.extend({ url: z.string().max(4000).optional(), content: z.string().max(1024 * 1024).optional() }).strict().refine(value => Boolean(value.url) !== Boolean(value.content), 'Choose a calendar file or a subscription URL.');
+export const updateSourceInput = fields.extend({ enabled: z.boolean(), expectedVersion: z.number().int().positive() }).strict();
 const versionInput = z.object({ expectedVersion: z.number().int().positive() }).strict();
 export const sourceDto = (row: calendar_source) => ({ id: row.id, name: row.name, color: row.color, timeZone: row.timeZone, enabled: row.enabled, version: row.version, kind: row.url ? 'subscription' : 'file', host: row.url ? new URL(row.url).hostname : null, lastCheckedAt: row.lastCheckedAt.toISOString(), lastSuccessAt: row.lastSuccessAt.toISOString(), error: row.error });
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
@@ -17,7 +17,7 @@ const validationRange = (timeZone: string) => { const today = wallAt(new Date(),
 async function ownSource(db: PrismaClient, userId: string, id: string) { const row = await db.calendar_source.findFirst({ where: { id, userId } }); if (!row) throw new CalendarError(404, 'Calendar source not found.'); return row; }
 export async function listCalendarSources(db: PrismaClient, userId: string) { return (await db.calendar_source.findMany({ where: { userId }, orderBy: { createdAt: 'asc' } })).map(sourceDto); }
 export async function addCalendarSource(db: PrismaClient, userId: string, raw: unknown) {
-  const input = createInput.parse(raw), url = input.url ? feedUrl(input.url).href : null;
+  const input = createSourceInput.parse(raw), url = input.url ? feedUrl(input.url).href : null;
   const sourceKey = digest(url ? `url:${url}` : `file:${input.content}`);
   const existing = await db.calendar_source.findUnique({ where: { userId_sourceKey: { userId, sourceKey } } });
   if (existing) return sourceDto(existing);
@@ -33,7 +33,7 @@ export async function addCalendarSource(db: PrismaClient, userId: string, raw: u
   });
 }
 export async function updateCalendarSource(db: PrismaClient, userId: string, id: string, raw: unknown) {
-  const { expectedVersion, ...changes } = updateInput.parse(raw);
+  const { expectedVersion, ...changes } = updateSourceInput.parse(raw);
   const existing = await ownSource(db, userId, id);
   if (changes.timeZone !== existing.timeZone) await readIcal({ content: existing.content, ...validationRange(changes.timeZone) });
   return calendarTransaction(db, userId, async tx => {

@@ -5,6 +5,9 @@ import { registerVocabularyTools } from "./tools/vocabulary";
 import { registerTaskTools } from "./tools/tasks";
 import { registerQuizTools } from "./tools/quizzes";
 import { registerFinanceTools } from "./tools/finance";
+import { registerHabitTools } from "./tools/habits";
+import { registerCalendarTools } from "./tools/calendar";
+import { registerCaptureTools } from "./tools/captures";
 import { registerResources } from "./resources";
 import { registerPrompts } from "./prompts";
 
@@ -24,6 +27,9 @@ export function createReaderMcpServer(userId: string): McpServer {
   registerTaskTools(server, userId);
   registerQuizTools(server, userId);
   registerFinanceTools(server, userId);
+  registerHabitTools(server, userId);
+  registerCalendarTools(server, userId);
+  registerCaptureTools(server, userId);
   registerResources(server, userId);
   registerPrompts(server, userId);
 

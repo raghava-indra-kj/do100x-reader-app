@@ -58,6 +58,8 @@ Release checks: frontend build and backend build passed; frontend suite 244 pass
 
 ## Deployment
 
+Habits is also available through 12 MCP tools, including progress, check-ins, ordering and export. See [MCP feature coverage](mcp-features.md) for contracts and isolated integration checks.
+
 Production deployment is separate from local implementation. No production migration was run during this work.
 
 1. Use a clean committed release, keep production configuration and session secret stable, and take a verified database backup. Check migration history against the existing production schema; never reset or reinitialize it.
