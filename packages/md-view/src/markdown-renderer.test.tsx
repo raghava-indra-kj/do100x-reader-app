@@ -34,6 +34,30 @@ describe('standalone Markdown renderer', () => {
     expect(html).toContain(`data-md-block-id="${document.blocks[0].id}"`);
   });
 
+  it.each([
+    'For ordinary short-context requests:\n\n$$ \\text = \\frac}',
+    'Before\n\n$$\n$$\n\nAfter',
+    'Before\r\n\r\n$$ \\frac}\r\n   \r\n$$\r\n\r\nAfter',
+  ])('retains empty math fences as readable source: %s', markdown => {
+    const document = createDocument(markdown);
+    const sourceBefore = JSON.stringify(document);
+    const html = renderToStaticMarkup(<MarkdownRenderer markdown={markdown} document={document} />);
+    expect(html).toContain('language-text');
+    expect(html).toContain('$$');
+    expect(html).toContain('data-md-atomic-kind="math"');
+    if (markdown.includes('\\frac}')) expect(html).toContain('\\frac}');
+    if (markdown.endsWith('After')) expect(html).toContain('After');
+    expect(html).not.toContain('katex');
+    expect(JSON.stringify(document)).toBe(sourceBefore);
+  });
+
+  it('escapes markup in an empty math opening line without loosening sanitization', () => {
+    const html = render('$$ <img src=x onerror=alert(1)> & <script>alert(2)</script>');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt; &amp; &lt;script&gt;alert(2)&lt;/script&gt;');
+    expect(html).not.toContain('<img');
+    expect(html).not.toContain('<script');
+  });
+
   it('supports host components and data-only embeds without app dependencies', () => {
     const markdown = '# Title\n\n```reader-component\n{"type":"quiz","id":"quiz-1"}\n```';
     const html = renderToStaticMarkup(<MarkdownRenderer markdown={markdown}

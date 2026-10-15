@@ -40,13 +40,6 @@ input[type="submit"] {
     outline-offset: var(--focus-ring-offset);
 }
 
-input:focus,
-input:focus-visible,
-textarea:focus,
-textarea:focus-visible {
-    outline: none !important;
-}
-
 * {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);

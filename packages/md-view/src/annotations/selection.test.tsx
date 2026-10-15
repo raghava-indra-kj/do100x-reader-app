@@ -147,6 +147,20 @@ describe('rendered selections and persistent anchors', () => {
         expect(sourcePieces(model, selected(root, model, range))).toEqual(['answer']);
     });
 
+    it('keeps recovered empty math fences atomic and anchored to their complete unchanged source', () => {
+        const source = 'For ordinary short-context requests:\n\n$$ \\text = \\frac}';
+        const { root, model } = render(source);
+        const math = root.querySelector('[data-md-atomic-kind="math"]')!;
+        expect(math.querySelector('code')!.textContent).toBe('$$ \\text = \\frac}');
+        const range = document.createRange();
+        range.selectNode(math);
+        const anchor = selected(root, model, range);
+        expect(sourcePieces(model, anchor)).toEqual(['$$ \\text = \\frac}']);
+        expect(anchor.quote).toBe('$$ \\text = \\frac}');
+        expect(anchorToRanges(root, model, anchor)[0].cloneContents().querySelector('code')!.textContent).toBe('$$ \\text = \\frac}');
+        expect(model.source).toBe(source);
+    });
+
     it('does not accept changed custom-renderer text or forged source metadata', () => {
         const { root, model } = render('Original', { components: { p: () => <p>Replacement</p> } });
         expect(selectionToAnchor(root, model, textRange(root.querySelector('p')!, 0, 5))).toMatchObject({ status: 'unmapped', reason: 'custom-content', blockIds: [model.blocks[0].id] });

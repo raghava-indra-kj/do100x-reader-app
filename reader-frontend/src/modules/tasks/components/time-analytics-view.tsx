@@ -99,7 +99,7 @@ export const TimeAnalyticsView = observer(({ store }: Props) => {
               onClick={() =>
                 store.setAnalyticsCustomRange(customStart, customEnd)
               }
-              className="px-2.5 py-0.5 bg-[var(--color-brand)] text-white font-bold rounded-lg hover:bg-[var(--color-brand-hover)] transition cursor-pointer text-[11px]"
+              className="px-2.5 py-0.5 bg-[var(--color-brand)] text-[var(--color-text-on-brand)] font-bold rounded-lg hover:bg-[var(--color-brand-hover)] transition cursor-pointer text-[11px]"
             >
               Apply
             </button>

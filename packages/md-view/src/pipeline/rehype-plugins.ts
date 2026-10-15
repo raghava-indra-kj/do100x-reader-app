@@ -8,6 +8,7 @@ import rehypeUnwrapBlocks from "./rehype-unwrap-blocks";
 import { rehypeResolveBaseUrl } from "./rehype-resolve-base-url";
 import { sourceBlocks } from './source-blocks';
 import { sourceText, sourceTextPositions, repairTextPositions } from './source-text';
+import { rehypeMathSourceFallback } from './rehype-math-source-fallback';
 import type { MarkdownDocument, SourceRange } from '@reader/md-ast';
 
 // Unified merges options for repeated plugin identities. A distinct wrapper is
@@ -29,7 +30,7 @@ export function getRehypePlugins(errorColor: string, baseUrl?: string, source?: 
   ];
 
   if (source) plugins.push([sourceBlocks, source], [sourceText, source]);
-  plugins.push(rehypeHighlight, [rehypeKatex, { throwOnError: false, errorColor, trust: false, maxExpand: 1000, maxSize: 20, output: 'htmlAndMathml' }]);
+  plugins.push(rehypeMathSourceFallback, rehypeHighlight, [rehypeKatex, { throwOnError: false, errorColor, trust: false, maxExpand: 1000, maxSize: 20, output: 'htmlAndMathml' }]);
 
   if (baseUrl) {
     plugins.push(rehypeResolveBaseUrl(baseUrl) as never);

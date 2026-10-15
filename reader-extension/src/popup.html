@@ -3,10 +3,10 @@
 <body>
 <header class="popup-header"><div class="brand"><img src="icon.png" alt="do100x"><strong>Reader</strong></div><button id="inbox" class="icon-button tooltip-end" aria-label="Open account inbox" data-tooltip="Account inbox"><span data-icon="inbox"></span></button></header>
 <main>
-<div class="intro"><h1>A little space to read.</h1><p>Bring the page. Leave the distractions.</p></div>
+<div class="intro"><h1>Start reading</h1><p>Open this page, a selection, or your own text.</p></div>
 <fieldset class="destination"><legend class="sr-only">Open in</legend><label><input type="radio" name="destination" value="local" checked><span><span data-icon="book"></span>Local reader</span></label><label><input type="radio" name="destination" value="account"><span><span data-icon="inbox"></span>Account inbox</span></label></fieldset>
 <p id="destination-hint" class="destination-hint">No sign-in · stays in this browser session</p>
-<button id="article" class="read-page primary"><span class="action-icon" data-icon="book"></span><span><strong>Read this page</strong><small>Just the article, beautifully readable</small></span><span class="action-arrow" data-icon="arrow"></span></button>
+<button id="article" class="read-page primary"><span class="action-icon" data-icon="book"></span><span class="action-copy"><strong>Read this page</strong><small>A focused view of this article</small></span><span class="action-arrow" data-icon="arrow"></span></button>
 <button id="selection" class="selection-action"><span data-icon="selection"></span><span>Read selected text</span><span class="action-arrow" data-icon="arrow"></span></button>
 <details id="paste-panel" class="paste-panel"><summary><span data-icon="clipboard"></span><span>Paste text or Markdown</span><span class="disclosure-icon" data-icon="chevron"></span></summary><div class="paste-fields"><label class="sr-only" for="title">Capture title</label><input id="title" maxlength="1000" placeholder="Give it a title (optional)"><label class="sr-only" for="content">Text or Markdown</label><textarea id="content" rows="5" placeholder="Paste something worth reading…"></textarea><button id="paste" class="primary" disabled>Open in Reader<span data-icon="arrow"></span></button></div></details>
 <input class="sr-only" id="file" type="file" tabindex="-1" accept=".md,.markdown,.txt,text/markdown,text/plain"><button id="import-file" class="import-action"><span data-icon="upload"></span>Open a Markdown or text file</button>
