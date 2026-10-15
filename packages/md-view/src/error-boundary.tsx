@@ -4,6 +4,7 @@ import { Component, type ReactNode } from "react";
 interface ErrorBoundaryProps {
   children: ReactNode;
   fallback?: ReactNode;
+  resetKey?: string;
 }
 
 /** Internal state tracking render failures. */
@@ -21,6 +22,10 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
 
   componentDidCatch(error: unknown) {
     console.error("[md-view] render error:", error);
+  }
+
+  componentDidUpdate(previous: ErrorBoundaryProps) {
+    if (this.state.hasError && previous.resetKey !== this.props.resetKey) this.setState({ hasError: false });
   }
 
   render() {

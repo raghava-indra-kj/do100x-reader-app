@@ -5,13 +5,16 @@ import { Maximize2 } from "lucide-react";
 import { useMdViewColors, useMdViewMermaidTheme } from "../../context/md-view-context";
 import type { MdViewColors, MdViewMermaidTheme } from "../../types/theme";
 import { MermaidFullscreenModal } from "./mermaid-fullscreen-modal";
+import { sanitizeDiagramSvg } from '../../utils/sanitize-svg';
+import { createSerialExecutor } from '../../utils/serial-executor';
 
 type MermaidModule = typeof import("mermaid").default;
 
 let mermaidModule: Promise<MermaidModule> | null = null;
+const enqueueMermaid = createSerialExecutor();
 function loadMermaidModule(): Promise<MermaidModule> {
   if (!mermaidModule) {
-    mermaidModule = import("mermaid").then((mod) => mod.default);
+    mermaidModule = import("mermaid").then((mod) => mod.default).catch(error => { mermaidModule = null; throw error; });
   }
   return mermaidModule;
 }
@@ -21,7 +24,7 @@ function buildMermaidConfig({ colors, mermaidTheme }: { colors: MdViewColors | n
   const base: MermaidConfig = { startOnLoad: false, securityLevel: "strict" };
 
   if (!colors) {
-    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const isDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
     return { ...base, theme: isDark ? "dark" : "default" };
   }
 
@@ -94,14 +97,14 @@ export function MermaidBlock({ children }: { children?: unknown }) {
     const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
 
     loadMermaidModule()
-      .then(async (m) => {
+      .then(m => enqueueMermaid(async () => {
         if (cancelled) return undefined;
         m.initialize(buildMermaidConfig({ colors, mermaidTheme }));
         await m.parse(source);
         return m.render(id, source);
-      })
+      }))
       .then((result) => {
-        if (!cancelled && result) setSvg(result.svg);
+        if (!cancelled && result) setSvg(sanitizeDiagramSvg(result.svg));
       })
       .catch((err) => {
         if (!cancelled) setError(String((err as Error)?.message ?? err));

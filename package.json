@@ -18,11 +18,15 @@
     "build:frontend": "cd reader-frontend && npm run build",
     "build:backend": "cd reader-backend && npm run build",
     "build:extension": "npm run build --workspace reader-extension",
-    "build": "npm run build:frontend && npm run build:backend",
+    "build": "npm run build:markdown && npm run build:frontend && npm run build:backend",
     "db:generate": "cd reader-backend && npx prisma generate",
     "db:migrate": "cd reader-backend && npx prisma migrate deploy",
     "setup": "npm install && npm run db:generate && npm run db:migrate && npm run build",
     "start": "cd reader-backend && npm run start",
-    "prod": "npm run setup && cd reader-backend && node dist/index.js"
+    "prod": "npm run setup && cd reader-backend && node dist/index.js",
+    "build:markdown": "npm run build --workspace @reader/md-ast && npm run build --workspace @reader/md-view",
+    "test:markdown": "npm run test --workspace @reader/md-ast && npm run test --workspace @reader/md-view",
+    "verify:markdown": "node scripts/verify-markdown-packages.mjs",
+    "package:extension": "node scripts/package-extension.cjs"
   }
 }

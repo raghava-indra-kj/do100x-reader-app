@@ -3,6 +3,7 @@ import { AppError } from '../../../core/errors/app-error';
 import { apiClient, getApiErrorMessage } from '../../../core/api/api-client';
 import { DbCommentSchema, type DbComment } from '../models/db-comment';
 import type { ICommentsRepo } from './comments-repo';
+import type { CommentTargetInput } from '../models/comment';
 
 export class CommentsRepoApi implements ICommentsRepo {
     async getComments(params: { pageId?: string; isExplanation?: boolean; date?: string }): AsyncResult<DbComment[], AppError> {
@@ -26,7 +27,7 @@ export class CommentsRepoApi implements ICommentsRepo {
         body: string;
         linkedPageId: string | null;
         isExplanation: boolean;
-    }): AsyncResult<string, AppError> {
+    } & CommentTargetInput): AsyncResult<string, AppError> {
         try {
             const { data } = await apiClient.post('/comments', params);
             return ok(data as string);
@@ -35,16 +36,13 @@ export class CommentsRepoApi implements ICommentsRepo {
         }
     }
 
-    async editComment({ commentId, body, linkedPageId }: {
+    async editComment({ commentId, ...payload }: {
         commentId: string;
-        body: string;
+        body?: string;
         linkedPageId?: string | null;
-    }): AsyncResult<void, AppError> {
+        resolved?: boolean;
+    } & CommentTargetInput): AsyncResult<void, AppError> {
         try {
-            const payload: Record<string, unknown> = { body };
-            if (linkedPageId !== undefined) {
-                payload.linkedPageId = linkedPageId;
-            }
             await apiClient.put(`/comments/${commentId}`, payload);
             return ok(undefined);
         } catch (error) {

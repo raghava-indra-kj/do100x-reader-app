@@ -28,6 +28,7 @@ import { useAuthStore } from '@modules/auth/provider/store';
 import { canShowMotivations, useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
 import { X } from 'lucide-react';
 import './components/reader-experience.css';
+import { READER_COMPACT_QUERY } from './reader-layout';
 
 const SCROLL_STEP = 80;
 
@@ -99,9 +100,9 @@ const PageContent = observer(function PageContent() {
     const contentPanelRef = usePanelRef();
     const scrollRef = useRef<HTMLElement>(null);
     const isOpen = uiSettings.sidebarPanelOpen && !uiSettings.focusMode;
-    const [compact, setCompact] = useState(() => window.matchMedia('(max-width: 700px)').matches);
+    const [compact, setCompact] = useState(() => window.matchMedia(READER_COMPACT_QUERY).matches);
     useEffect(() => {
-        const media = window.matchMedia('(max-width: 700px)');
+        const media = window.matchMedia(READER_COMPACT_QUERY);
         const update = () => setCompact(media.matches);
         media.addEventListener('change', update);
         return () => media.removeEventListener('change', update);

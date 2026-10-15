@@ -4,6 +4,8 @@ import { Maximize2, AlertCircle } from "lucide-react";
 import { useMdViewColors } from "../../context/md-view-context";
 import { getD2Instance } from "./d2-instance";
 import { D2FullscreenModal } from "./d2-fullscreen-modal";
+import { sanitizeDiagramSvg } from '../../utils/sanitize-svg';
+import { isDarkColor } from '../../context/css-appearance';
 
 export interface D2BlockProps {
   children?: unknown;
@@ -44,9 +46,8 @@ export function D2Block({
     }
 
     // Determine dark mode preference from custom theme or system query
-    const isDark = colors
-      ? (typeof window !== "undefined" && colors.surfaceBg !== "#ffffff" && colors.surfaceBg !== "#fff" && (colors.surfaceBg.startsWith("#0") || colors.surfaceBg.startsWith("#1") || colors.surfaceBg.startsWith("#2")))
-      : (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const isDark = (colors ? isDarkColor(colors.surfaceBg) : undefined)
+      ?? (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
 
     const resolvedDarkThemeID = darkThemeID !== undefined ? darkThemeID : (isDark ? 200 : undefined);
 
@@ -57,8 +58,7 @@ export function D2Block({
           fs: { index: source },
           options: {
             layout,
-            themeID,
-            darkThemeID: resolvedDarkThemeID,
+            themeID: isDark ? resolvedDarkThemeID ?? 200 : themeID,
             noXMLTag: true,
             pad: 40,
           },
@@ -68,7 +68,7 @@ export function D2Block({
         const renderedSvg = await d2.render(result.diagram, result.renderOptions);
 
         if (!cancelled) {
-          setSvg(renderedSvg);
+          setSvg(sanitizeDiagramSvg(renderedSvg));
         }
       })
       .catch((err) => {

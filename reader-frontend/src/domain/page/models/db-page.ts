@@ -7,6 +7,7 @@ export const DbPageSchema = z.object({
     title: z.string(),
     content: z.string(),
     contentVersion: z.number().int().nonnegative(),
+    documentMetadata: z.object({ version: z.literal(1), blocks: z.array(z.object({ id: z.string(), kind: z.string(), start: z.number().int().nonnegative(), end: z.number().int().nonnegative() })) }).nullable().optional(),
     category: z.string().nullable(),
     sortOrder: z.number(),
     childrenCount: z.number(),

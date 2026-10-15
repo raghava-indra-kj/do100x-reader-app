@@ -4,7 +4,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
 const state = vi.hoisted(() => ({ row: null as any }));
-vi.mock('../../prisma', () => ({ prisma: { page: {
+vi.mock('../../prisma', () => ({ prisma: { $queryRaw: async () => [], comment: { findMany: async () => [], updateMany: async () => ({ count: 0 }) }, page: {
     findFirst: vi.fn(async ({ where }: any) => {
         const row = state.row;
         return row && !row.deletedAt && row.id === where.id && row.userId === where.userId ? { ...row } : null;

@@ -16,7 +16,7 @@ describe('do100x browser route contract', () => {
     const resolve = (path: string) => matchRoutes(routes, path)!.at(-1)!;
 
     it('registers only current suite routes and a not-found screen', () => {
-        expect(routes.map(route => route.path)).toEqual(['/', '/reader/pages/:id', '/login', '/reader', '/reader/captures', '/reader/capture', '/reader/vocabulary', '/settings', '/tasks', '/finance', '/habits', '/calendar', '*']);
+        expect(routes.map(route => route.path)).toEqual(['/chrome-extension', '/', '/reader/pages/:id', '/login', '/reader', '/reader/captures', '/reader/capture', '/reader/vocabulary', '/settings', '/tasks', '/finance', '/habits', '/calendar', '*']);
     });
     it.each(['/reader', '/reader/capture', '/reader/captures', '/finance', '/tasks', '/habits', '/calendar', '/settings'])('keeps the private app %s behind the existing guard', path => {
         const element = resolve(path).route.element;

@@ -1,4 +1,5 @@
 import type { Section } from './section';
+import { documentFromMetadata, type DocumentMetadata, type MarkdownDocument } from '@reader/md-ast';
 
 export { Section } from './section';
 
@@ -9,6 +10,7 @@ export class Page {
     readonly title: string;
     readonly content: string;
     readonly contentVersion: number;
+    readonly document: MarkdownDocument | null;
     readonly category: string | null;
     readonly createdAt: Date;
     readonly updatedAt: Date;
@@ -30,6 +32,7 @@ export class Page {
         title: string;
         content: string;
         contentVersion: number;
+        documentMetadata?: DocumentMetadata | null;
         category: string | null;
         createdAt: Date;
         updatedAt: Date;
@@ -50,6 +53,7 @@ export class Page {
         this.title = params.title;
         this.content = params.content;
         this.contentVersion = params.contentVersion;
+        this.document = params.documentMetadata ? documentFromMetadata(params.content, params.documentMetadata) : null;
         this.category = params.category;
         this.createdAt = params.createdAt;
         this.updatedAt = params.updatedAt;

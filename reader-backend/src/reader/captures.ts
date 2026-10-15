@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 import { requireSession } from '../session';
+import { pageDocumentMetadata } from '../page-content';
 
 export const CAPTURE_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 export const MAX_CAPTURE_BYTES = 512 * 1024;
@@ -32,9 +33,9 @@ export async function listCaptures(db: PrismaClient, userId: string, search = ''
 }
 
 export async function getCapture(db: PrismaClient, userId: string, id: string, now = new Date()) {
-  const page = await db.page.findFirst({ where: { id, userId, deletedAt: null, captureExpiresAt: { gt: now } }, select: { ...metadata, content: true, contentVersion: true, updatedAt: true } });
+  const page = await db.page.findFirst({ where: { id, userId, deletedAt: null, captureExpiresAt: { gt: now } }, select: { ...metadata, content: true, contentVersion: true, documentMetadata: true, updatedAt: true } });
   if (!page) throw new CaptureError(404, 'Active capture not found. It may have expired, been kept, or been discarded.');
-  return page;
+  return { ...page, documentMetadata: pageDocumentMetadata(page) };
 }
 
 export async function discardCapture(db: PrismaClient, userId: string, id: string, now = new Date()) {

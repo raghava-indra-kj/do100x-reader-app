@@ -36,8 +36,10 @@ export const mdSanitizeSchema: SanitizeSchema = {
       "ariaLabel",
     ],
     callout: ["icon"],
+    div: ['dataMdBlockId', 'dataMdSourceStart', 'dataMdSourceEnd', 'dataMdAtomicStart', 'dataMdAtomicEnd', 'dataMdAtomicKind'],
     input: ["type", "checked", "disabled"],
-    span: ["className", "style"],
+    span: ["className", "style", 'dataMdTextMap', 'dataMdAtomicStart', 'dataMdAtomicEnd', 'dataMdAtomicKind'],
+    code: ['className', 'dataMdTextMap'],
     details: ["open"],
     img: [...(base.attributes?.img ?? []), "src", "alt", "title"],
     a: [...(base.attributes?.a ?? []), "href", "target", "rel"],
@@ -56,4 +58,16 @@ export const mdSanitizeSchema: SanitizeSchema = {
     ...(base.protocols ?? {}),
     poster: ["http", "https"],
   },
+};
+
+// Strip author-supplied CSS before KaTeX generates the inline styles it requires.
+// Component overrides and the viewer's CSS remain the host's customization API.
+export const rawMarkdownSchema: SanitizeSchema = {
+  ...mdSanitizeSchema,
+  attributes: Object.fromEntries(Object.entries(mdSanitizeSchema.attributes ?? {}).map(([tag, attributes]) =>
+    [tag, attributes.filter(attribute => {
+      const name = Array.isArray(attribute) ? attribute[0] : attribute;
+      return name !== 'style' && !name.startsWith('dataMd');
+    })],
+  )),
 };

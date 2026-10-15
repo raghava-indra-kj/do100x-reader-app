@@ -8,16 +8,15 @@ function fixture() {
     const target = sectionBodyTarget(row.content, range);
     const request = { contentVersion: 4, target, expectedBodyHash: contentHash(target.expectedBody), newBody: 'changed' };
     let calls = 0;
-    const storage: PageContentStorage = { page: {
-        async findFirst({ where }) { return where.userId === row.userId && !row.deletedAt ? { ...row } : null; },
-        async updateMany({ where, data }) {
+    const storage = { $queryRaw: async () => [], comment: { findMany: async () => [], updateMany: async () => ({ count: 0 }) }, page: {
+        async findFirst({ where }: any) { return where.userId === row.userId && !row.deletedAt ? { ...row } : null; },
+        async updateMany({ where, data }: any) {
             calls++;
             if (where.contentVersion !== row.contentVersion || where.userId !== row.userId || row.deletedAt) return { count: 0 };
-            row.content = data.content;
-            row.contentVersion++;
+            Object.assign(row, data, { contentVersion: row.contentVersion + (data.content !== undefined ? 1 : 0) });
             return { count: 1 };
         },
-    } };
+    } } as unknown as PageContentStorage;
     return { row, storage, request, calls: () => calls };
 }
 

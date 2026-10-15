@@ -1,0 +1,11 @@
+import { build } from 'esbuild';
+import { copyFile, mkdir, cp } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+await mkdir('dist', { recursive: true });
+await build({ entryPoints: ['src/index.ts'], outfile: 'dist/index.js', bundle: true, packages: 'external', format: 'esm', platform: 'browser', target: 'es2022', jsx: 'automatic', sourcemap: true });
+await Promise.all(['md-view.css', 'md-view-hljs.css'].map(name => copyFile(`src/${name}`, `dist/${name}`)));
+const require = createRequire(import.meta.url);
+const katexDist = path.dirname(require.resolve('katex'));
+await copyFile(path.join(katexDist, 'katex.css'), 'dist/math.css');
+await cp(path.join(katexDist, 'fonts'), 'dist/fonts', { recursive: true });

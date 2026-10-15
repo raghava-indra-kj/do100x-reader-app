@@ -3,6 +3,7 @@
     "target": "ES2023",
     "module": "ESNext",
     "moduleResolution": "bundler",
+    "paths": { "@reader/md-ast": ["../packages/md-ast/src/index.ts"] },
     "lib": ["ES2023"],
     "noEmit": true,
     "strict": true,

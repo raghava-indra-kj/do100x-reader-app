@@ -1,4 +1,4 @@
-import { MarkdownRenderer } from '@reader/md-view';
+import { MarkdownRenderer } from '@lib/markdown-renderer';
 import { useThemeStore } from '@modules/core/theme';
 import { usePageStore } from '../store';
 import { PageColorSchema } from '../theme/page-color-schema';

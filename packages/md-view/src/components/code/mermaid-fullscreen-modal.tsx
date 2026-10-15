@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { Network, ZoomIn, ZoomOut, Maximize, X } from "lucide-react";
 import type { MdViewColors } from "../../types/theme";
+import { useDialogFocus } from '../../utils/use-dialog-focus';
 
 export interface MermaidFullscreenModalProps {
   svg: string;
@@ -24,6 +25,8 @@ interface Viewport {
 }
 
 export function MermaidFullscreenModal({ svg, colors, onClose }: MermaidFullscreenModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef);
   const canvasRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -241,7 +244,7 @@ export function MermaidFullscreenModal({ svg, colors, onClose }: MermaidFullscre
   const scaledHeight = svgSizeRef.current.height * viewport.scale;
 
   return createPortal(
-    <div className="md-mermaid-fullscreen-modal" style={bgStyle}>
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Mermaid diagram" tabIndex={-1} className="md-mermaid-fullscreen-modal" style={bgStyle}>
       {/* Header Toolbar */}
       <header className="md-mermaid-fullscreen-header">
         <div className="md-mermaid-fullscreen-title">

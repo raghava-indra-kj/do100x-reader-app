@@ -1,31 +1,48 @@
 {
-    "name": "@reader/md-ast",
-    "version": "1.0.0",
-    "private": true,
-    "type": "module",
-    "exports": {
-        ".": "./src/index.ts"
-    },
-    "scripts": {
-        "test": "vitest run",
-        "test:watch": "vitest"
-    },
-    "dependencies": {
-        "parse5": "^7.3.0",
-        "js-yaml": "^4.2.0",
-        "mdast-util-to-string": "^4.0.0",
-        "remark-frontmatter": "^5.0.0",
-        "remark-gfm": "^4.0.1",
-        "remark-math": "^6.0.0",
-        "remark-parse": "^11.0.0",
-        "unified": "^11.0.5",
-        "zod": "^4.4.3"
-    },
-    "devDependencies": {
-        "@types/js-yaml": "^4.0.9",
-        "@types/node": "^22.0.0",
-        "@types/mdast": "^4.0.0",
-        "typescript": "^6.0.3",
-        "vitest": "^4.1.9"
+  "name": "@reader/md-ast",
+  "version": "2.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc -p tsconfig.build.json && node build.mjs && node ../../scripts/markdown-declarations.mjs dist",
+    "prepack": "npm run build",
+    "prebuild": "node ../../scripts/clean-markdown-dist.mjs"
+  },
+  "dependencies": {
+    "@types/mdast": "^4.0.4",
+    "diff": "^8.0.4",
+    "js-yaml": "^4.2.0",
+    "mdast-util-math": "^3.0.0",
+    "mdast-util-to-string": "^4.0.0",
+    "parse5": "^7.3.0",
+    "remark-frontmatter": "^5.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "esbuild": "0.28.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.9"
+  },
+  "description": "Lossless Markdown documents, source edits and block annotation anchors.",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false
 }

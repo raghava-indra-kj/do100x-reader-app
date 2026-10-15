@@ -60,6 +60,7 @@ try {
   for (const key of ['SESSION_SECRET', 'GOOGLE_CLIENT_ID', 'APP_ORIGINS', 'PORT', 'DOTENV_CONFIG_PATH', 'DOTENV_CONFIG_OVERRIDE']) delete buildEnv[key];
   console.log('Generating the local Prisma client (no database connection)…');
   runPrisma(['generate'], buildEnv);
+  runNpm(['run', 'package:extension'], buildEnv);
   console.log('Building frontend and backend…');
   runNpm(['run', 'build'], buildEnv);
 
@@ -72,6 +73,7 @@ try {
   fs.writeFileSync(path.join(staging, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   copyFile('reader-backend/package.json');
   copyFile('reader-frontend/package.json');
+  copyFile('reader-extension/package.json');
   for (const entry of fs.readdirSync(path.join(root, 'packages'), { withFileTypes: true })) {
     if (entry.isSymbolicLink()) throw new Error('Workspace directories cannot be symlinks when packaging.');
     if (entry.isDirectory()) copyFile(path.join('packages', entry.name, 'package.json'));

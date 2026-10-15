@@ -86,6 +86,10 @@ export default observer(function HomePage() {
                         </Link>)}
                 </nav>
 
+                <section className="suite-home-extension">
+                    <div><h2>Take Reader with you</h2><p>Open articles and selected text in a focused reading view.</p></div>
+                    <Link to="/chrome-extension" className="suite-home-explore">Download Chrome extension <ArrowRight size={16} aria-hidden="true" /></Link>
+                </section>
                 {auth.isAuthenticated && <nav className="suite-home-shortcuts" aria-label="Quick access">
                     <Link to={vocabularyPageRoute} className="suite-home-shortcut">
                         <BookOpen size={19} aria-hidden="true" />

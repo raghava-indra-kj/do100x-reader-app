@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { MarkdownRenderer, D2Diagram } from "@reader/md-view";
+import { MarkdownRenderer } from "@lib/markdown-renderer";
+import { D2Diagram } from "@reader/md-view";
 import type { LinkClickEvent } from "@reader/md-view";
 import { defaultColors, defaultFontSizes, defaultFonts } from "@lib/md-parser/default-theme";
 import testFile from "@lib/md-parser/test-file.md?raw";

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { Workflow, ZoomIn, ZoomOut, Maximize, X } from "lucide-react";
 import type { MdViewColors } from "../../types/theme";
+import { useDialogFocus } from '../../utils/use-dialog-focus';
 
 export interface D2FullscreenModalProps {
   svg: string;
@@ -25,6 +26,8 @@ interface Viewport {
 }
 
 export function D2FullscreenModal({ svg, colors, onClose, title = "D2 diagram" }: D2FullscreenModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef);
   const canvasRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -242,7 +245,7 @@ export function D2FullscreenModal({ svg, colors, onClose, title = "D2 diagram" }
   const scaledHeight = svgSizeRef.current.height * viewport.scale;
 
   return createPortal(
-    <div className="md-d2-fullscreen-modal" style={bgStyle}>
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="md-d2-fullscreen-modal" style={bgStyle}>
       {/* Header Toolbar */}
       <header className="md-d2-fullscreen-header">
         <div className="md-d2-fullscreen-title">

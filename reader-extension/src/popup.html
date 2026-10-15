@@ -1,10 +1,17 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>do100x Reader</title><link rel="stylesheet" href="popup.css"></head>
-<body><header><img src="icon.png" alt="do100x"><strong>Reader</strong></header>
-<h1>Read without the clutter</h1><p>Open content in your private temporary inbox. Captures expire after 7 days unless you keep them.</p>
-<div class="actions"><button id="article">Read this page</button><button id="selection" class="secondary">Read selected text</button></div>
-<details><summary>Read copied text</summary><label for="title">Title</label><input id="title" maxlength="1000" value="Copied text"><label for="content">Paste text or Markdown</label><textarea id="content" rows="6" placeholder="Paste only the content you want to send to do100x."></textarea><button id="paste">Open in Reader</button></details>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>do100x Reader</title><link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="popup.css"></head>
+<body>
+<header class="popup-header"><div class="brand"><img src="icon.png" alt="do100x"><strong>Reader</strong></div><button id="inbox" class="icon-button tooltip-end" aria-label="Open account inbox" data-tooltip="Account inbox"><span data-icon="inbox"></span></button></header>
+<main>
+<div class="intro"><h1>A little space to read.</h1><p>Bring the page. Leave the distractions.</p></div>
+<fieldset class="destination"><legend class="sr-only">Open in</legend><label><input type="radio" name="destination" value="local" checked><span><span data-icon="book"></span>Local reader</span></label><label><input type="radio" name="destination" value="account"><span><span data-icon="inbox"></span>Account inbox</span></label></fieldset>
+<p id="destination-hint" class="destination-hint">No sign-in · stays in this browser session</p>
+<button id="article" class="read-page primary"><span class="action-icon" data-icon="book"></span><span><strong>Read this page</strong><small>Just the article, beautifully readable</small></span><span class="action-arrow" data-icon="arrow"></span></button>
+<button id="selection" class="selection-action"><span data-icon="selection"></span><span>Read selected text</span><span class="action-arrow" data-icon="arrow"></span></button>
+<details id="paste-panel" class="paste-panel"><summary><span data-icon="clipboard"></span><span>Paste text or Markdown</span><span class="disclosure-icon" data-icon="chevron"></span></summary><div class="paste-fields"><label class="sr-only" for="title">Capture title</label><input id="title" maxlength="1000" placeholder="Give it a title (optional)"><label class="sr-only" for="content">Text or Markdown</label><textarea id="content" rows="5" placeholder="Paste something worth reading…"></textarea><button id="paste" class="primary" disabled>Open in Reader<span data-icon="arrow"></span></button></div></details>
+<input class="sr-only" id="file" type="file" tabindex="-1" accept=".md,.markdown,.txt,text/markdown,text/plain"><button id="import-file" class="import-action"><span data-icon="upload"></span>Open a Markdown or text file</button>
 <p id="status" role="status" aria-live="polite"></p>
-<footer><button id="inbox" class="text">Temporary inbox</button><button id="retry" class="text">Retry last capture</button></footer>
-<small>Uses your do100x sign-in. Nothing is captured until you choose an action. Unsent captures stay in this browser session for up to 30 minutes.</small>
+<section id="local-captures" class="recent" hidden><div class="section-heading"><h2>Continue reading</h2><span>Local</span></div><div id="capture-list"></div></section>
+</main>
+<footer><span data-icon="clock"></span><span id="storage-note">Local copies clear on restart or after 7 days.</span><button id="retry" class="icon-button tooltip-end" aria-label="Retry last account transfer" data-tooltip="Retry last transfer"><span data-icon="refresh"></span></button></footer>
 <script src="popup.js"></script></body></html>

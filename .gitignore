@@ -8,6 +8,8 @@ reader-frontend/dist/
 reader-backend/dist/
 reader-extension/dist/
 releases/
+packages/md-ast/dist/
+packages/md-view/dist/
 
 # Environment files
 client_secret*.json
@@ -33,3 +35,7 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# Private database backups and generated public downloads
+backup-databases/
+reader-frontend/public/downloads/

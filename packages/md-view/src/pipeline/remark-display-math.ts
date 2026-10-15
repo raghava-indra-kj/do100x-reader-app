@@ -23,6 +23,7 @@ function walk(parent: Parent): void {
         parent.children[index] = {
           type: "math",
           value,
+          position: node.position,
           data: {
             hName: "div",
             hProperties: { className: ["math", "math-display"] },

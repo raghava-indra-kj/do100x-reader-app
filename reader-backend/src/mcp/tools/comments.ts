@@ -2,7 +2,8 @@ import { registerTool } from '../register-tool';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
-import { withoutExpiredCaptureComments, isExpiredCapture, createPageComment } from "../../reader/capture-comment-access";
+import { withoutExpiredCaptureComments, isExpiredCapture, createPageComment, updatePageComment } from "../../reader/capture-comment-access";
+import { commentAnchorSchema } from '../../reader/comment-attachment';
 
 export function registerCommentTools(server: McpServer, userId: string) {
   // 1. Get comments
@@ -47,6 +48,9 @@ export function registerCommentTools(server: McpServer, userId: string) {
                 sectionTitle: c.sectionTitle,
                 selectedText: c.selectedText,
                 body: c.body,
+                anchor: c.anchor,
+                anchorRevision: c.anchorRevision,
+                resolvedAt: c.resolvedAt,
                 linkedPageId: c.linkedPageId,
                 isExplanation: c.isExplanation,
                 createdAt: c.createdAt.toISOString(),
@@ -72,6 +76,8 @@ export function registerCommentTools(server: McpServer, userId: string) {
       sectionTitle: z.string().nullable().optional().describe("Title of the section heading where the comment belongs"),
       linkedPageId: z.string().nullable().optional().describe("UUID of another page to link for cross-reference"),
       isExplanation: z.boolean().optional().default(false).describe("Mark this comment as an explanation"),
+      anchor: commentAnchorSchema.optional().describe('Precise target using block IDs from reader_get_page.documentMetadata; text offsets are UTF-16 source offsets relative to each block'),
+      contentVersion: z.number().int().nonnegative().optional().describe('Required when anchor is supplied; use reader_get_page.contentVersion'),
     },
     async ({
       pageId,
@@ -80,6 +86,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
       sectionTitle,
       linkedPageId,
       isExplanation,
+      anchor, contentVersion,
     }) => {
       const targetPage = await prisma.page.findFirst({
         where: { id: pageId, userId, deletedAt: null },
@@ -105,7 +112,7 @@ export function registerCommentTools(server: McpServer, userId: string) {
           isExplanation: isExplanation ?? false,
           createdAt: now,
           updatedAt: now,
-      }, true);
+      }, true, { anchor, contentVersion });
       if (!newComment) return { isError: true, content: [{ type: 'text', text: 'Page or linked page is no longer available.' }] };
 
       return {
@@ -122,13 +129,16 @@ export function registerCommentTools(server: McpServer, userId: string) {
   // 3. Update comment
   registerTool(server,
     "reader_update_comment",
-    "Edit an existing comment's body or linked page ID",
+    "Edit a comment, resolve or reopen it, or reattach it to a current page selection",
     {
       commentId: z.string().describe("The UUID of the comment to update"),
       body: z.string().optional().describe("The new body text"),
       linkedPageId: z.string().nullable().optional().describe("The new linked page UUID"),
+      resolved: z.boolean().optional().describe('Resolve (true) or reopen (false) the discussion without changing its source attachment'),
+      anchor: commentAnchorSchema.optional().describe('New selection for reattachment; use current block IDs and ranges from reader_get_page'),
+      contentVersion: z.number().int().nonnegative().optional().describe('Required when reattaching; the current page revision'),
     },
-    async ({ commentId, body, linkedPageId }) => {
+    async ({ commentId, body, linkedPageId, resolved, anchor, contentVersion }) => {
       const existing = await prisma.comment.findFirst({
         where: { id: commentId, userId },
       });
@@ -140,17 +150,8 @@ export function registerCommentTools(server: McpServer, userId: string) {
         };
       }
 
-      const updateData: Record<string, unknown> = {
-        updatedAt: new Date(),
-      };
-      if (body !== undefined) updateData.body = body;
-      if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId, deletedAt: null, captureExpiresAt: null } })) return { isError: true, content: [{ type: 'text', text: 'Linked page must be one of your saved pages.' }] };
-      if (linkedPageId !== undefined) updateData.linkedPageId = linkedPageId;
-
-      await prisma.comment.update({
-        where: { id: commentId },
-        data: updateData,
-      });
+      const updated = await updatePageComment(prisma, userId, commentId, { body, linkedPageId, resolved }, { anchor, contentVersion });
+      if (!updated) return { isError: true, content: [{ type: 'text', text: 'Comment or linked page is no longer available.' }] };
 
       return {
         content: [

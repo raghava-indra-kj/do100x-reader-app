@@ -11,9 +11,12 @@ import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Input } from '@modules/core/ui/primitives/input';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 import { ConfirmationDialog } from '@modules/core/ui/components/confirmation-dialog';
-import { Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link as LinkIcon, Unlink, NotebookPen, ShieldCheck, Sparkles } from 'lucide-react';
+import { Pencil, Trash2, X, Check, Copy, ChevronsDown, ChevronsUp, ChevronDown, ChevronRight, Link as LinkIcon, Unlink, NotebookPen, ShieldCheck, Sparkles, LocateFixed, Undo2, Crosshair } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { readerPageWithIdRouteValue, loginPageRoute } from '@boot/routes';
+import { MarkdownRenderer } from '@reader/md-view';
+import { commentInFilter, commentSourceLabel, type CommentFilter } from './comment-state';
+import '@reader/md-view/md-view.css';
 
 function formatRelativeTime(date: Date): string {
     const now = Date.now();
@@ -34,7 +37,7 @@ function formatCommentForCopy(comment: Comment): string {
     if (comment.sectionTitle) {
         parts.push(`[${comment.sectionTitle}]`);
     }
-    parts.push(`"${comment.selectedText}"`);
+    parts.push(`"${comment.anchor?.quote ?? comment.selectedText}"`);
     if (comment.body) {
         parts.push(`→ ${comment.body}`);
     }
@@ -63,6 +66,21 @@ function CommentCard({
     const [linkPageId, setLinkPageId] = useState(comment.linkedPageId ?? '');
     const [isSavingLink, setIsSavingLink] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const [error, setError] = useState('');
+    const [resolving, setResolving] = useState(false);
+    const sourceLabel = commentSourceLabel(comment);
+    const hasSource = Boolean(comment.anchor?.segments.length && comment.anchorRevision === store.optCurrentPage?.contentVersion);
+
+    const toggleResolved = async () => {
+        if (resolving) return;
+        setResolving(true); setError('');
+        try {
+            const result = await editComment({ commentId: comment.id, resolved: !comment.resolvedAt });
+            if (!result.ok) setError(result.error.message);
+            else onEdited();
+        } catch { setError('Couldn’t update the comment. Try again.'); }
+        finally { setResolving(false); }
+    };
 
     useEffect(() => {
         if (isEditing && textareaRef.current) {
@@ -79,7 +97,7 @@ function CommentCard({
         if (result.ok) {
             setIsEditing(false);
             onEdited();
-        }
+        } else setError(result.error.message);
     }, [comment.id, editBody, isSaving, onEdited]);
 
     const handleDelete = useCallback(async () => {
@@ -158,6 +176,7 @@ function CommentCard({
                         </div>
                     )}
                     <div className="reader-panel-summary">{comment.body || comment.selectedText}</div>
+                    {sourceLabel && <small className="reader-comment-status">{sourceLabel}</small>}
                 </div>
                 {comment.linkedPageId && (
                     <LinkIcon size={11} className="shrink-0 text-[var(--color-brand)]" />
@@ -174,14 +193,21 @@ function CommentCard({
                 <div className="px-3 pb-3 pt-0">
                     {/* Selected text quote */}
                     <div className="mb-2 rounded-md bg-[var(--color-surface-soft)] px-2.5 py-1.5 text-xs text-[var(--color-text-muted)] border-l-2 border-[var(--color-brand)] leading-relaxed whitespace-pre-wrap">
-                        {comment.selectedText}
+                        {comment.anchor?.quote ?? comment.selectedText}
                     </div>
+                    <div className="reader-comment-source-actions">
+                        {hasSource && <button onClick={() => store.showCommentSource(comment)}><LocateFixed size={13} />Show source</button>}
+                        <button onClick={() => store.setCommentToReattach(comment)}><Crosshair size={13} />Reattach</button>
+                        <ReaderActionButton tooltip={comment.resolvedAt ? 'Reopen comment' : 'Resolve comment'} className="reader-icon-button" disabled={resolving} onClick={() => void toggleResolved()}>{comment.resolvedAt ? <Undo2 size={13} /> : <Check size={13} />}</ReaderActionButton>
+                    </div>
+                    {error && <p role="alert" className="reader-composer-error">{error}</p>}
 
                     {/* Comment body */}
                     {isEditing ? (
                         <div className="flex flex-col gap-1.5">
                             <textarea
                                 ref={textareaRef}
+                                aria-label="Edit comment"
                                 value={editBody}
                                 onChange={(e) => setEditBody(e.target.value)}
                                 onKeyDown={handleKeyDown}
@@ -210,7 +236,7 @@ function CommentCard({
                             </div>
                         </div>
                     ) : (
-                        <p className="text-xs text-[var(--color-text-body)] leading-relaxed whitespace-pre-wrap">{comment.body}</p>
+                        <div className="reader-comment-markdown"><MarkdownRenderer markdown={comment.body} /></div>
                     )}
 
                     {/* Linked page */}
@@ -269,7 +295,7 @@ function CommentCard({
                         </span>
                         {!isEditing && (
                             <div className="flex items-center gap-0.5">
-                                <ReaderActionButton tooltip="Ask AI about this comment" onClick={() => store.doubtStore.open(comment.body, comment.selectedText, comment.pageTitle, comment.sectionTitle ?? '')} className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-brand)]" disabled={!comment.body.trim()}><Sparkles size={13} /></ReaderActionButton>
+                                <ReaderActionButton tooltip="Ask AI about this comment" onClick={() => store.doubtStore.open(comment.body, comment.selectedText, comment.pageTitle, comment.sectionTitle ?? '', comment.anchor && comment.anchorRevision !== null && ['attached', 'changed'].includes(comment.anchor.status) ? { anchor: { ...comment.anchor, status: 'attached' }, contentVersion: comment.anchorRevision } : undefined)} className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-brand)]" disabled={!comment.body.trim()}><Sparkles size={13} /></ReaderActionButton>
                                 <Tooltip content="Link page">
                                     <button aria-label="Link page"
                                         onClick={() => { setLinkPageId(comment.linkedPageId ?? ''); setIsLinking(true); }}
@@ -308,23 +334,27 @@ export const PageComments = observer(function PageComments() {
     const authStore = useAuthStore();
     const [dataState, setDataState] = useState<DataState<Comment[]>>(DataState.init);
     const mountedRef = useRef(true);
+    const requestRef = useRef(0);
     const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
     const [copyFeedback, setCopyFeedback] = useState(false);
     const [query, setQuery] = useState('');
+    const [filter, setFilter] = useState<CommentFilter>('active');
 
     const commentsVersion = store.commentsVersion;
+    const contentVersion = store.optCurrentPage?.contentVersion;
 
     const load = useCallback(() => {
+        const request = ++requestRef.current;
         setDataState(DataState.loading());
         getComments({ pageId: store.pageId }).then((result) => {
-            if (!mountedRef.current) return;
+            if (!mountedRef.current || request !== requestRef.current) return;
             if (result.ok) {
                 setDataState(DataState.data(result.data));
             } else {
                 setDataState(DataState.error(result.error));
             }
         });
-    }, [store.pageId, commentsVersion]);
+    }, [store.pageId, commentsVersion, contentVersion]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -452,6 +482,7 @@ export const PageComments = observer(function PageComments() {
                 )}
             </>} />
             {comments.length > 0 && <div className="reader-panel-toolbar"><SidebarSearch value={query} onChange={setQuery} label="Find a comment" /></div>}
+            {comments.length > 0 && <div className="reader-comment-filters" role="group" aria-label="Comment status">{(['active', 'attention', 'history'] as const).map(value => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value === 'active' ? 'Active' : value === 'attention' ? 'Needs attention' : 'History'}</button>)}</div>}
             <div className="reader-panel-scroll">
 
                 {dataState.fold({
@@ -462,8 +493,8 @@ export const PageComments = observer(function PageComments() {
                     ),
                     loaded: (comments) => {
                         if (comments.length === 0) return <SidebarEmpty title="Capture your thoughts">Select a passage and choose “Ask or comment”. Your notes will appear here.</SidebarEmpty>;
-                        const visible = comments.filter(comment => [comment.body, comment.selectedText, comment.sectionTitle].some(text => text?.toLowerCase().includes(query.trim().toLowerCase())));
-                        if (!visible.length) return <SidebarEmpty title="No matching comments"><button onClick={() => setQuery('')}>Clear search</button></SidebarEmpty>;
+                        const visible = comments.filter(comment => commentInFilter(comment, filter) && [comment.body, comment.anchor?.quote, comment.selectedText, comment.sectionTitle].some(text => text?.toLowerCase().includes(query.trim().toLowerCase())));
+                        if (!visible.length) return <SidebarEmpty title={query ? 'No matching comments' : filter === 'history' ? 'No archived comments' : filter === 'attention' ? 'All attachments are up to date' : 'No active comments'}>{query ? <button onClick={() => setQuery('')}>Clear search</button> : filter === 'history' ? 'Resolved comments and notes with removed sources appear here.' : 'Your saved notes remain available in History.'}</SidebarEmpty>;
                         return (
                             <div className="flex flex-col">
                                 {visible.map((comment) => (

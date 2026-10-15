@@ -12,14 +12,18 @@ import { PageSkeletonLoader } from './page-skeleton-loader';
 import { Button } from '@modules/core/ui/primitives/button';
 import { SelectionPopover } from './selection-popover';
 import { EmptyPagePlaceholder } from './empty-page-placeholder';
+import { ReaderAnnotations } from './reader-annotations';
+import type { BlockCommentSelection } from './comment-target';
 import '@reader/md-view/md-view.css';
 import '@reader/md-view/md-view-hljs.css';
 import './reader-experience.css';
+import './reader-annotations.css';
 
 export const PageMain = observer(function PageMain() {
     const store = usePageStore();
     const themeStore = useThemeStore();
     const contentRef = useRef<HTMLDivElement>(null);
+    const [blockSelection, setBlockSelection] = useState<BlockCommentSelection | null>(null);
     // Pin the snapshot outside the keyed reader so a refresh never destroys an
     // open draft. The server will reject a stale snapshot at save time.
     const [editing, setEditing] = useState<{ page: Page; range: MarkdownSectionRange } | null>(null);
@@ -71,6 +75,7 @@ export const PageMain = observer(function PageMain() {
 
     return (
         <><div ref={contentRef} className="reader-reading-surface" style={{ maxWidth: uiSettings.readingWidth === 'full' ? '100%' : uiSettings.readingWidth === 'wide' ? 1200 : 860 }}>
+            {!editing && <ReaderAnnotations page={page} containerRef={contentRef} onCompose={setBlockSelection} />}
             <SectionReader
                 key={`${section.id}:${page.contentVersion}`}
                 page={page}
@@ -85,6 +90,8 @@ export const PageMain = observer(function PageMain() {
                 containerRef={contentRef}
                 page={page}
                 section={section}
+                blockSelection={blockSelection}
+                onClearBlocks={() => setBlockSelection(null)}
             />}
             <nav className="reader-section-navigation" aria-label="Section navigation">
                 {previous ? <button type="button" onClick={() => store.goToPrevSection()}><ArrowLeft size={16} aria-hidden="true" /><span><small>Previous section</small><strong>{previous.title ?? 'Introduction'}</strong></span></button> : <span />}

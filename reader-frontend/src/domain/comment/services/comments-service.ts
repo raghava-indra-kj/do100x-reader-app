@@ -1,7 +1,7 @@
 import type { AsyncResult } from '@raghava.indra/result-ts';
 import { ok } from '@raghava.indra/result-ts';
 import type { AppError } from '../../../core/errors/app-error';
-import type { Comment } from '../models/comment';
+import type { Comment, CommentTargetInput } from '../models/comment';
 import type { ICommentsRepo } from '../repos/comments-repo';
 import { container, TYPES } from '@di/container';
 import { Comment as CommentModel } from '../models/comment';
@@ -14,6 +14,9 @@ function toComment(db: import('../models/db-comment').DbComment): Comment {
         sectionTitle: db.sectionTitle,
         selectedText: db.selectedText,
         body: db.body,
+        anchor: db.anchor,
+        anchorRevision: db.anchorRevision,
+        resolvedAt: db.resolvedAt,
         linkedPageId: db.linkedPageId,
         isExplanation: db.isExplanation,
         createdAt: db.createdAt,
@@ -40,7 +43,7 @@ export async function getExplanations(
 }
 
 export async function createComment(
-    params: { pageId: string; pageTitle: string; sectionTitle: string | null; selectedText: string; body: string; linkedPageId?: string | null; isExplanation?: boolean }
+    params: { pageId: string; pageTitle: string; sectionTitle: string | null; selectedText: string; body: string; linkedPageId?: string | null; isExplanation?: boolean } & CommentTargetInput
 ): AsyncResult<string, AppError> {
     const repo = container.get<ICommentsRepo>(TYPES.ICommentsRepo);
     const result = await repo.createComment({
@@ -53,7 +56,7 @@ export async function createComment(
 }
 
 export async function editComment(
-    params: { commentId: string; body: string; linkedPageId?: string | null }
+    params: { commentId: string; body?: string; linkedPageId?: string | null; resolved?: boolean } & CommentTargetInput
 ): AsyncResult<void, AppError> {
     const repo = container.get<ICommentsRepo>(TYPES.ICommentsRepo);
     const result = await repo.editComment(params);

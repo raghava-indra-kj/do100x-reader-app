@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Copy, X } from 'lucide-react';
 import { editableSectionBody, replaceSectionBody, sectionBodyTarget, type MarkdownSectionRange } from '@reader/md-ast';
-import { MarkdownRenderer } from '@reader/md-view';
+import { MarkdownRenderer } from '@lib/markdown-renderer';
 import type { Page } from '@domain/page/models/page';
 import type { SectionEditSnapshot } from '@domain/page/models/section-edit';
 import { getSectionEditSnapshot, saveSectionBody } from '@domain/page/services/pages-service';

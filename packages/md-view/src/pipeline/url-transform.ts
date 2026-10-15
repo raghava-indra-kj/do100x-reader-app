@@ -43,6 +43,6 @@ export const strictUrlTransform: UrlTransform = (url) => {
 export function buildUrlTransform(baseUrl: string): UrlTransform {
     return (url) => {
         const safe = sanitizeUrl(defaultUrlTransform(url)) ?? "";
-        return resolveRelativeUrl(safe, baseUrl);
+        return sanitizeUrl(defaultUrlTransform(resolveRelativeUrl(safe, baseUrl))) ?? '';
     };
 }

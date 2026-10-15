@@ -6,7 +6,7 @@ import { beforeAll, afterAll, beforeEach, describe, expect, it, vi } from 'vites
 import { issueSession, attachSession } from './session';
 
 const state = vi.hoisted(() => ({ row: null as any }));
-vi.mock('./prisma', () => ({ prisma: { auth_identity: { findUnique: vi.fn(async ({ where }: any) => ({ userId: where.userId_provider.userId })) }, page: {
+vi.mock('./prisma', () => ({ prisma: { $queryRaw: async () => [], comment: { findMany: async () => [], updateMany: async () => ({ count: 0 }) }, auth_identity: { findUnique: vi.fn(async ({ where }: any) => ({ userId: where.userId_provider.userId })) }, page: {
     findFirst: vi.fn(async ({ where }: any) => {
         const row = state.row;
         if (!row || row.deletedAt || row.id !== where.id || (where.userId && row.userId !== where.userId)) return null;

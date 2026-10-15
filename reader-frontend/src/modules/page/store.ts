@@ -13,6 +13,9 @@ import { PageReadingState } from './reading-state';
 import { MeaningStore } from './meaning-store';
 import { DoubtStore } from './doubt-store';
 import { ExplanationStore } from './explanation-store';
+import type { Comment } from '@domain/comment/models/comment';
+import { documentMetadata } from '@reader/md-ast';
+import { READER_COMPACT_QUERY } from './reader-layout';
 
 export interface Motivation {
     quote: string;
@@ -59,6 +62,11 @@ export class PageStore {
     reorderingSubpages = false;
     commentsCount: number;
     vocabCount: number;
+    comments: Comment[] = [];
+    focusedCommentId: string | null = null;
+    commentFocusVersion = 0;
+    commentToReattach: Comment | null = null;
+    private commentsRequest = 0;
 
     constructor({ pageId }: { pageId: string }) {
         this.pageId = pageId;
@@ -90,6 +98,12 @@ export class PageStore {
             reorderingSubpages: observable,
             commentsCount: observable,
             vocabCount: observable,
+            comments: observable.ref,
+            focusedCommentId: observable,
+            commentFocusVersion: observable,
+            commentToReattach: observable.ref,
+            showCommentSource: action,
+            setCommentToReattach: action,
             optCurrentPage: computed,
             isOwner: computed,
             isPublic: computed,
@@ -153,12 +167,33 @@ export class PageStore {
     }
 
     async loadCommentsCount() {
+        const request = ++this.commentsRequest;
         const result = await getComments({ pageId: this.pageId });
         runInAction(() => {
-            if (result.ok) {
+            if (result.ok && request === this.commentsRequest) {
                 this.commentsCount = result.data.length;
+                this.comments = result.data;
             }
         });
+    }
+
+    setCommentToReattach(comment: Comment | null) {
+        this.commentToReattach = comment;
+        if (comment && window.matchMedia(READER_COMPACT_QUERY).matches) this.uiSettingsStore.setSidebarPanelOpen(false);
+    }
+
+    showCommentSource(comment: Comment) {
+        const page = this._currentPage;
+        if (!page?.document || comment.anchorRevision !== page.contentVersion) return;
+        const target = comment.anchor?.segments[0];
+        const block = page.document.blocks.find(item => item.id === target?.blockId);
+        if (!block || !target) return;
+        const offset = block.start + target.start;
+        const section = this.flatSections.filter(item => item.sourceRange && (item.sourceRange.headingStart ?? item.sourceRange.bodyStart) <= offset).at(-1);
+        if (section) this.setCurrentSection(section);
+        this.focusedCommentId = comment.id;
+        this.commentFocusVersion++;
+        if (window.matchMedia(READER_COMPACT_QUERY).matches) this.uiSettingsStore.setSidebarPanelOpen(false);
     }
 
     async loadVocabCount() {
@@ -278,10 +313,12 @@ export class PageStore {
                 if (this._currentPage) {
                     this._currentPage = new Page({
                         id: this._currentPage.id,
+                        userId: this._currentPage.userId,
                         parentPageId: this._currentPage.parentPageId,
                         title: this._currentPage.title,
                         content: this._currentPage.content,
                         contentVersion: this._currentPage.contentVersion,
+                        documentMetadata: this._currentPage.document ? documentMetadata(this._currentPage.document) : null,
                         category: this._currentPage.category,
                         createdAt: this._currentPage.createdAt,
                         updatedAt: this._currentPage.updatedAt,

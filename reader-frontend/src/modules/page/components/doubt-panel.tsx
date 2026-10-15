@@ -8,20 +8,20 @@ import { createComment } from '@domain/comment/services/comments-service';
 import { toast } from '@modules/core/ui/primitives/toast';
 import type { AiDoubtEntry } from '../doubt-store';
 
-function SaveQuestionComment({ entry }: { entry: AiDoubtEntry }) {
+export function SaveQuestionComment({ entry }: { entry: AiDoubtEntry }) {
     const store = usePageStore();
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
-    return <ReaderActionButton tooltip={saved ? 'Question saved to comments' : 'Save question as comment'} disabled={saving || saved} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-brand)] disabled:opacity-50" onClick={async () => {
+    return <ReaderActionButton tooltip={saved ? 'Question saved to comments' : entry.attachment ? 'Save question as comment' : 'Save question as page note'} disabled={saving || saved} className="p-1 text-[var(--color-text-muted)] hover:text-[var(--color-brand)] disabled:opacity-50" onClick={async () => {
         if (saving || saved) return;
         setSaving(true);
         try {
-            const result = await createComment({ pageId: store.pageId, pageTitle: entry.pageTitle, sectionTitle: entry.sectionTitle || null, selectedText: entry.selectedText, body: entry.searchTerm });
+            const result = await createComment({ pageId: entry.pageId, pageTitle: entry.pageTitle, sectionTitle: entry.sectionTitle || null, selectedText: entry.selectedText, body: entry.searchTerm, ...entry.attachment });
             if (!result.ok) throw result.error;
             setSaved(true);
             store.bumpCommentsVersion();
             toast.success('Question saved to comments');
-        } catch { toast.error('Couldn’t save this question. Please try again.'); }
+        } catch (error) { toast.error(error instanceof Error ? error.message : 'Couldn’t save this question. It remains in Questions; try again.'); }
         finally { setSaving(false); }
     }}>{saved ? <Check size={14} /> : <StickyNote size={14} />}</ReaderActionButton>;
 }

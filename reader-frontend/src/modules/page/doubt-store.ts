@@ -5,9 +5,14 @@ import { createPage } from '@domain/page/services/pages-service';
 import { ChatAppError, type ChatErrorDetails } from '@domain/chat/models/chat-types';
 import { toast } from '@modules/core/ui/primitives/toast';
 import type { PageStore } from './store';
+import type { AnnotationAnchor } from '@reader/md-ast';
+
+export type DoubtAttachment = { anchor: AnnotationAnchor; contentVersion: number };
 
 export interface AiDoubtEntry {
     id: string;
+    pageId: string;
+    attachment?: DoubtAttachment;
     searchTerm: string;
     selectedText: string;
     pageTitle: string;
@@ -109,16 +114,21 @@ export class DoubtStore {
         this.fetchDoubt(entryId);
     }
 
-    open(doubtText: string, selectedText: string, pageTitle: string, sectionTitle: string) {
+    open(doubtText: string, selectedText: string, pageTitle: string, sectionTitle: string, attachment?: DoubtAttachment) {
         const query = doubtText.trim();
         const passage = selectedText.trim();
         const page = pageTitle.trim();
         const sec = sectionTitle.trim();
+        const pageId = this.pageStore.pageId;
+        // Keep the original selection/revision, including while AI is running or
+        // the page changes. Never reconstruct an attachment by quotation search.
+        const target = attachment ? { contentVersion: attachment.contentVersion, anchor: { ...attachment.anchor, segments: attachment.anchor.segments.map(segment => ({ ...segment })) } } : undefined;
+        const targetKey = JSON.stringify(target ?? null);
 
         // Check if matching entry already exists in history
         const existing = this.history.find(
-            e => e.searchTerm.toLowerCase() === query.toLowerCase() && 
-                 e.selectedText.toLowerCase() === passage.toLowerCase()
+            e => e.pageId === pageId && e.sectionTitle === sec && e.searchTerm.toLowerCase() === query.toLowerCase() &&
+                 e.selectedText.toLowerCase() === passage.toLowerCase() && JSON.stringify(e.attachment ?? null) === targetKey
         );
 
         if (existing) {
@@ -127,6 +137,8 @@ export class DoubtStore {
             const id = String(Date.now() + Math.random());
             const newEntry: AiDoubtEntry = {
                 id,
+                pageId,
+                attachment: target,
                 searchTerm: query,
                 selectedText: passage,
                 pageTitle: page,
@@ -242,7 +254,7 @@ Please help me understand this and directly answer my doubt.`;
             modelId,
             systemPrompt: 'You are a learning assistant. The user is studying a passage and has a question/doubt about it. Provide a clear, detailed, and helpful answer. Format your response cleanly in Markdown.',
             userPrompt,
-            pageId: this.pageStore.pageId,
+            pageId: entry.pageId,
             actionType: 'doubt',
             signal: controller.signal,
         });
@@ -279,7 +291,7 @@ Please help me understand this and directly answer my doubt.`;
         entry.isSavingPage = true;
 
         const result = await createPage({
-            parentPageId: this.pageStore.pageId,
+            parentPageId: entry.pageId,
             title: `Question: ${entry.searchTerm}`,
             content: `### Context\n\n> ${entry.selectedText.split('\n').join('\n> ')}\n\n### Question\n\n*${entry.searchTerm}*\n\n### Answer\n\n${entry.responseMarkdown}`,
             category: null,

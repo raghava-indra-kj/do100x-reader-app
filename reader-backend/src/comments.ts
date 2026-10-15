@@ -1,10 +1,22 @@
-import { Router } from "express";
+import { Router, type Request, type Response, type NextFunction } from "express";
+import { z } from 'zod';
 import { prisma } from "./prisma";
 import { readSession, requireSession } from "./session";
 import { canReadPage } from "./page-access";
-import { withoutExpiredCaptureComments, isExpiredCapture, createPageComment } from './reader/capture-comment-access';
+import { withoutExpiredCaptureComments, createPageComment, updatePageComment } from './reader/capture-comment-access';
+import { commentAnchorSchema } from './reader/comment-attachment';
+import { PageContentError } from './page-content';
 
 const router = Router();
+const commentCreateSchema = z.object({
+  pageId: z.string().min(1), pageTitle: z.string().default(''), sectionTitle: z.string().nullable().optional(),
+  selectedText: z.string().max(100_000), body: z.string().max(100_000), linkedPageId: z.string().nullable().optional(), isExplanation: z.boolean().optional(),
+  anchor: commentAnchorSchema.optional(), contentVersion: z.number().int().nonnegative().optional(),
+});
+const commentUpdateSchema = z.object({
+  body: z.string().max(100_000).optional(), linkedPageId: z.string().nullable().optional(), isExplanation: z.boolean().optional(), resolved: z.boolean().optional(),
+  anchor: commentAnchorSchema.optional(), contentVersion: z.number().int().nonnegative().optional(),
+});
 router.use((req, res, next) => req.method === "GET" ? next() : requireSession(req, res, next));
 
 // GET /comments?pageId=&isExplanation=&date=
@@ -65,6 +77,9 @@ router.get("/", async (req, res) => {
       sectionTitle: c.sectionTitle ?? null,
       selectedText: c.selectedText,
       body: c.body,
+      anchor: c.anchor ?? null,
+      anchorRevision: c.anchorRevision ?? null,
+      resolvedAt: c.resolvedAt ?? null,
       linkedPageId: c.linkedPageId ?? null,
       isExplanation: c.isExplanation,
       createdAt: c.createdAt,
@@ -76,6 +91,8 @@ router.get("/", async (req, res) => {
 // POST /comments
 router.post("/", async (req, res) => {
   const reqUserId = readSession(req);
+  const parsed = commentCreateSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: 'Check the comment and its selection.' }); return; }
   const {
     pageId,
     pageTitle,
@@ -84,15 +101,8 @@ router.post("/", async (req, res) => {
     body,
     linkedPageId,
     isExplanation,
-  } = req.body as {
-    pageId: string;
-    pageTitle: string;
-    sectionTitle: string | null;
-    selectedText: string;
-    body: string;
-    linkedPageId: string | null;
-    isExplanation?: boolean;
-  };
+    anchor, contentVersion,
+  } = parsed.data;
 
   const finalUserId = reqUserId;
   if (!finalUserId) {
@@ -115,7 +125,7 @@ router.post("/", async (req, res) => {
       isExplanation: isExplanation ?? false,
       createdAt: now,
       updatedAt: now,
-  });
+  }, false, { anchor, contentVersion });
   if (!newComment) { res.status(404).json({ message: 'Page or linked page is no longer available.' }); return; }
   res.status(201).json(newComment.id);
 });
@@ -124,34 +134,11 @@ router.post("/", async (req, res) => {
 router.put("/:commentId", async (req, res) => {
   const { commentId } = req.params;
   const reqUserId = readSession(req);
-  const { body, linkedPageId } = req.body as {
-    body: string;
-    linkedPageId?: string | null;
-  };
-
-  const existing = await prisma.comment.findFirst({
-    where: { id: commentId, userId: reqUserId },
-  });
-
-  if (!existing || await isExpiredCapture(prisma, existing.pageId)) {
-    res.status(404).json({ message: "Comment not found" });
-    return;
-  }
-
-
-  const updateData: Record<string, unknown> = {
-    body,
-    updatedAt: new Date(),
-  };
-  if (linkedPageId !== undefined) {
-    if (linkedPageId && !await prisma.page.findFirst({ where: { id: linkedPageId, userId: reqUserId, deletedAt: null, captureExpiresAt: null } })) { res.status(404).json({ message: "Linked page not found" }); return; }
-    updateData.linkedPageId = linkedPageId ?? null;
-  }
-
-  await prisma.comment.update({
-    where: { id: commentId, userId: reqUserId },
-    data: updateData,
-  });
+  const parsed = commentUpdateSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ message: 'Check the comment and its selection.' }); return; }
+  const { anchor, contentVersion, ...changes } = parsed.data;
+  const updated = await updatePageComment(prisma, reqUserId!, commentId, changes, { anchor, contentVersion });
+  if (!updated) { res.status(404).json({ message: 'Comment or linked page is no longer available.' }); return; }
 
   res.status(204).send();
 });
@@ -198,4 +185,8 @@ router.delete("/:commentId", async (req, res) => {
   res.status(204).send();
 });
 
+router.use((error: unknown, _req: Request, res: Response, next: NextFunction) => {
+  if (error instanceof PageContentError) { res.status(error.status).json({ message: error.message }); return; }
+  next(error);
+});
 export default router;

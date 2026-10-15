@@ -63,6 +63,8 @@ describe('suite home', () => {
         expect(html).toContain('Continue with Google.');
         expect(html).toContain('href="#home-tools"');
         expect(html).toContain('id="home-tools"');
+        expect(html).toContain('href="/chrome-extension"');
+        expect(html).toContain('Download Chrome extension');
         expect(html).toContain('Example workspace');
         expect(html.match(/class="suite-home-features"/g)).toHaveLength(5);
         expect(html).not.toContain('aria-label="Quick access"');

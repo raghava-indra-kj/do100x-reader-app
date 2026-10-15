@@ -2,16 +2,16 @@ import { describe, expect, it, vi } from 'vitest';
 import { createElement, type ComponentType } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { locateSections } from '@reader/md-ast';
-import type { MarkdownRendererProps } from '@reader/md-view';
+import type { MarkdownRendererProps } from '@lib/markdown-renderer';
 import { Page } from '@domain/page/models/page';
 import { Section } from '@domain/page/models/section';
 import { PageColorSchema } from '../theme/page-color-schema';
 
 // Keep the reading component's real heading overrides; diagrams are irrelevant
 // to whether edit controls are duplicated across nested headings.
-vi.mock('@reader/md-view', () => ({
-    MarkdownRenderer: ({ markdown, components }: MarkdownRendererProps) => <div>
-        {locateSections(markdown).filter((range) => range.kind === 'heading').map((range) => {
+vi.mock('@lib/markdown-renderer', () => ({
+    MarkdownRenderer: ({ markdown, components, sourceRange }: MarkdownRendererProps) => <div>
+        {locateSections(markdown).filter((range) => range.kind === 'heading' && (!sourceRange || range.headingStart! >= sourceRange.start && range.headingStart! < sourceRange.end)).map((range) => {
             const tag = `h${range.level}`;
             const Heading = components?.[tag as keyof typeof components] as ComponentType<any>;
             return createElement(Heading, {

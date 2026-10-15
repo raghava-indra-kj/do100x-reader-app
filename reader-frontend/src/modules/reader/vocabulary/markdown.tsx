@@ -1,5 +1,5 @@
 import { observer } from 'mobx-react-lite';
-import { MarkdownRenderer } from '@reader/md-view';
+import { MarkdownRenderer } from '@lib/markdown-renderer';
 import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '@modules/page/theme/page-color-schema';
 import { PageFontFamilies } from '@modules/page/theme/page-font-families';

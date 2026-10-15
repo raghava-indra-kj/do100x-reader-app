@@ -16,5 +16,7 @@ build({
   format: "cjs",
   target: "node22",
   sourcemap: true,
+  // Dev watches this source. Resolve it directly so parser edits cannot use a stale dist.
+  alias: { "@reader/md-ast": path.resolve(__dirname, "../../packages/md-ast/src/index.ts") },
   external: Object.keys(dependencies).filter((name) => !["@reader/md-ast", "@reader/finance-core", "@reader/habit-core", "@reader/calendar-core"].includes(name)),
 }).then(() => console.log("Backend build complete")).catch(() => process.exit(1));

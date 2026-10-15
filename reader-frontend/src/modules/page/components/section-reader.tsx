@@ -3,7 +3,7 @@ import { useMemo, useRef, useState, type MouseEvent, type ElementType } from 're
 import type { Components } from 'react-markdown';
 import { Pencil } from 'lucide-react';
 import { locateSections, type MarkdownSectionRange } from '@reader/md-ast';
-import { MarkdownRenderer, type MarkdownRendererProps } from '@reader/md-view';
+import { MarkdownRenderer, type MarkdownRendererProps } from '@lib/markdown-renderer';
 import type { Page } from '@domain/page/models/page';
 import type { Section } from '@domain/page/models/section';
 
@@ -26,11 +26,11 @@ export function SectionReader({ page, section, maxLevel, onEdit, ...theme }: {
     const components = useMemo(() => {
         const overrides: Partial<Components> = {};
         for (const tag of ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'] as const) {
-            overrides[tag] = ({ node, children }) => {
+            overrides[tag] = ({ node, children, ...props }) => {
                 const offset = node?.position?.start.offset;
-                const range = offset === undefined ? undefined : visible.find((item) => item.headingStart === start + offset);
+                const range = offset === undefined ? undefined : visible.find((item) => item.headingStart === offset);
                 const Tag = tag as ElementType;
-                return <Tag className={`md-heading-${tag.slice(1)}`} data-reader-heading-start={range?.headingStart ?? undefined}>
+                return <Tag {...props} className={`md-heading-${tag.slice(1)}`} data-reader-heading-start={range?.headingStart ?? undefined}>
                     {children}
                 </Tag>;
             };
@@ -57,7 +57,7 @@ export function SectionReader({ page, section, maxLevel, onEdit, ...theme }: {
             </ReaderActionButton>
         </div>}
         <div ref={containerRef} onClick={selectClickedSection}>
-            <MarkdownRenderer markdown={own ? page.content.slice(start, end) : section.chunkMarkdown(maxLevel)} {...theme} components={components} />
+            <MarkdownRenderer markdown={own ? page.content : section.chunkMarkdown(maxLevel)} document={own ? page.document ?? undefined : undefined} sourceRange={own ? { start, end } : undefined} {...theme} components={components} />
         </div>
     </>;
 }

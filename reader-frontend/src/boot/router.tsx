@@ -5,6 +5,7 @@ import { MotivationPreferencesProvider } from '@modules/core/preferences/motivat
 import { RouteErrorBoundary } from './route-error-boundary';
 import { financePageRoute, habitsPageRoute, homePageRoute, loginPageRoute, readerPageWithIdRoute, readerPageRoute, vocabularyPageRoute, settingsPageRoute, tasksPageRoute } from './routes';
 
+const ExtensionPage = lazy(() => import('../modules/home/extension-page'));
 const HomePage = lazy(() => import('../modules/home/page'));
 const NotFoundPage = lazy(() => import('../modules/home/not-found'));
 const LoginPage = lazy(() => import('../modules/auth/login/page'));
@@ -22,6 +23,7 @@ const CaptureImportPage = lazy(() => import('../modules/reader/captures/import-p
 /** Documents handle their own visibility so shared Reader pages remain public. */
 export function ApplicationRoutes() {
     return <Routes>
+        <Route path="/chrome-extension" element={<ExtensionPage />} />
         <Route path={homePageRoute} element={<HomePage />} />
         <Route path={readerPageWithIdRoute} element={<PagePage />} />
         <Route path={loginPageRoute} element={<LoginPage />} />

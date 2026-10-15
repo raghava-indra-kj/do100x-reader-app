@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Temporary Reader · do100x</title><link rel="stylesheet" href="ui.css"><link rel="stylesheet" href="reader.css"></head>
+<body>
+<header class="reader-bar">
+<div class="brand"><img src="icon.png" alt="do100x"><strong>Reader</strong></div>
+<span id="capture-name" class="capture-name">Temporary reading</span>
+<nav aria-label="Reading tools">
+<div class="tool-group text-size"><details id="font-menu"><summary class="icon-button font-trigger" aria-label="Reading font" data-tooltip="Reading font">Aa</summary><fieldset class="font-options"><legend>Reading font</legend><label class="font-lexend"><input type="radio" name="reading-font" value="lexend" checked><span>Lexend<small>Clear &amp; familiar</small></span></label><label class="font-merriweather"><input type="radio" name="reading-font" value="merriweather"><span>Merriweather<small>A book-like serif</small></span></label></fieldset></details><button id="smaller" class="icon-button" aria-label="Decrease text size" data-tooltip="Smaller text">A−</button><output id="font-size" aria-label="Text size">19</output><button id="larger" class="icon-button" aria-label="Increase text size" data-tooltip="Larger text">A+</button></div>
+<div class="tool-group"><button id="theme" class="icon-button" aria-label="Use dark theme" data-tooltip="Dark theme"><span data-icon="moon"></span></button><button id="source" class="icon-button" aria-label="View Markdown source" data-tooltip="Markdown source" aria-pressed="false"><span data-icon="source"></span></button></div>
+<div class="tool-group"><button id="copy" class="icon-button" aria-label="Copy Markdown" data-tooltip="Copy Markdown"><span data-icon="copy"></span></button><button id="download" class="icon-button" aria-label="Download Markdown" data-tooltip="Download Markdown"><span data-icon="download"></span></button></div>
+<button id="save" class="primary tooltip-end" aria-label="Send to Reader" data-tooltip="Send this copy to your account"><span data-icon="inbox"></span><span class="save-label">Send to Reader</span></button>
+<button id="remove" class="icon-button tooltip-end" aria-label="Remove local copy" data-tooltip="Remove local copy"><span data-icon="trash"></span></button>
+</nav></header>
+<div class="capture-info"><span class="lifetime-info"><span data-icon="clock"></span><span id="lifetime">Loading temporary capture…</span></span><a id="source-link" hidden target="_blank" rel="noreferrer noopener"><span id="source-label">Original page</span><span data-icon="external"></span></a></div>
+<div id="status" role="status" aria-live="polite"></div>
+<main class="reader-content"><iframe id="reader-frame" title="Reading content" sandbox="allow-scripts allow-downloads allow-popups" src="reader-sandbox.html"></iframe><pre id="markdown-source" tabindex="0" aria-label="Markdown source" hidden></pre><div id="empty" hidden><span data-icon="book"></span><h1>This temporary capture is unavailable</h1><p id="empty-message"></p><p>Use the extension to read another page or paste Markdown.</p></div></main>
+<script src="reader.js"></script></body></html>

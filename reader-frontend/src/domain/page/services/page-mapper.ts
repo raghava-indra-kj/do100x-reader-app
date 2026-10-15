@@ -1,5 +1,5 @@
 import { AppError } from '@core/errors/app-error';
-import { ok, type Result } from '@raghava.indra/result-ts';
+import { ok, err, type Result } from '@raghava.indra/result-ts';
 import { safeParseMarkdown } from '../../../lib/md-parser/parse-markdown';
 import type { MdSection } from '../../../lib/md-parser/types';
 import type { DbPage } from '../models/db-page';
@@ -37,6 +37,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
             }),
         ];
 
+    try {
     const page = new Page({
         id: dbPage.id,
         userId: dbPage.userId,
@@ -44,6 +45,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         title: dbPage.title,
         content: dbPage.content,
         contentVersion: dbPage.contentVersion,
+        documentMetadata: dbPage.documentMetadata,
         category: dbPage.category,
         createdAt: dbPage.createdAt,
         updatedAt: dbPage.updatedAt,
@@ -59,6 +61,9 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         doubtSystemPrompt: dbPage.doubtSystemPrompt,
     });
     return ok(page);
+    } catch (cause) {
+        return err(new AppError({ message: 'This page’s document index does not match its content. Reload a consistent version before annotating.', cause }));
+    }
 }
 
 function toSection({ mdSection, pageId }: { mdSection: MdSection, pageId: string }): Section {

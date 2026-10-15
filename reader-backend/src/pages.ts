@@ -2,7 +2,7 @@ import { Router } from "express";
 import { prisma } from "./prisma";
 import { z } from "zod";
 import { locateSections, sectionBodyTarget } from "@reader/md-ast";
-import { contentHash, editSectionBody, PageContentError } from "./page-content";
+import { contentHash, editSectionBody, savePageContent, pageDocumentMetadata, PageContentError } from "./page-content";
 import { readSession, requireSession } from "./session";
 import { pageSearchQuery, searchPages } from "./reader/page-search";
 
@@ -99,6 +99,7 @@ router.get("/:pageId", async (req, res) => {
       title: true,
       content: true,
       contentVersion: true,
+      documentMetadata: true,
       category: true,
       sortOrder: true,
       childrenCount: true,
@@ -134,6 +135,7 @@ router.get("/:pageId", async (req, res) => {
     title: page.title,
     content: page.content ?? "",
     contentVersion: page.contentVersion,
+    documentMetadata: pageDocumentMetadata(page),
     category: page.category ?? null,
     sortOrder: page.sortOrder,
     childrenCount: page.childrenCount,
@@ -348,20 +350,18 @@ router.put("/:pageId", async (req, res) => {
     return;
   }
 
-  const saved = await prisma.page.updateMany({
-    where: { id: pageId, userId: reqUserId, deletedAt: null, contentVersion },
-    data: {
+  try {
+    await savePageContent(prisma, reqUserId, pageId, contentVersion, content, {
       title,
-      content,
       category: category ?? null,
       meaningSystemPrompt: meaningSystemPrompt || null,
       explanationSystemPrompt: explanationSystemPrompt || null,
       doubtSystemPrompt: doubtSystemPrompt || null,
-      updatedAt: new Date(),
-    },
-  });
-
-  if (saved.count !== 1) { res.status(409).json({ message: "This page has changed. Your draft is kept here. Copy it before reloading." }); return; }
+    });
+  } catch (error) {
+    if (error instanceof PageContentError) { res.status(error.status).json({ message: error.message }); return; }
+    throw error;
+  }
 
   res.status(204).send();
 });

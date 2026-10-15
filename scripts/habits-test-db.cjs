@@ -15,6 +15,8 @@ const { PrismaClient } = requireBackend('@prisma/client');
 
 async function main() {
   const calendar = process.argv.includes('--calendar');
+  const markdown = process.argv.includes('--markdown');
+  if (markdown && !calendar) throw new Error('--markdown requires --calendar for the complete application schema.');
   if (process.argv.includes('--mcp') && !calendar) throw new Error('--mcp requires --calendar so all three feature schemas are available.');
   const releaseIndex = process.argv.indexOf('--release-dir');
   const releaseDirectory = releaseIndex >= 0 ? process.argv[releaseIndex + 1] : null;
@@ -41,7 +43,11 @@ async function main() {
     run(process.execPath, [requireBackend.resolve('prisma/build/index.js'), 'migrate', 'deploy', '--schema', path.join(migrationStage, 'schema.prisma')], { env });
     fixtureDb = new PrismaClient({ datasourceUrl: source.href });
     const user = await fixtureDb.appuser.create({ data: { email: 'existing-data@example.test' } });
-    const page = await fixtureDb.page.create({ data: { userId: user.id, title: 'Existing Reader page', content: '# Keep this content', sortOrder: 1, childrenCount: 0, createdAt: new Date(), updatedAt: new Date() } });
+    const page = { id: randomUUID() };
+    // Prior-schema SQL remains valid when the generated client knows additive fields.
+    await fixtureDb.$executeRaw`INSERT INTO page (id, userId, title, content, sortOrder, childrenCount, createdAt, updatedAt) VALUES (${page.id}, ${user.id}, 'Existing Reader page', '# Keep this content', 1, 0, NOW(6), NOW(6))`;
+    const commentId = randomUUID();
+    await fixtureDb.$executeRaw`INSERT INTO comment (id, userId, pageId, pageTitle, selectedText, body, createdAt, updatedAt) VALUES (${commentId}, ${user.id}, ${page.id}, 'Existing Reader page', 'Keep this content', 'Keep this note', NOW(6), NOW(6))`;
     const task = { id: randomUUID() };
     // Use the prior SQL contract: the generated client already knows newer columns.
     await fixtureDb.$executeRaw`INSERT INTO task (id, userId, title, totalTimeSeconds, createdAt, updatedAt) VALUES (${task.id}, ${user.id}, 'Existing task', 900, NOW(6), NOW(6))`;
@@ -53,22 +59,28 @@ async function main() {
       await fixtureDb.habit_log.create({ data: { userId: user.id, habitId: habit.id, date: '2026-10-01', status: 'RECORDED', value: 2, note: 'Keep this reflection' } });
     }
     const oldTask = async () => (await fixtureDb.$queryRaw`SELECT id, userId, listId, parentId, title, description, status, priority, dueDate, dueTime, sortOrder, totalTimeSeconds, completedAt, createdAt, updatedAt, deletedAt FROM task WHERE id = ${task.id}`)[0];
-    const snapshot = async () => JSON.stringify(await Promise.all([fixtureDb.appuser.findUnique({ where: { id: user.id } }), fixtureDb.page.findUnique({ where: { id: page.id } }), oldTask(), fixtureDb.time_session.findMany({ where: { userId: user.id } }), fixtureDb.finance_book.findUnique({ where: { id: book.id } }), fixtureDb.finance_account.findUnique({ where: { id: account.id } }), ...(calendar ? [fixtureDb.habit.findMany({ where: { userId: user.id }, include: { logs: true } })] : [])]));
+    const oldPage = async () => (await fixtureDb.$queryRaw`SELECT id, userId, parentId, title, content, contentVersion, category, sortOrder, childrenCount, isPublic, createdAt, updatedAt, deletedAt, captureExpiresAt, captureKey, captureSourceUrl, meaningSystemPrompt, explanationSystemPrompt, doubtSystemPrompt FROM page WHERE id = ${page.id}`)[0];
+    const oldComment = async () => (await fixtureDb.$queryRaw`SELECT id, userId, pageId, pageTitle, sectionTitle, selectedText, body, linkedPageId, isExplanation, createdAt, updatedAt FROM comment WHERE id = ${commentId}`)[0];
+    const snapshot = async () => JSON.stringify(await Promise.all([fixtureDb.appuser.findUnique({ where: { id: user.id } }), oldPage(), oldComment(), oldTask(), fixtureDb.time_session.findMany({ where: { userId: user.id } }), fixtureDb.finance_book.findUnique({ where: { id: book.id } }), fixtureDb.finance_account.findUnique({ where: { id: account.id } }), ...(calendar ? [fixtureDb.habit.findMany({ where: { userId: user.id }, include: { logs: true } })] : [])]));
     const before = await snapshot();
     runPrisma(['migrate', 'deploy'], env);
     assert.equal(await snapshot(), before, 'Existing app records must survive the migration unchanged.');
     console.log('Upgrade preserved existing account, Reader, Finance, Tasks and focus records' + (calendar ? ', plus Habits and check-ins.' : '.'));
     if (calendar) await requireBackend('esbuild').build({ entryPoints: [path.join(backend, 'src/calendar/ical-worker.ts')], outfile: path.join(backend, 'dist/ical-worker.js'), bundle: true, platform: 'node', target: 'node22', format: 'cjs' });
     if (process.argv.includes('--preview')) {
+      if (markdown) env.APP_ORIGINS = 'http://127.0.0.1:5187';
       if (process.argv.includes('--seed')) env.HABITS_PREVIEW_SEED = '1';
-      await requireBackend('esbuild').build({ entryPoints: [path.join(backend, `src/${feature}/dev-preview.ts`)], outfile: path.join(backend, `dist/${feature}-preview.js`), bundle: true, platform: 'node', target: 'node22', format: 'cjs', external: ['@prisma/client', 'express', 'dotenv/config', 'zod'] });
-      const child = spawn(process.execPath, [path.join(backend, `dist/${feature}-preview.js`)], { cwd: root, env, stdio: 'inherit', windowsHide: true });
+      const preview = markdown ? 'reader' : feature;
+      await requireBackend('esbuild').build({ entryPoints: [path.join(backend, `src/${preview}/dev-preview.ts`)], outfile: path.join(backend, `dist/${preview}-preview.js`), bundle: true, platform: 'node', target: 'node22', format: 'cjs', external: ['@prisma/client', 'express', 'dotenv/config', 'zod'] });
+      const child = spawn(process.execPath, [path.join(backend, `dist/${preview}-preview.js`)], { cwd: root, env, stdio: 'inherit', windowsHide: true });
       const stop = () => child.kill();
       process.once('SIGINT', stop); process.once('SIGTERM', stop);
       await new Promise((resolve, reject) => { child.on('exit', code => code ? reject(new Error('Preview exited with an error.')) : resolve()); child.on('error', reject); });
       process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop);
     } else if (releaseDirectory) {
       await require('./verify-calendar-release.cjs').verifyCalendarRelease(releaseDirectory, env, fixtureDb);
+    } else if (markdown) {
+      runNpm(['run', 'test', '--workspace=reader-backend', '--', 'src/reader/annotations.database.test.ts', 'src/page-content.database.test.ts'], { ...env, RUN_DATABASE_TESTS: '1', MARKDOWN_DATABASE_TEST: '1', APP_ORIGINS: 'http://localhost:3000' });
     } else {
       runNpm(['run', 'test', '--workspace=reader-backend', '--', ...(calendar ? ['src/calendar/calendar.database.test.ts', 'src/timer.database.test.ts'] : ['src/habits/habit.database.test.ts']), ...(process.argv.includes('--mcp') ? ['src/mcp/tools/features.database.test.ts'] : [])], { ...env, MCP_FEATURE_DATABASE_TEST: calendar && process.argv.includes('--mcp') ? '1' : '0' });
       if (process.argv.includes('--contracts')) runNpm(['run', 'test', '--workspace=reader-backend', '--', 'src/auth/auth-router.database.test.ts', 'src/finance/adapters.database.test.ts', 'src/finance/import-service.database.test.ts', 'src/finance/ledger-service.database.test.ts', 'src/quiz/quiz-router.database.test.ts', 'src/mcp/tools/quizzes.database.test.ts'], { ...env, RUN_DATABASE_TESTS: '1', APP_ORIGINS: 'http://localhost:3000' });

@@ -24,6 +24,7 @@ prisma.$use(async (params, next) => {
   }
   if (params.model === "page" && ["update", "updateMany"].includes(params.action) && params.args?.data?.content !== undefined) {
     if (params.args.where?.contentVersion === undefined) throw new Error("Page content writes require a contentVersion precondition");
+    if (!params.args.data.documentMetadata) throw new Error('Use savePageContent so source and comment attachments are updated atomically');
     params.args.data.contentVersion = { increment: 1 };
   }
   return next(params);

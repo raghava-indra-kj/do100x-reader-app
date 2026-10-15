@@ -1,3 +1,5 @@
+import type { AnnotationAnchor } from '@reader/md-ast';
+export type CommentTargetInput = { anchor?: AnnotationAnchor; contentVersion?: number };
 export class Comment {
     readonly id: string;
     readonly pageId: string;
@@ -5,6 +7,9 @@ export class Comment {
     readonly sectionTitle: string | null;
     readonly selectedText: string;
     readonly body: string;
+    readonly anchor: AnnotationAnchor | null;
+    readonly anchorRevision: number | null;
+    readonly resolvedAt: Date | null;
     readonly linkedPageId: string | null;
     readonly isExplanation: boolean;
     readonly createdAt: Date;
@@ -17,6 +22,9 @@ export class Comment {
         sectionTitle: string | null;
         selectedText: string;
         body: string;
+        anchor?: AnnotationAnchor | null;
+        anchorRevision?: number | null;
+        resolvedAt?: Date | null;
         linkedPageId: string | null;
         isExplanation: boolean;
         createdAt: Date;
@@ -28,6 +36,9 @@ export class Comment {
         this.sectionTitle = params.sectionTitle;
         this.selectedText = params.selectedText;
         this.body = params.body;
+        this.anchor = params.anchor ?? null;
+        this.anchorRevision = params.anchorRevision ?? null;
+        this.resolvedAt = params.resolvedAt ?? null;
         this.linkedPageId = params.linkedPageId;
         this.isExplanation = params.isExplanation;
         this.createdAt = params.createdAt;

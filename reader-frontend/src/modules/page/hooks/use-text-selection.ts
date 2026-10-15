@@ -69,11 +69,17 @@ export function useTextSelection(
         if (!container) return;
 
         // mouseup is the primary trigger — fires after click, drag-select, double/triple click
+        let selectionFrame = 0;
         const handleMouseUp = () => {
             // Small delay to let the browser finalize the selection
-            requestAnimationFrame(() => {
+            cancelAnimationFrame(selectionFrame);
+            selectionFrame = requestAnimationFrame(() => {
                 checkSelection();
             });
+        };
+        const handleKeyUp = (event: KeyboardEvent) => {
+            if (event.target instanceof Element && event.target.closest('input,textarea,[contenteditable="true"]')) return;
+            if (event.shiftKey && /^(Arrow|Home|End|Page)/.test(event.key) || (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') handleMouseUp();
         };
 
         // Dismiss on Escape
@@ -109,6 +115,7 @@ export function useTextSelection(
 
         container.addEventListener('mouseup', handleMouseUp);
         document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
         document.addEventListener('mousedown', handleDocumentMouseDown);
 
         // Find the scrollable ancestor — the `<main>` with overflow-y-auto
@@ -116,8 +123,10 @@ export function useTextSelection(
         scrollParent?.addEventListener('scroll', handleScroll, { passive: true });
 
         return () => {
+            cancelAnimationFrame(selectionFrame);
             container.removeEventListener('mouseup', handleMouseUp);
             document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('keyup', handleKeyUp);
             document.removeEventListener('mousedown', handleDocumentMouseDown);
             scrollParent?.removeEventListener('scroll', handleScroll);
         };

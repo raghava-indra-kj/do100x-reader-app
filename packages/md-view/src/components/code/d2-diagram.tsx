@@ -4,6 +4,8 @@ import { Maximize2, AlertCircle } from "lucide-react";
 import { getD2Instance } from "./d2-instance";
 import { D2FullscreenModal } from "./d2-fullscreen-modal";
 import { useMdViewColors } from "../../context/md-view-context";
+import { sanitizeDiagramSvg } from '../../utils/sanitize-svg';
+import { isDarkColor } from '../../context/css-appearance';
 
 export interface D2DiagramProps {
   source: string;
@@ -58,15 +60,14 @@ export function D2Diagram({
         const d2 = await getD2Instance();
         if (cancelled) return;
 
-        const resolvedDark = dark ?? (typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        const resolvedDark = dark ?? (colors ? isDarkColor(colors.surfaceBg) : undefined) ?? (typeof window !== "undefined" && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
         const resolvedDarkThemeID = darkThemeID !== undefined ? darkThemeID : (resolvedDark ? 200 : undefined);
 
         const result = await d2.compile({
           fs: { index: trimmed },
           options: {
             layout,
-            themeID,
-            darkThemeID: resolvedDarkThemeID,
+            themeID: resolvedDark ? resolvedDarkThemeID ?? 200 : themeID,
             noXMLTag: true,
             pad,
             sketch,
@@ -79,7 +80,7 @@ export function D2Diagram({
         const renderedSvg = await d2.render(result.diagram, result.renderOptions);
 
         if (!cancelled) {
-          setSvg(renderedSvg);
+          setSvg(sanitizeDiagramSvg(renderedSvg));
         }
       } catch (err) {
         if (!cancelled) {
@@ -98,7 +99,7 @@ export function D2Diagram({
     return () => {
       cancelled = true;
     };
-  }, [source, layout, themeID, darkThemeID, dark, pad, sketch, scale]);
+  }, [source, layout, themeID, darkThemeID, dark, pad, sketch, scale, colors]);
 
   return (
     <div className={`md-d2-wrapper ${className}`}>
@@ -111,6 +112,7 @@ export function D2Diagram({
             <span>Invalid D2 diagram</span>
           </div>
           <pre className="md-d2-error-msg">{error}</pre>
+          <pre className="md-code-block"><code>{source}</code></pre>
         </div>
       )}
 

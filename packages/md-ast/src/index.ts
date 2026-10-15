@@ -21,3 +21,14 @@ export { reuseIds } from "./reuse-ids";
 export { editableSectionBody, locateSections, parseSourceTree, replaceSectionBody, sectionBodyTarget } from "./section-edit";
 export type { MarkdownSectionRange, SectionBodyTarget } from "./section-edit";
 
+export { createDocument, serializeDocument, hydrateDocument, reconcileDocument, applySourceEdits, replaceBlock, createBlockAnchor, resolveBlockAnchor } from './document';
+export type { MarkdownDocument, MarkdownBlock, SourceRange, SourceEdit, BlockAnchor, AnchorResolution } from './document';
+export { createTextAnchor, createBlocksAnchor, sourceSegments, validateAnchor, editAnnotatedDocument, reconcileAnchor } from './annotations';
+export type { AnnotationAnchor, AnnotationSegment, AttachmentStatus } from './annotations';
+export { documentMetadata, documentFromMetadata } from './document';
+export type { DocumentMetadata } from './document';
+export { sourceReplacementEdits, replaceAnnotatedSource } from './source-replacement';
+export { moveAnnotatedBlocks, copyAnnotatedBlocks } from './block-operations';
+export { createAnnotationChange, restoreAnnotationChange } from './annotation-history';
+export type { IdentifiedAnnotation, AnnotationState, AnnotationChange, AnnotationRestoration } from './annotation-history';
+

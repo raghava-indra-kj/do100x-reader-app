@@ -1,16 +1,19 @@
 import { MarkdownActionButton } from '../action-button';
 import { Check, Copy } from "lucide-react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { MdViewCopyContext } from '../../context/md-view-context';
 
 /** Props for the fenced code block component. */
 interface CodeBlockProps {
   language?: string;
   codeClassName?: string;
   children?: ReactNode;
+  sourceMap?: string;
 }
 
 /** Fenced code block with syntax highlighting and a source-copy control. */
-export function CodeBlock({ language, codeClassName, children }: CodeBlockProps) {
+export function CodeBlock({ language, codeClassName, children, sourceMap }: CodeBlockProps) {
+  const copyText = useContext(MdViewCopyContext);
   const codeRef = useRef<HTMLElement>(null);
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
@@ -29,7 +32,9 @@ export function CodeBlock({ language, codeClassName, children }: CodeBlockProps)
     if (!source) return;
 
     try {
-      if (navigator.clipboard?.writeText) {
+      if (copyText) {
+        await copyText(source);
+      } else if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(source);
       } else {
         const fallback = document.createElement("textarea");
@@ -58,7 +63,7 @@ export function CodeBlock({ language, codeClassName, children }: CodeBlockProps)
 
   return (
     <pre className="md-code-block">
-      {language && <span className="md-code-block-language" aria-label={`Language: ${language}`}>{language}</span>}
+      {language && <span data-md-ui="true" className="md-code-block-language" aria-label={`Language: ${language}`}>{language}</span>}
       <MarkdownActionButton
         type="button"
         className="md-code-block-copy"
@@ -71,6 +76,7 @@ export function CodeBlock({ language, codeClassName, children }: CodeBlockProps)
       <code
         ref={codeRef}
         data-language={language}
+        data-md-text-map={sourceMap}
         className={`md-code-block-content ${codeClassName ?? ""}`.trim()}
       >
         {children}

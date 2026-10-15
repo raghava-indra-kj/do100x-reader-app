@@ -6,7 +6,7 @@ import { useState, useEffect, useId } from 'react';
 import { usePageStore } from '../store';
 import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
-import { MarkdownRenderer } from '@reader/md-view';
+import { MarkdownRenderer } from '@lib/markdown-renderer';
 import { Loader } from '@modules/core/ui/primitives/loader/loader';
 import { Button } from '@modules/core/ui/primitives/button';
 import { toast } from '@modules/core/ui/primitives/toast';

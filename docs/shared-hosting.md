@@ -154,3 +154,13 @@ See `docs/calendar.md` in the source checkout for the current release gates.
 
 References: [Node environment parsing](https://nodejs.org/download/release/latest-jod/docs/api/util.html#utilparseenvcontent),
 [locked npm installations](https://docs.npmjs.com/cli/commands/npm-ci/).
+
+## Public Chrome extension download
+
+`npm run package` builds the production extension before the web application.
+The home page links to `/chrome-extension`, with manual beta installation steps.
+`npm run package:extension` separately generates an extension-only ZIP and release
+metadata in `reader-frontend/public/downloads/` (ignored generated files).
+Only that extension ZIP belongs on the public download page. Never publish the
+private `releases/do100x-*.zip` archive: it contains production credentials.
+The beta requires Load unpacked; a Chrome Web Store listing is a separate release.

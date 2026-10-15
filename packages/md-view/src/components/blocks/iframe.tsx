@@ -13,7 +13,7 @@ interface IFrameProps extends NodeProps {
 }
 
 /** Renders an iframe, optionally wrapped in a labelled frame showing the source URL. */
-export function IFrame({ node, src, width, height, title, loading, allowFullScreen, allow, sandbox }: IFrameProps) {
+export function IFrame({ node, src, width, height, title, loading, allowFullScreen, allow }: IFrameProps) {
   const safe = sanitizeUrl(src);
   if (!safe) return null;
 
@@ -25,11 +25,12 @@ export function IFrame({ node, src, width, height, title, loading, allowFullScre
       src={safe}
       width={width}
       height={height}
-      title={title}
-      loading={loading as "lazy" | "eager" | undefined}
+      title={title || 'Embedded content'}
+      loading={(loading as "lazy" | "eager" | undefined) ?? 'lazy'}
       allowFullScreen={allowFullScreen}
       allow={allow}
-      sandbox={sandbox as string | undefined}
+      sandbox="allow-scripts allow-presentation"
+      referrerPolicy="no-referrer"
     />
   );
 

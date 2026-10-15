@@ -23,3 +23,6 @@ export const MdViewLinkContext = createContext<((e: LinkClickEvent) => void) | n
 export function useMdViewLinkClick(): ((e: LinkClickEvent) => void) | null {
   return useContext(MdViewLinkContext);
 }
+
+/** Hosts with restricted clipboard access (for example sandboxed readers) may bridge copying. */
+export const MdViewCopyContext = createContext<((text: string) => Promise<void>) | null>(null);

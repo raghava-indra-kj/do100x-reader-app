@@ -604,6 +604,7 @@ model page {
   title                   String    @db.VarChar(1000)
   content                 String?   @db.LongText
   contentVersion          Int       @default(0)
+  documentMetadata        Json?
   category                String?   @db.VarChar(255)
   sortOrder               Int
   childrenCount           Int
@@ -789,11 +790,16 @@ model comment {
   pageTitle     String   @db.VarChar(1000)
   sectionTitle  String?  @db.VarChar(1000)
   selectedText  String   @db.Text
+  anchor        Json?
+  anchorRevision Int?
+  resolvedAt    DateTime? @db.DateTime(6)
   body          String   @db.Text
   linkedPageId  String?  @db.VarChar(36)
   isExplanation Boolean  @default(false)
   createdAt     DateTime @db.DateTime(6)
   updatedAt     DateTime @db.DateTime(6)
+
+  @@index([pageId])
 }
 
 model vocabulary {

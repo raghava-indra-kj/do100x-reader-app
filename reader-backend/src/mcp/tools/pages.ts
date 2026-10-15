@@ -2,7 +2,7 @@ import { registerTool } from '../register-tool';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { prisma } from "../../prisma";
-import { editSectionBody, contentHash } from "../../page-content";
+import { editSectionBody, contentHash, savePageContent, pageDocumentMetadata, PageContentError, type PageMetadataChanges } from "../../page-content";
 import { sectionBodyTarget, editableSectionBody } from "@reader/md-ast";
 import {
   parseMarkdownSections,
@@ -138,6 +138,7 @@ export function registerPageTools(server: McpServer, userId: string) {
                 title: page.title,
                 content: formattedContent,
                 contentVersion: page.contentVersion,
+                documentMetadata: pageDocumentMetadata(page),
                 totalLines: rawContent.split(/\r?\n/).length,
                 category: page.category,
                 sortOrder: page.sortOrder,
@@ -242,13 +243,7 @@ export function registerPageTools(server: McpServer, userId: string) {
           preserveHeading ?? true
         );
 
-        await prisma.page.update({
-          where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
-          data: {
-            content: updatedMarkdown,
-            updatedAt: new Date(),
-          },
-        });
+        await savePageContent(prisma, userId, pageId, page.contentVersion, updatedMarkdown);
 
         return {
           content: [
@@ -312,13 +307,7 @@ export function registerPageTools(server: McpServer, userId: string) {
           expectedContent
         );
 
-        await prisma.page.update({
-          where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
-          data: {
-            content: updatedMarkdown,
-            updatedAt: new Date(),
-          },
-        });
+        await savePageContent(prisma, userId, pageId, page.contentVersion, updatedMarkdown);
 
         return {
           content: [
@@ -381,13 +370,7 @@ export function registerPageTools(server: McpServer, userId: string) {
         content
       );
 
-      await prisma.page.update({
-        where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
-        data: {
-          content: updatedMarkdown,
-          updatedAt: new Date(),
-        },
-      });
+      await savePageContent(prisma, userId, pageId, page.contentVersion, updatedMarkdown);
 
       return {
         content: [
@@ -512,24 +495,20 @@ export function registerPageTools(server: McpServer, userId: string) {
         };
       }
 
-      const updateData: Record<string, unknown> = {
-        updatedAt: new Date(),
-      };
+      const updateData: PageMetadataChanges = {};
       if (content !== undefined && contentVersion !== existing.contentVersion) {
         return { isError: true, content: [{ type: "text" as const, text: "A matching contentVersion is required to replace page content. Fetch reader_get_page again." }] };
       }
 
       if (title !== undefined) updateData.title = title;
-      if (content !== undefined) updateData.content = content;
       if (category !== undefined) updateData.category = category;
       if (meaningSystemPrompt !== undefined) updateData.meaningSystemPrompt = meaningSystemPrompt;
       if (explanationSystemPrompt !== undefined) updateData.explanationSystemPrompt = explanationSystemPrompt;
       if (doubtSystemPrompt !== undefined) updateData.doubtSystemPrompt = doubtSystemPrompt;
 
-      const updated = await prisma.page.update({
-        where: { id: pageId, userId, deletedAt: null, ...(content !== undefined ? { contentVersion: existing.contentVersion } : {}) },
-        data: updateData,
-      });
+      const updated = content !== undefined
+        ? await savePageContent(prisma, userId, pageId, existing.contentVersion, content, updateData)
+        : await prisma.page.update({ where: { id: pageId, userId, deletedAt: null }, data: { ...updateData, updatedAt: new Date() } });
 
       return {
         content: [
@@ -859,13 +838,7 @@ export function registerPageTools(server: McpServer, userId: string) {
         updatedContent = existingContent + appended;
       }
 
-      const updated = await prisma.page.update({
-        where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
-        data: {
-          content: updatedContent,
-          updatedAt: new Date(),
-        },
-      });
+      const updated = await savePageContent(prisma, userId, pageId, page.contentVersion, updatedContent);
 
       const newSections = parseMarkdownSections(updated.content || "");
       return {
@@ -1232,21 +1205,18 @@ export function registerPageTools(server: McpServer, userId: string) {
         return { isError: true, content: [{ type: "text", text: `Invalid regular expression: ${String(err)}` }] };
       }
 
-      const results: Array<{ pageId: string; title: string; replacements: number }> = [];
-      const now = new Date();
+      const results: Array<{ pageId: string; title: string; replacements: number; error?: string }> = [];
 
       for (const p of pages) {
         const content = p.content || "";
         const matches = content.match(regex);
         if (matches && matches.length > 0) {
           const newContent = content.replace(regex, replace);
-          results.push({ pageId: p.id, title: p.title, replacements: matches.length });
-
-          if (!dryRun) {
-            await prisma.page.update({
-              where: { id: p.id, userId, deletedAt: null, contentVersion: p.contentVersion },
-              data: { content: newContent, updatedAt: now },
-            });
+          try {
+            if (!dryRun) await savePageContent(prisma, userId, p.id, p.contentVersion, newContent);
+            results.push({ pageId: p.id, title: p.title, replacements: matches.length });
+          } catch (error) {
+            results.push({ pageId: p.id, title: p.title, replacements: 0, error: error instanceof PageContentError ? error.message : 'This page could not be saved.' });
           }
         }
       }
@@ -1259,8 +1229,9 @@ export function registerPageTools(server: McpServer, userId: string) {
             type: "text",
             text: JSON.stringify({
               dryRun,
+              success: results.every(result => !result.error),
               totalReplacements,
-              totalPagesAffected: results.length,
+              totalPagesAffected: results.filter(result => !result.error).length,
               pages: results,
             }, null, 2),
           },
@@ -1482,10 +1453,7 @@ export function registerPageTools(server: McpServer, userId: string) {
       });
 
       if (autoFix && fixed) {
-        await prisma.page.update({
-          where: { id: pageId, userId, deletedAt: null, contentVersion: page.contentVersion },
-          data: { content: markdown, updatedAt: new Date() },
-        });
+        await savePageContent(prisma, userId, pageId, page.contentVersion, markdown);
       }
 
       return {
