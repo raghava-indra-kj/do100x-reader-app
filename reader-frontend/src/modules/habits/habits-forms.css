@@ -1,0 +1,37 @@
+.habit-dialog.habit-form-dialog { width:min(650px, calc(100vw - 24px)); max-height:calc(100dvh - 24px); padding:0 !important; overflow:hidden; display:flex; flex-direction:column; }
+.habit-form-dialog:not(.habit-dialog-wide) { max-width:500px; }
+.habit-form-dialog > .habit-dialog-heading { flex-shrink:0; margin:0; padding:14px 16px; border-bottom:1px solid var(--color-border-subtle); }
+.habit-form-dialog .habit-dialog-heading h2 { font-size:18px; line-height:1.35; min-width:0; overflow-wrap:anywhere; max-height:3.6em; overflow-y:auto; }
+.habit-form-dialog .habit-dialog-heading > button { flex-shrink:0; }
+.habit-form-dialog .habit-form { display:flex; flex-direction:column; flex:1; min-height:0; gap:0; margin:0; overflow:hidden; }
+.habit-form-dialog .habit-form-body { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; padding:14px 16px; }
+.habit-form-dialog .habit-form-fields { min-width:0; display:flex; flex-direction:column; gap:13px; padding:0; margin:0; border:0; }
+.habit-form-dialog .habit-form-footer { flex-shrink:0; margin:0; padding:11px 16px; gap:8px; background:var(--color-surface-raised); }
+.habit-form-dialog .habit-form-footer button { min-height:36px; font-size:12px; padding-left:12px; padding-right:12px; }
+.habit-form-dialog .habit-form-date { margin:0; color:var(--color-text-muted); font-size:12px; line-height:1.6; }
+.habit-form-dialog .habit-form-notice { display:grid; gap:8px; padding:10px; border:1px solid var(--color-border-subtle); border-radius:6px; font-size:12px; line-height:1.6; }
+.habit-form-dialog .habit-form-notice p { margin:0; }
+.habit-form-dialog .habit-form-notice button { justify-self:start; white-space:normal; height:auto; min-height:34px; }
+.habit-form-dialog .habits-error { margin:0; font-size:12px; overflow-wrap:anywhere; }
+.habit-form-dialog .habit-gallery { margin:12px 0 0; }
+.habit-form-dialog .habit-gallery button { padding:11px; }
+.habit-form-dialog .habit-gallery strong { font-size:12px; }
+.habit-form-dialog .habit-field small, .habit-form-dialog .habit-reminder-field small { line-height:1.5; }
+.habit-form-dialog .habit-reminder-times { min-width:0; }
+.habit-form-dialog .habit-reminder-times input { min-width:0; max-width:130px; }
+.habit-form-dialog .habit-weekdays, .habit-form-dialog .habit-moods > div { flex-wrap:wrap; }
+.habit-form-dialog .habit-appearance > div { min-width:0; flex-wrap:wrap; }
+.habit-form-confirm-backdrop { position:fixed; inset:0; z-index:60; background:rgb(0 0 0 / .35); }
+.habit-form-confirm { position:fixed; z-index:70; left:50%; top:50%; transform:translate(-50%,-50%); width:min(430px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; padding:18px; border:1px solid var(--color-border-subtle); border-radius:10px; box-shadow:0 16px 50px rgb(0 0 0 / .2); background:var(--color-surface-raised); color:var(--color-text-strong); }
+.habit-form-confirm h2 { font-size:18px; font-weight:650; }
+.habit-form-confirm p { font-size:13px; line-height:1.65; margin:12px 0 18px; overflow-wrap:anywhere; }
+.habit-form-confirm > div { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+.habit-form-confirm button { white-space:normal; height:auto; min-height:38px; }
+@media(max-width:420px) {
+  .habit-form-dialog .habit-form-body { padding:12px; }
+  .habit-form-dialog > .habit-dialog-heading { padding:10px 12px; }
+  .habit-form-dialog .habit-form-footer { padding:10px 12px; gap:6px; }
+  .habit-form-dialog .habit-form-footer button { padding-left:9px; padding-right:9px; }
+  .habit-form-dialog .habit-form-grid, .habit-form-dialog .habit-form-grid.three { grid-template-columns:1fr; }
+  .habit-form-dialog .habit-gallery { grid-template-columns:1fr 1fr; gap:7px; }
+}
