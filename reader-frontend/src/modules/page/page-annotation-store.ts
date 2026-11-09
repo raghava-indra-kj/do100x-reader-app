@@ -19,6 +19,8 @@ export class PageAnnotationStore {
     /** Anchor key being generated, if any. */
     generatingKey: string | null = null;
     error: string | null = null;
+    /** Set after a successful generation so the new takeaways scroll into view once. */
+    revealed: { key: string } | null = null;
     /** Open groups, as `<anchor key>|<before|after>`. Collapsed by default so reading stays uninterrupted. */
     expanded = new Set<string>();
 
@@ -28,6 +30,8 @@ export class PageAnnotationStore {
             items: observable.ref,
             generatingKey: observable,
             error: observable,
+            revealed: observable.ref,
+            clearRevealed: action,
             expanded: observable,
             setExpanded: action,
             clearError: action,
@@ -43,6 +47,8 @@ export class PageAnnotationStore {
     }
 
     clearError() { this.error = null; }
+
+    clearRevealed() { this.revealed = null; }
 
     async load() {
         const request = ++this.loadRequest;
@@ -117,7 +123,10 @@ export class PageAnnotationStore {
             if (!saved.ok) return fail(saved.error.message);
 
             await this.load();
-            runInAction(() => { for (const slot of ['before', 'after']) this.expanded.add(`${target.key}|${slot}`); });
+            runInAction(() => {
+                for (const slot of ['before', 'after']) this.expanded.add(`${target.key}|${slot}`);
+                this.revealed = { key: target.key };
+            });
             return true;
         } catch (error) {
             if (controller.signal.aborted) return false;

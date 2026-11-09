@@ -1,12 +1,12 @@
-import { useId, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { ArrowDown, ArrowUp, Pencil, Sparkles, Trash2 } from 'lucide-react';
 import { MarkdownRenderer, type MarkdownRendererProps } from '@lib/markdown-renderer';
-import { Dialog } from '@modules/core/ui/primitives/dialog';
 import { Button } from '@modules/core/ui/primitives/button';
 import { ReaderActionButton } from './reader-action-button';
-import { PAGE_ANNOTATION_KINDS, PAGE_ANNOTATION_KIND_LABELS, type PageAnnotation, type PageAnnotationKind } from '@domain/page-annotation/models/page-annotation';
+import type { PageAnnotation } from '@domain/page-annotation/models/page-annotation';
 import { annotationKindLabel } from '../page-annotation-ai';
+import { PageAnnotationGenerateDialog } from './page-annotation-generate-dialog';
 import type { PageAnnotationTarget } from '../page-annotation-target';
 import { usePageStore } from '../store';
 import './page-annotations.css';
@@ -22,15 +22,25 @@ export const PageAnnotationSlot = observer(function PageAnnotationSlot({ target,
     const annotations = store.annotationStore;
     const fallback = store.uiSettingsStore.annotationPlacement;
     const items = annotations.itemsFor(target.key).filter((item) => (item.placement ?? fallback) === slot);
+    const ref = useRef<HTMLDetailsElement>(null);
+    const revealed = annotations.revealed;
+    const present = items.length > 0;
+    useEffect(() => {
+        if (!revealed || revealed.key !== target.key || !present) return;
+        ref.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+        annotations.clearRevealed();
+    }, [revealed, target.key, present, annotations]);
     if (!items.length) return null;
     const groupId = `${target.key}|${slot}`;
+    const kinds = [...new Set(items.map((item) => annotationKindLabel(item.kind)))];
     return (
-        <details className="reader-takeaways" data-slot={slot} open={annotations.expanded.has(groupId)}
+        <details ref={ref} className="reader-takeaways" data-slot={slot} open={annotations.expanded.has(groupId)}
             onToggle={(event) => annotations.setExpanded(groupId, event.currentTarget.open)}>
             <summary>
                 <Sparkles size={14} aria-hidden="true" />
                 <span className="reader-takeaways-label">Key takeaways</span>
                 <span className="reader-takeaways-count">{items.length}</span>
+                <span className="reader-takeaways-kinds">{kinds.join(' · ')}</span>
                 {items.some((item) => item.stale) && <span className="reader-takeaways-stale">May be out of date</span>}
             </summary>
             <ol className="reader-takeaways-list">
@@ -101,50 +111,21 @@ const TakeawayItem = observer(function TakeawayItem({ item, target, slot, first,
     );
 });
 
-const DEFAULT_KINDS: PageAnnotationKind[] = ['summary', 'key_takeaway'];
-
 /** Toolbar button that opens the generate dialog for the section being read. */
 export const PageAnnotationControls = observer(function PageAnnotationControls({ target, sectionTitle }: {
     target: PageAnnotationTarget;
     sectionTitle: string | null;
 }) {
-    const store = usePageStore();
-    const annotations = store.annotationStore;
-    const titleId = useId();
-    const descriptionId = useId();
+    const annotations = usePageStore().annotationStore;
     const [open, setOpen] = useState(false);
-    const [kinds, setKinds] = useState<PageAnnotationKind[]>(DEFAULT_KINDS);
-    const generating = annotations.generatingKey === target.key;
-    const replacing = annotations.itemsFor(target.key).some((item) => item.origin === 'ai' && kinds.includes(item.kind as PageAnnotationKind));
-
-    const close = () => { if (!generating) { setOpen(false); annotations.clearError(); } };
-    const toggle = (kind: PageAnnotationKind) => setKinds((current) => current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind]);
-    const generate = async () => { if (await annotations.generate(target, PAGE_ANNOTATION_KINDS.filter((kind) => kinds.includes(kind)), sectionTitle)) setOpen(false); };
+    const count = annotations.itemsFor(target.key).length;
 
     return <>
-        <ReaderActionButton type="button" tooltip="Generate key takeaways" aria-label={`Generate key takeaways: ${target.title}`} onClick={() => setOpen(true)}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)]">
+        <ReaderActionButton type="button" tooltip="Generate key takeaways" aria-label={`Generate key takeaways: ${target.title}`} onClick={() => setOpen(true)} className="reader-takeaways-trigger">
             <Sparkles size={14} aria-hidden="true" />
+            <span className="reader-takeaways-trigger-label">Takeaways</span>
+            {count > 0 && <span className="reader-takeaways-trigger-count" aria-hidden="true">{count}</span>}
         </ReaderActionButton>
-        {open && <Dialog open labelledBy={titleId} describedBy={descriptionId} onOpenChange={(next) => { if (!next) close(); }}>
-            <h2 id={titleId} className="text-lg font-semibold text-[var(--color-text-strong)]">Generate key takeaways</h2>
-            <p id={descriptionId} className="mt-1 text-sm text-[var(--color-text-muted)]">
-                Written from “{target.title}” and everything under it. {replacing && 'This replaces the AI-written items of the selected kinds already here.'}
-            </p>
-            <fieldset className="mt-4 flex flex-col gap-2" disabled={generating}>
-                <legend className="mb-1 text-xs font-semibold uppercase text-[var(--color-text-muted)]">Include</legend>
-                {PAGE_ANNOTATION_KINDS.map((kind) => (
-                    <label key={kind} className="flex items-center gap-2 text-sm text-[var(--color-text-strong)]">
-                        <input type="checkbox" checked={kinds.includes(kind)} onChange={() => toggle(kind)} />
-                        {PAGE_ANNOTATION_KIND_LABELS[kind]}
-                    </label>
-                ))}
-            </fieldset>
-            {annotations.error && <p role="alert" className="mt-4 text-sm text-[var(--color-error)]">{annotations.error}</p>}
-            <div className="mt-6 flex justify-end gap-3">
-                <Button variant="outlined" onClick={close} disabled={generating}>Cancel</Button>
-                <Button onClick={generate} loading={generating} disabled={!kinds.length}>Generate</Button>
-            </div>
-        </Dialog>}
+        {open && <PageAnnotationGenerateDialog target={target} sectionTitle={sectionTitle} onClose={() => { annotations.clearError(); setOpen(false); }} />}
     </>;
 });
