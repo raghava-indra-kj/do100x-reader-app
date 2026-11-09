@@ -1,5 +1,5 @@
 import { ReaderActionButton } from './reader-action-button';
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Copy, X } from 'lucide-react';
 import { editableSectionBody, replaceSectionBody, sectionBodyTarget, type MarkdownSectionRange } from '@reader/md-ast';
@@ -14,6 +14,7 @@ import { useThemeStore } from '@modules/core/theme';
 import { PageColorSchema } from '../theme/page-color-schema';
 import { usePageStore } from '../store';
 import { setDialogConsuming } from '../clipboard-paste';
+import { formatSection } from '../page-format-service';
 
 type TargetSnapshot = SectionEditSnapshot['sections'][number];
 
@@ -34,6 +35,10 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
     const [confirmDiscard, setConfirmDiscard] = useState(false);
     const [tab, setTab] = useState<'preview' | 'compare'>('preview');
     const [copied, setCopied] = useState(false);
+    const [formatting, setFormatting] = useState(false);
+    const [beforeFormat, setBeforeFormat] = useState<string | null>(null);
+    const [formatNotice, setFormatNotice] = useState<{ tone: 'info' | 'warning' | 'error'; text: string } | null>(null);
+    const formatAbort = useRef<AbortController | null>(null);
     const dirty = draft !== original;
     const schema = PageColorSchema.VALUES.find((item) => item.id === themeStore.theme.value) ?? PageColorSchema.LIGHT;
     const uiSettings = store.uiSettingsStore;
@@ -64,6 +69,33 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
         try { replaceSectionBody({ source: page.content, target: sectionBodyTarget(page.content, range), newBody: draft }); return null; }
         catch (caught) { return caught instanceof Error ? caught.message : 'Invalid section body'; }
     }, [page.content, range, draft]);
+
+    useEffect(() => () => formatAbort.current?.abort(), []);
+
+    /** Puts the formatted body into the draft only; the Compare tab shows the change and nothing is saved until Save section. */
+    const format = async () => {
+        if (formatting || saving) return;
+        const controller = new AbortController();
+        formatAbort.current = controller;
+        setFormatting(true);
+        setFormatNotice(null);
+        const outcome = await formatSection({ pageTitle: page.title, sectionTitle: range.title ?? 'Introduction', level: range.level, body: draft, signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setFormatting(false);
+        if (!outcome.ok) { setFormatNotice({ tone: 'error', text: outcome.message }); return; }
+        setBeforeFormat(draft);
+        setDraft(outcome.data.content);
+        setCopied(false);
+        setFormatNotice(outcome.warnings.length
+            ? { tone: 'warning', text: `Formatted, but check this before saving: ${outcome.warnings.join(' ')}` }
+            : { tone: 'info', text: 'Formatted. Review it in Preview or Compare, then save the section.' });
+    };
+    const undoFormat = () => {
+        if (beforeFormat === null || formatting) return;
+        setDraft(beforeFormat);
+        setBeforeFormat(null);
+        setFormatNotice(null);
+    };
 
     const close = () => {
         if (saving) return;
@@ -97,11 +129,15 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
                 <div className="flex min-h-0 flex-col border-b border-[var(--color-border-default)] md:border-b-0 md:border-r">
                     <div className="flex shrink-0 items-center justify-between px-5 py-3">
                         <label htmlFor="section-markdown" className="text-sm font-semibold">Markdown</label>
-                        <ReaderActionButton type="button" tooltip={copied ? 'Draft copied' : 'Copy draft'} aria-label="Copy draft" className="rounded p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" onClick={async () => {
-                            try { await navigator.clipboard.writeText(draft); setCopied(true); } catch { setError('Couldn’t copy the draft. Select the text and copy it manually.'); }
-                        }}><Copy size={15} /></ReaderActionButton>
+                        <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outlined" onClick={format} loading={formatting} disabled={saving || !draft.trim()}>Format</Button>
+                            {beforeFormat !== null && <Button size="sm" variant="outlined" onClick={undoFormat} disabled={formatting || saving}>Undo format</Button>}
+                            <ReaderActionButton type="button" tooltip={copied ? 'Draft copied' : 'Copy draft'} aria-label="Copy draft" className="rounded p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]" onClick={async () => {
+                                try { await navigator.clipboard.writeText(draft); setCopied(true); } catch { setError('Couldn’t copy the draft. Select the text and copy it manually.'); }
+                            }}><Copy size={15} /></ReaderActionButton>
+                        </div>
                     </div>
-                    <textarea id="section-markdown" value={draft} onChange={(event) => { setDraft(event.target.value); setCopied(false); }} readOnly={saving} autoFocus spellCheck={false}
+                    <textarea id="section-markdown" value={draft} onChange={(event) => { setDraft(event.target.value); setCopied(false); }} readOnly={saving || formatting} autoFocus spellCheck={false}
                         className="min-h-0 flex-1 resize-none bg-[var(--color-surface-canvas)] px-5 pb-5 font-mono text-sm leading-relaxed text-[var(--color-text-strong)] outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-brand)]" />
                 </div>
                 <div className="flex min-h-0 flex-col">
@@ -116,10 +152,11 @@ export const SectionEditDialog = observer(function SectionEditDialog({ page, ran
                     </div>
                 </div>
             </div>
+ {formatNotice && <p role={formatNotice.tone === 'error' ? 'alert' : 'status'} className={`shrink-0 border-t border-[var(--color-border-default)] px-5 py-3 text-sm ${formatNotice.tone === 'error' ? 'text-[var(--color-error)]' : 'text-[var(--color-text-muted)]'}`}>{formatNotice.text}</p>}
             {(validationError || error) && <p role="alert" className="shrink-0 border-t border-[var(--color-border-default)] px-5 py-3 text-sm text-[var(--color-error)]">{validationError || error}</p>}
             <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--color-border-default)] px-5 py-4">
                 <span className="text-xs text-[var(--color-text-muted)]">{error ? 'Your draft is kept here. Copy it before closing or reloading.' : !snapshot ? 'Checking the latest page…' : null}</span>
-                <div className="flex gap-3"><Button variant="outlined" onClick={close} disabled={saving}>Cancel</Button><Button onClick={save} loading={saving} disabled={!snapshot || !dirty || Boolean(validationError)}>Save section</Button></div>
+                <div className="flex gap-3"><Button variant="outlined" onClick={close} disabled={saving}>Cancel</Button><Button onClick={save} loading={saving} disabled={!snapshot || !dirty || formatting || Boolean(validationError)}>Save section</Button></div>
             </footer>
             <ConfirmationDialog open={confirmDiscard} title="Discard changes?" description="Your unsaved section changes will be lost."
                 confirmLabel="Discard changes" cancelLabel="Keep editing" pending={saving}

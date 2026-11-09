@@ -29,18 +29,26 @@ router.post("/", async (req, res) => {
     explanationModelId,
     meaningModelId,
     doubtModelId,
+    annotationModelId,
+    formatModelId,
     meaningSystemPrompt,
     explanationSystemPrompt,
     doubtSystemPrompt,
+    annotationSystemPrompt,
+    formatSystemPrompt,
   } = req.body as {
     baseUrl: string;
     apiKey: string;
     explanationModelId?: string;
     meaningModelId?: string;
     doubtModelId?: string;
+    annotationModelId?: string;
+    formatModelId?: string;
     meaningSystemPrompt?: string;
     explanationSystemPrompt?: string;
     doubtSystemPrompt?: string;
+    annotationSystemPrompt?: string;
+    formatSystemPrompt?: string;
   };
 
   if (!baseUrl || !apiKey) {
@@ -58,9 +66,13 @@ router.post("/", async (req, res) => {
       explanationModelId,
       meaningModelId,
       doubtModelId,
+      annotationModelId,
+    formatModelId,
       meaningSystemPrompt,
       explanationSystemPrompt,
       doubtSystemPrompt,
+      annotationSystemPrompt,
+    formatSystemPrompt,
     },
     create: {
       userId,
@@ -69,9 +81,13 @@ router.post("/", async (req, res) => {
       explanationModelId,
       meaningModelId,
       doubtModelId,
+      annotationModelId,
+    formatModelId,
       meaningSystemPrompt,
       explanationSystemPrompt,
       doubtSystemPrompt,
+      annotationSystemPrompt,
+    formatSystemPrompt,
     },
   });
 

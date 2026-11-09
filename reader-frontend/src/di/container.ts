@@ -7,6 +7,7 @@ import { SettingsRepoApi } from '@domain/settings/repos/settings-repo-api';
 import { ChatRepoApi } from '@domain/chat/repos/chat-repo-api';
 import { TaskRepoApi } from '@domain/tasks/repos/task-repo-api';
 import { FinanceRepoApi } from '@domain/finance/repos/finance-repo-api';
+import { PageAnnotationRepoApi } from '@domain/page-annotation/repos/page-annotation-repo-api';
 import { TYPES } from './types';
 
 const container = new Container();
@@ -19,5 +20,6 @@ container.bind(TYPES.ISettingsRepo).to(SettingsRepoApi);
 container.bind(TYPES.IChatRepo).to(ChatRepoApi);
 container.bind(TYPES.ITaskRepo).to(TaskRepoApi);
 container.bind(TYPES.IFinanceRepo).to(FinanceRepoApi);
+container.bind(TYPES.IPageAnnotationRepo).to(PageAnnotationRepoApi);
 
 export { container, TYPES };

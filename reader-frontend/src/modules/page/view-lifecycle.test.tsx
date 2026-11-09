@@ -44,7 +44,7 @@ beforeEach(() => {
     fixture.makeStore = (pageId: string) => {
         const lookup = () => observable({ isExpanded: false, history: [], dispose: vi.fn() }, { dispose: false });
         const uiSettingsStore = observable({ sidebarPanel: 'doubt', sidebarPanelOpen: true, focusMode: false, setSidebarPanelOpen(open: boolean) { this.sidebarPanelOpen = open; }, setSidebarPanel(panel: string) { this.sidebarPanel = panel; this.sidebarPanelOpen = true; } });
-        const store = { pageId, uiSettingsStore, meaningStore: lookup(), doubtStore: lookup(), explanationStore: lookup(), dictionaryStore: { isOpen: false }, currentSection: { id: 'first' }, optCurrentPage: null, isOwner: false, readingProgress: 0, motivationQuote: null, dismissMotivation: vi.fn(), mount: vi.fn(), bumpSubpagesVersion: vi.fn() };
+        const store = { pageId, uiSettingsStore, meaningStore: lookup(), doubtStore: lookup(), explanationStore: lookup(), annotationStore: { dispose: vi.fn() }, dictionaryStore: { isOpen: false }, currentSection: { id: 'first' }, optCurrentPage: null, isOwner: false, readingProgress: 0, motivationQuote: null, dismissMotivation: vi.fn(), mount: vi.fn(), bumpSubpagesVersion: vi.fn() };
         fixture.stores.push(store); return store;
     };
     vi.stubGlobal('matchMedia', vi.fn(() => ({ get matches() { return fixture.compact; }, addEventListener: (_: string, cb: () => void) => fixture.mediaListeners.add(cb), removeEventListener: (_: string, cb: () => void) => fixture.mediaListeners.delete(cb) })));
@@ -90,6 +90,7 @@ it('reuses a page store for the same user but isolates changed users, anonymous 
     expect(original.doubtStore.dispose).toHaveBeenCalledOnce();
     expect(original.meaningStore.dispose).toHaveBeenCalledOnce();
     expect(original.explanationStore.dispose).toHaveBeenCalledOnce();
+    expect(original.annotationStore.dispose).toHaveBeenCalledOnce();
     await edit(() => { fixture.auth.optCurrentUser = null; fixture.auth.isAuthenticated = false; });
     expect(fixture.stores).toHaveLength(3);
     expect(host.querySelector('[aria-label="Questions editor"]')).not.toBeNull();

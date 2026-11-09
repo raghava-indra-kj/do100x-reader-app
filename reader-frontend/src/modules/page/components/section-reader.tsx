@@ -1,5 +1,5 @@
 import { ReaderActionButton } from './reader-action-button';
-import { useMemo, useRef, useState, type MouseEvent, type ElementType } from 'react';
+import { useMemo, useRef, useState, type MouseEvent, type ElementType, type ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import { Pencil } from 'lucide-react';
 import { locateSections, type MarkdownSectionRange } from '@reader/md-ast';
@@ -8,11 +8,13 @@ import type { Page } from '@domain/page/models/page';
 import type { Section } from '@domain/page/models/section';
 
 /** The entire reading chunk stays in one renderer, preserving cross-block Markdown context. */
-export function SectionReader({ page, section, maxLevel, onEdit, ...theme }: {
+export function SectionReader({ page, section, maxLevel, onEdit, actions, ...theme }: {
     page: Page;
     section: Section;
     maxLevel: number;
     onEdit: (range: MarkdownSectionRange) => void;
+    /** Extra toolbar buttons shown beside the edit button. */
+    actions?: ReactNode;
 } & Pick<MarkdownRendererProps, 'colors' | 'fontSizes' | 'fonts'>) {
     const containerRef = useRef<HTMLDivElement>(null);
     const ranges = useMemo(() => locateSections(page.content), [page.content]);
@@ -50,11 +52,12 @@ export function SectionReader({ page, section, maxLevel, onEdit, ...theme }: {
     };
 
     return <>
-        {canEdit && selected && <div className="sticky top-0 z-10 mb-2 ml-auto w-fit rounded-md bg-[var(--color-surface-canvas)]">
-            <ReaderActionButton type="button" tooltip={`Edit section: ${selected.title ?? 'Introduction'}`} aria-label={`Edit section: ${selected.title ?? 'Introduction'}`} onClick={() => onEdit(selected)}
+        {((canEdit && selected) || actions) && <div className="sticky top-0 z-10 mb-2 ml-auto flex w-fit items-center gap-1 rounded-md bg-[var(--color-surface-canvas)]">
+            {actions}
+            {canEdit && selected && <ReaderActionButton type="button" tooltip={`Edit section: ${selected.title ?? 'Introduction'}`} aria-label={`Edit section: ${selected.title ?? 'Introduction'}`} onClick={() => onEdit(selected)}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-muted)] transition-colors hover:bg-[var(--color-surface-soft)] hover:text-[var(--color-text-strong)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)]">
                 <Pencil size={14} aria-hidden="true" />
-            </ReaderActionButton>
+            </ReaderActionButton>}
         </div>}
         <div ref={containerRef} onClick={selectClickedSection}>
             <MarkdownRenderer markdown={own ? page.content : section.chunkMarkdown(maxLevel)} document={own ? page.document ?? undefined : undefined} sourceRange={own ? { start, end } : undefined} {...theme} components={components} />

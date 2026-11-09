@@ -8,9 +8,13 @@ export const ModelConfigSchema = z.object({
     explanationModelId: z.string().nullable().optional(),
     meaningModelId: z.string().nullable().optional(),
     doubtModelId: z.string().nullable().optional(),
+    annotationModelId: z.string().nullable().optional(),
+    formatModelId: z.string().nullable().optional(),
     meaningSystemPrompt: z.string().nullable().optional(),
     explanationSystemPrompt: z.string().nullable().optional(),
     doubtSystemPrompt: z.string().nullable().optional(),
+    annotationSystemPrompt: z.string().nullable().optional(),
+    formatSystemPrompt: z.string().nullable().optional(),
 });
 
 export type ModelConfigData = z.infer<typeof ModelConfigSchema>;
@@ -23,9 +27,13 @@ export class ModelConfig {
     readonly explanationModelId?: string;
     readonly meaningModelId?: string;
     readonly doubtModelId?: string;
+    readonly annotationModelId?: string;
+    readonly formatModelId?: string;
     readonly meaningSystemPrompt?: string;
     readonly explanationSystemPrompt?: string;
     readonly doubtSystemPrompt?: string;
+    readonly annotationSystemPrompt?: string;
+    readonly formatSystemPrompt?: string;
 
     constructor(params: ModelConfigData) {
         this.id = params.id;
@@ -35,8 +43,12 @@ export class ModelConfig {
         this.explanationModelId = params.explanationModelId ?? undefined;
         this.meaningModelId = params.meaningModelId ?? undefined;
         this.doubtModelId = params.doubtModelId ?? undefined;
+        this.annotationModelId = params.annotationModelId ?? undefined;
+        this.formatModelId = params.formatModelId ?? undefined;
         this.meaningSystemPrompt = params.meaningSystemPrompt ?? undefined;
         this.explanationSystemPrompt = params.explanationSystemPrompt ?? undefined;
         this.doubtSystemPrompt = params.doubtSystemPrompt ?? undefined;
+        this.annotationSystemPrompt = params.annotationSystemPrompt ?? undefined;
+        this.formatSystemPrompt = params.formatSystemPrompt ?? undefined;
     }
 }

@@ -10,11 +10,11 @@ router.use(requireSession);
 async function resolveSystemPrompt(
   userId: string,
   pageId: string | undefined,
-  actionType: 'meaning' | 'explanation' | 'doubt' | undefined,
+  actionType: 'meaning' | 'explanation' | 'doubt' | 'annotation' | 'format' | undefined,
   defaultSystemPrompt: string
 ): Promise<string> {
-  // 1. Resolve from page hierarchy
-  if (pageId && actionType) {
+  // 1. Resolve from page hierarchy (annotations and formatting have no per-page prompt)
+  if (pageId && actionType && actionType !== 'annotation' && actionType !== 'format') {
     let currentPageId: string | null = pageId;
     while (currentPageId) {
       const pageRow: {
@@ -52,6 +52,8 @@ async function resolveSystemPrompt(
       const globalPrompt = 
         actionType === 'meaning' ? config.meaningSystemPrompt :
         actionType === 'explanation' ? config.explanationSystemPrompt :
+        actionType === 'annotation' ? config.annotationSystemPrompt :
+        actionType === 'format' ? config.formatSystemPrompt :
         config.doubtSystemPrompt;
 
       if (globalPrompt && globalPrompt.trim()) {
@@ -72,7 +74,7 @@ router.post("/", async (req, res) => {
     systemPrompt: string;
     userPrompt: string;
     pageId?: string;
-    actionType?: 'meaning' | 'explanation' | 'doubt';
+    actionType?: 'meaning' | 'explanation' | 'doubt' | 'annotation' | 'format';
   };
 
   // 1. Validate inputs

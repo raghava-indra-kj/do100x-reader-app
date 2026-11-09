@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editableSectionBody, locateSections, replaceSectionBody, sectionBodyTarget } from './section-edit';
+import { editableSectionBody, locateSections, replaceSectionBody, sectionAnchorKeys, sectionBodyTarget, sectionSubtreeSource } from './section-edit';
 
 const edit = (source: string, index: number, newBody: string) => replaceSectionBody({ source, target: sectionBodyTarget(source, locateSections(source)[index]), newBody });
 
@@ -86,5 +86,24 @@ describe('source-scoped section editing', () => {
             expect(updated.startsWith(source.slice(0, range.bodyStart))).toBe(true);
             expect(updated.endsWith(source.slice(range.bodyEnd))).toBe(true);
         }
+    });
+});
+
+describe('section anchors for attached content', () => {
+    it('keys sections by level, occurrence and normalized title, with a preamble key', () => {
+        const source = 'intro\n\n# Same\n\na\n\n## Same  Title\n\nb\n\n# Same\n\nc\n';
+        expect(sectionAnchorKeys(locateSections(source))).toEqual(['preamble', '1:0:same', '2:0:same title', '1:1:same']);
+    });
+    it('changes a key when the heading is renamed', () => {
+        const before = sectionAnchorKeys(locateSections('# One\n\nx'));
+        const after = sectionAnchorKeys(locateSections('# Two\n\nx'));
+        expect(before).not.toEqual(after);
+    });
+    it('covers a heading, its body and every deeper section but not its siblings', () => {
+        const source = '# A\n\na\n\n## B\n\nb\n\n### C\n\nc\n\n## D\n\nd\n\n# E\n\ne\n';
+        const ranges = locateSections(source);
+        expect(sectionSubtreeSource(source, ranges, 1)).toBe('## B\n\nb\n\n### C\n\nc\n\n');
+        expect(sectionSubtreeSource(source, ranges, 0)).toBe('# A\n\na\n\n## B\n\nb\n\n### C\n\nc\n\n## D\n\nd\n\n');
+        expect(sectionSubtreeSource(source, ranges, 3)).toBe('## D\n\nd\n\n');
     });
 });

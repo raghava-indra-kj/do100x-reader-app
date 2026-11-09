@@ -45,6 +45,7 @@ export const PageProvider = observer(function PageProvider({ pageId, children }:
             window.removeEventListener('focus', refreshCollection);
             store.meaningStore.dispose();
             store.explanationStore.dispose();
+            store.annotationStore.dispose();
             store.doubtStore.dispose();
         };
     }, [store]);

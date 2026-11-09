@@ -74,6 +74,35 @@ export function locateSections(source: string, tree: Root = parseSourceTree(sour
     return result;
 }
 
+/**
+ * Stable keys for sections, aligned with `ranges`: `<level>:<occurrence>:<normalized title>`, or `preamble`.
+ * `occurrence` counts earlier headings with the same level and title, so duplicates stay distinct.
+ * Renaming or re-levelling a heading changes its key; that is how attached content is detected as orphaned.
+ */
+export function sectionAnchorKeys(ranges: readonly MarkdownSectionRange[]): string[] {
+    const seen = new Map<string, number>();
+    return ranges.map((range) => {
+        if (range.kind === "preamble") return "preamble";
+        const title = (range.title ?? "").trim().replace(/\s+/g, " ").toLowerCase().slice(0, 150);
+        const base = `${range.level}:${title}`;
+        const occurrence = seen.get(base) ?? 0;
+        seen.set(base, occurrence + 1);
+        return `${range.level}:${occurrence}:${title}`;
+    });
+}
+
+/**
+ * The full source of one section: its heading, its body and every deeper sub-section.
+ * A preamble covers only its own body. `index` addresses `ranges`.
+ */
+export function sectionSubtreeSource(source: string, ranges: readonly MarkdownSectionRange[], index: number): string {
+    const range = ranges[index];
+    if (!range) return "";
+    if (range.kind === "preamble") return source.slice(range.bodyStart, range.bodyEnd);
+    const next = ranges.slice(index + 1).find((item) => item.kind === "heading" && item.level <= range.level);
+    return source.slice(range.headingStart ?? range.bodyStart, next?.headingStart ?? source.length);
+}
+
 /** Remove only boundary line breaks used to separate the body from its heading and neighbors. */
 export function editableSectionBody(source: string, range: MarkdownSectionRange): string {
     return source.slice(range.bodyStart, range.bodyEnd)

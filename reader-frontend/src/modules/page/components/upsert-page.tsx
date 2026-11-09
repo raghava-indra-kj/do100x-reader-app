@@ -10,6 +10,8 @@ import { Input } from "@modules/core/ui/primitives/input";
 import { toast } from "@modules/core/ui/primitives/toast/toast";
 import { readerPageWithIdRouteValue } from "@boot/routes";
 import { setDialogConsuming } from "../clipboard-paste";
+import { formatPage } from "../page-format-service";
+import type { PageFormatMode } from "../page-format-ai";
 import { useNavigate } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePageStore } from "../store";
@@ -31,7 +33,7 @@ export interface UpsertPageDialogProps {
 
 export function UpsertPageDialog({
     open,
-    onOpenChange,
+    onOpenChange: onOpenChangeProp,
     parentPageId,
     page,
     editPageId,
@@ -50,6 +52,20 @@ export function UpsertPageDialog({
     const [contentVersion, setContentVersion] = useState<number | null>(null);
     const [isLoadingPage, setIsLoadingPage] = useState(false);
     const [category, setCategory] = useState<string | null>(null);
+    const [formatting, setFormatting] = useState<PageFormatMode | null>(null);
+    const [formatUndo, setFormatUndo] = useState<{ title: string; category: string | null; content: string } | null>(null);
+    const [formatNotice, setFormatNotice] = useState<{ tone: 'info' | 'warning' | 'error'; text: string } | null>(null);
+    const formatAbort = useRef<AbortController | null>(null);
+    /** Closing the dialog also stops a running format and drops its undo, so reopening starts clean. */
+    const onOpenChange = useCallback((next: boolean) => {
+        if (!next) {
+            formatAbort.current?.abort();
+            setFormatting(null);
+            setFormatUndo(null);
+            setFormatNotice(null);
+        }
+        onOpenChangeProp(next);
+    }, [onOpenChangeProp]);
     const [meaningSystemPrompt, setMeaningSystemPrompt] = useState("");
     const [explanationSystemPrompt, setExplanationSystemPrompt] = useState("");
     const [doubtSystemPrompt, setDoubtSystemPrompt] = useState("");
@@ -121,6 +137,41 @@ export function UpsertPageDialog({
             return () => { cancelled = true; loadingRef.current = false; };
         }
     }, [open, isEdit, editId, page, initialTitle, initialContent, initialCategory]);
+
+    useEffect(() => () => formatAbort.current?.abort(), []);
+
+    /** Fills only an empty title or category; formatted content replaces the body and can be undone. Nothing is saved here. */
+    const runFormat = useCallback(async (mode: PageFormatMode) => {
+        if (formatting) return;
+        const controller = new AbortController();
+        formatAbort.current = controller;
+        setFormatting(mode);
+        setFormatNotice(null);
+        const outcome = await formatPage({ mode, title, category, content, signal: controller.signal });
+        if (controller.signal.aborted) return;
+        setFormatting(null);
+        if (!outcome.ok) { setFormatNotice({ tone: 'error', text: outcome.message }); return; }
+        const { title: foundTitle, category: foundCategory, content: formatted } = outcome.data;
+        const fillTitle = Boolean(foundTitle) && !title.trim();
+        const fillCategory = Boolean(foundCategory) && !(category ?? '').trim();
+        if (!fillTitle && !fillCategory && !formatted) { setFormatNotice({ tone: 'info', text: 'Title and category are already filled in.' }); return; }
+        setFormatUndo({ title, category, content });
+        if (fillTitle) setTitle((current) => current.trim() ? current : foundTitle!);
+        if (fillCategory) setCategory((current) => (current ?? '').trim() ? current : foundCategory!);
+        if (formatted) setContent(formatted);
+        setFormatNotice(outcome.warnings.length
+            ? { tone: 'warning', text: `Formatted, but check this before saving: ${outcome.warnings.join(' ')}` }
+            : { tone: 'info', text: 'Formatted. Check the result, then save. Undo restores what you had.' });
+    }, [formatting, title, category, content]);
+
+    const undoFormat = useCallback(() => {
+        if (!formatUndo) return;
+        setTitle(formatUndo.title);
+        setCategory(formatUndo.category);
+        setContent(formatUndo.content);
+        setFormatUndo(null);
+        setFormatNotice(null);
+    }, [formatUndo]);
 
     const applyPaste = useCallback(
         (extracted: ExtractedPaste) => {
@@ -205,15 +256,30 @@ export function UpsertPageDialog({
                 <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">
                     {isEdit ? "Edit page" : "New page"}
                 </h2>
-                <Button
-                    variant="outlined"
-                    size="sm"
-                    onClick={() => setReadNowOpen(true)}
-                    disabled={!content.trim()}
-                >
-                    Read now
-                </Button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Format with AI">
+                        {([['extract', 'Extract details'], ['format', 'Format content'], ['both', 'Extract and format']] as const).map(([mode, label]) => (
+                            <Button key={mode} variant="outlined" size="sm" onClick={() => runFormat(mode)} loading={formatting === mode} disabled={formatting !== null || !content.trim()}>
+                                {label}
+                            </Button>
+                        ))}
+                        {formatUndo && <Button variant="outlined" size="sm" onClick={undoFormat} disabled={formatting !== null}>Undo format</Button>}
+                    </div>
+                    <Button
+                        variant="outlined"
+                        size="sm"
+                        onClick={() => setReadNowOpen(true)}
+                        disabled={!content.trim()}
+                    >
+                        Read now
+                    </Button>
+                </div>
             </div>
+            {formatNotice && (
+                <p role={formatNotice.tone === 'error' ? 'alert' : 'status'} className={`mx-6 mb-3 shrink-0 text-sm ${formatNotice.tone === 'error' ? 'text-[var(--color-error)]' : 'text-[var(--color-text-muted)]'}`}>
+                    {formatNotice.text}
+                </p>
+            )}
             <div className="flex flex-col gap-5 px-6 pb-4 min-h-0 flex-1">
                 <div className="flex gap-4 shrink-0">
                     <div className="flex flex-col gap-2 flex-1">
@@ -240,6 +306,7 @@ export function UpsertPageDialog({
                         value={content}
                         onChange={(e) => setContent(e.target.value)}
                         onPaste={handleTextareaPaste}
+                        readOnly={formatting !== null}
                         placeholder="Write your content here…"
                         className="w-full flex-1 resize-none border border-[var(--color-border-default)] bg-[var(--color-surface-raised)] text-[var(--color-text-strong)] placeholder:text-[var(--color-text-subtle)] px-4 py-2.5 text-sm rounded-[var(--radius-md)] transition-colors outline-none overflow-y-auto"
                     />
@@ -304,7 +371,7 @@ export function UpsertPageDialog({
                 <Button
                     onClick={handleSubmit}
                     loading={submitState.isLoading}
-                    disabled={!title.trim() || isLoadingPage || (isEdit && contentVersion === null)}
+                    disabled={!title.trim() || isLoadingPage || formatting !== null || (isEdit && contentVersion === null)}
                 >
                     {isEdit ? "Save" : "Create"}
                 </Button>

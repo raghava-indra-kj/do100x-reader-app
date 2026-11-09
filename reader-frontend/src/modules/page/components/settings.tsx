@@ -93,6 +93,11 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                     <p className="text-xs text-[var(--color-text-muted)]">Use shorter lines for prose, or more room for tables and code.</p>
                 </div>
                 <div className="flex flex-col gap-2">
+                    <FormLabel>Key takeaways</FormLabel>
+                    <Observer>{() => <div className="flex gap-2" role="group" aria-label="Key takeaways placement">{(['before', 'after'] as const).map(placement => <Button key={placement} size="sm" variant={uiSettings.annotationPlacement === placement ? 'secondary' : 'outlined'} aria-pressed={uiSettings.annotationPlacement === placement} onClick={() => uiSettings.setAnnotationPlacement(placement)}>{placement === 'before' ? 'Before content' : 'After content'}</Button>)}</div>}</Observer>
+                    <p className="text-xs text-[var(--color-text-muted)]">Show a section’s takeaways above or below its content.</p>
+                </div>
+                <div className="flex flex-col gap-2">
                     <FormLabel>Default section depth</FormLabel>
                     <p className="text-xs text-[var(--color-text-muted)]">H1 reads larger chapters; deeper levels split them into smaller sections.</p>
                     <Observer>

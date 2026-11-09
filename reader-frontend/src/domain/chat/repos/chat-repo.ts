@@ -8,7 +8,7 @@ export interface IChatRepo {
         systemPrompt: string;
         userPrompt: string;
         pageId?: string;
-        actionType?: 'meaning' | 'explanation' | 'doubt';
+        actionType?: 'meaning' | 'explanation' | 'doubt' | 'annotation' | 'format';
         signal?: AbortSignal;
     }): AsyncResult<ChatCompletionResult, AppError>;
 }

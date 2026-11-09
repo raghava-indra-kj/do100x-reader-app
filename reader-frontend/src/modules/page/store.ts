@@ -13,6 +13,7 @@ import { PageReadingState } from './reading-state';
 import { MeaningStore } from './meaning-store';
 import { DoubtStore } from './doubt-store';
 import { ExplanationStore } from './explanation-store';
+import { PageAnnotationStore } from './page-annotation-store';
 import type { Comment } from '@domain/comment/models/comment';
 import { documentMetadata } from '@reader/md-ast';
 import { READER_COMPACT_QUERY } from './reader-layout';
@@ -53,6 +54,7 @@ export class PageStore {
     meaningStore: MeaningStore;
     doubtStore: DoubtStore;
     explanationStore: ExplanationStore;
+    annotationStore: PageAnnotationStore;
     readingState: PageReadingState;
     private _currentPage: Page | null;
     private _currentSectionId: string | null;
@@ -78,6 +80,7 @@ export class PageStore {
         this.meaningStore = new MeaningStore(this);
         this.doubtStore = new DoubtStore(this);
         this.explanationStore = new ExplanationStore(this);
+        this.annotationStore = new PageAnnotationStore(this);
         this.readingState = new PageReadingState({ pageId });
         this._currentPage = null;
         this._currentSectionId = null;
@@ -361,6 +364,7 @@ export class PageStore {
                 }
                 this.loadCommentsCount();
                 this.loadVocabCount();
+                this.annotationStore.load();
             } else {
                 this._currentPage = null;
                 this._currentSectionId = null;

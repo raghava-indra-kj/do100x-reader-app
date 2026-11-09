@@ -621,6 +621,7 @@ model page {
 
   quizzes quiz[]
   homePreferences reader_preferences[]
+  annotations page_annotation[]
   @@index([userId, deletedAt, updatedAt])
   @@unique([userId, captureKey])
   @@index([captureExpiresAt, id])
@@ -802,6 +803,32 @@ model comment {
   @@index([pageId])
 }
 
+/// Generated or hand-written reading aids (summary, key takeaway, ...) attached to a page or one of its headings.
+model page_annotation {
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  userId        String   @db.VarChar(36)
+  pageId        String   @db.VarChar(36)
+  /// { type: 'page' } or { type: 'heading', key, level, titleSnapshot }
+  anchor        Json
+  kind          String   @db.VarChar(40)
+  title         String   @db.VarChar(500)
+  content       String   @db.LongText
+  format        String   @default("markdown") @db.VarChar(20)
+  displayOrder  Int      @default(0)
+  /// 'before' | 'after'; null follows the reader's global placement setting.
+  placement     String?  @db.VarChar(10)
+  /// Hash of the source the item was written for; a mismatch marks it stale.
+  sourceHash    String?  @db.Char(64)
+  /// 'ai' | 'manual'
+  origin        String   @default("ai") @db.VarChar(10)
+  createdAt     DateTime @default(now()) @db.DateTime(6)
+  updatedAt     DateTime @updatedAt @db.DateTime(6)
+
+  page page @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@index([pageId, userId, displayOrder])
+}
+
 model vocabulary {
   id                  String   @id @default(uuid()) @db.VarChar(36)
   userId              String   @db.VarChar(36)
@@ -848,9 +875,13 @@ model model_config {
   explanationModelId      String? @db.VarChar(255)
   meaningModelId          String? @db.VarChar(255)
   doubtModelId            String? @db.VarChar(255)
+  annotationModelId       String? @db.VarChar(255)
+  formatModelId           String? @db.VarChar(255)
   meaningSystemPrompt     String? @db.Text
   explanationSystemPrompt String? @db.Text
   doubtSystemPrompt       String? @db.Text
+  annotationSystemPrompt  String? @db.Text
+  formatSystemPrompt      String? @db.Text
 }
 
 model user_model {
