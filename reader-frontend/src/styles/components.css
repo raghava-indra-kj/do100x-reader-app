@@ -74,9 +74,13 @@
     --dialog-bg: var(--color-surface-raised);
     --dialog-radius: var(--radius-xl);
     --dialog-padding: var(--space-8);
+    --reader-comment-bg: var(--amber-100);
+    --reader-comment-focus-bg: #ffe2aa;
 }
 
 .dark {
+    --reader-comment-bg: var(--navy-700);
+    --reader-comment-focus-bg: var(--navy-600);
     --button-primary-bg: var(--coral-300);
     --button-primary-text: var(--stone-950);
     --button-primary-hover-bg: var(--coral-200);
@@ -84,6 +88,8 @@
 }
 
 .forest-dark {
+    --reader-comment-bg: var(--green-900);
+    --reader-comment-focus-bg: var(--green-800);
     --button-primary-bg: var(--green-400);
     --button-primary-text: var(--green-950);
     --button-primary-hover-bg: var(--green-300);

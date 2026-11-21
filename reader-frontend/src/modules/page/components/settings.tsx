@@ -64,7 +64,7 @@ export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogPro
                         <span>{label}</span>
                     </label>)}
                 </div>
-                <p id={`${choicesId}-width-hint`}>Wide tables can use the space beside the text.</p>
+                <p id={`${choicesId}-width-hint`}>Applies to text and tables.</p>
             </fieldset>
             <div className="reader-settings-field">
                 <span>Font</span>

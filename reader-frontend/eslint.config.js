@@ -19,4 +19,10 @@ export default defineConfig([
             globals: globals.browser,
         },
     },
+    {
+        files: ['src/modules/settings/*.tsx'],
+        rules: {
+            'react-refresh/only-export-components': ['error', { allowConstantExport: true, extraHOCs: ['observer'] }],
+        },
+    },
 ])

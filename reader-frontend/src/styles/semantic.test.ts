@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { defaultMermaidTheme } from '@reader/md-view';
+import { PageColorSchema } from '../modules/page/theme/page-color-schema';
 
 const primitives = readFileSync(new URL('./primitives.css', import.meta.url), 'utf8');
 const semantic = readFileSync(new URL('./semantic.css', import.meta.url), 'utf8');
@@ -45,6 +47,39 @@ function contrast(foreground: string, background: string) {
 }
 
 describe('semantic theme readability', () => {
+    it('keeps Mermaid labels readable on each diagram fill', () => {
+        for (const tone of ['primary', 'secondary', 'tertiary'] as const) {
+            expect(contrast(defaultMermaidTheme[`${tone}TextColor`], defaultMermaidTheme[`${tone}Color`]), tone).toBeGreaterThanOrEqual(4.5);
+        }
+        for (const { label, value } of PageColorSchema.VALUES) {
+            expect(contrast(value.calloutText, value.calloutBg), `${label} notes and edge labels`).toBeGreaterThanOrEqual(4.5);
+            expect(contrast(value.body, value.surfaceBg), `${label} messages and actors`).toBeGreaterThanOrEqual(4.5);
+        }
+    });
+
+    it.each(PageColorSchema.VALUES)('$label keeps annotated text and links readable', theme => {
+        const color = palette(`.${theme.id}`);
+        for (const fill of ['--reader-comment-bg', '--reader-comment-focus-bg']) {
+            for (const ink of ['body', 'muted', 'link', 'linkHover'] as const) {
+                expect(contrast(theme.value[ink], color(fill)), `${ink} on ${fill}`).toBeGreaterThanOrEqual(4.5);
+            }
+        }
+    });
+
+    it('keeps fenced code syntax readable across Reader palettes', () => {
+        const css = readFileSync(new URL('../../../packages/md-view/src/md-view-hljs.css', import.meta.url), 'utf8');
+        const lightCode = declarations(css, '.md-view');
+        const darkCode = { ...lightCode, ...declarations(css, '.md-view[data-md-code-scheme="dark"]') };
+        for (const theme of PageColorSchema.VALUES) {
+            const background = theme.value.codeBlockBg;
+            for (const [token, color] of Object.entries(darkCode)) {
+                expect(contrast(color, background), `${theme.label} ${token}`).toBeGreaterThanOrEqual(4.5);
+            }
+        }
+        for (const [token, color] of Object.entries(lightCode)) {
+            expect(contrast(color, '#f6f8fa'), `Default light code ${token}`).toBeGreaterThanOrEqual(4.5);
+        }
+    });
     it.each([':root', '.light', '.dark', '.forest-dark'])('%s keeps primary labels readable in every interaction state', theme => {
         const color = palette(theme);
         for (const state of ['--color-brand', '--color-brand-hover', '--color-brand-active']) {

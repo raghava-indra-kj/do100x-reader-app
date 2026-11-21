@@ -4,10 +4,29 @@ import { resolve } from 'path'
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-    plugins: [react(), tailwindcss()],
+    plugins: [
+        react(),
+        tailwindcss(),
+        {
+            name: 'separate-local-dev-cache',
+            apply: 'serve',
+            config(config, env) {
+                const port = config.server?.port;
+                if (env.isPreview || env.mode === 'test' || process.env.VITEST || config.cacheDir !== undefined) return;
+                // A preview dev server may optimize a different dependency set while the main app is open.
+                if (port && port !== 5173) return { cacheDir: `node_modules/.vite-dev-${port}` };
+            },
+        },
+    ],
+    optimizeDeps: {
+        // Discover dependencies of lazy routes before an open tab requests their chunks.
+        entries: ['index.html', 'src/modules/**/*.tsx', '!src/modules/**/*.test.tsx'],
+    },
     server: {
         proxy: {
             '/backend-api': 'http://localhost:3000',
+            '/sse': 'http://localhost:3000',
+            '/messages': 'http://localhost:3000',
         },
     },
     resolve: {

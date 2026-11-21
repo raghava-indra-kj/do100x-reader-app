@@ -201,6 +201,7 @@
 }
 
 .md-view .md-code-block {
+  --_md-code-ink: #243044;
   position: relative;
   margin: 1rem 0;
   padding: 1rem;
@@ -211,6 +212,10 @@
   background-color: var(--md-color-codeBlockBg, var(--_md-surface));
   color: var(--md-color-codeBlockText, var(--_md-code-ink));
   font-size: var(--md-font-size-code, 0.875em);
+}
+
+.md-view[data-md-code-scheme="dark"] .md-code-block {
+  --_md-code-ink: #e6edf3;
 }
 
 .md-view .md-code-block-language {

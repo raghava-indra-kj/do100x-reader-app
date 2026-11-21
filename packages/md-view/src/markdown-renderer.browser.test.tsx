@@ -23,6 +23,28 @@ it('keeps embedded components mounted through CSS appearance changes', async () 
   await act(async () => root.unmount());
 });
 
+it('tracks the fenced code surface independently of the page during theme changes', async () => {
+  const container = document.createElement('div');
+  document.body.append(container);
+  const root = createRoot(container);
+  const render = (surface: string, block: string) => act(async () => {
+    const style = { '--md-color-surfaceBg': surface, '--md-color-codeBlockBg': block } as CSSProperties;
+    root.render(<MarkdownRenderer markdown={'```js\nconst a = "hello";\n```'} style={style} />);
+  });
+  try {
+    await render('#faf6ef', '#252a30');
+    const view = container.querySelector<HTMLElement>('.md-view')!;
+    expect(view.dataset.mdScheme).toBe('light');
+    expect(view.dataset.mdCodeScheme).toBe('dark');
+    expect(view.querySelector('.hljs-string')).toBeTruthy();
+    await render('#101d31', '#f6f8fa');
+    expect(view.dataset.mdScheme).toBe('dark');
+    expect(view.dataset.mdCodeScheme).toBe('light');
+  } finally {
+    await act(async () => root.unmount());
+  }
+});
+
 it('hydrates render-local IDs without mismatching server markup', async () => {
   const recoverable = vi.fn();
   const container = document.createElement('div'); document.body.append(container);

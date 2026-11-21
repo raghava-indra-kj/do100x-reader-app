@@ -1,0 +1,90 @@
+.account-profile {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+
+.account-profile-photo {
+    position: relative;
+    width: 54px;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: var(--color-brand-soft);
+    color: var(--color-brand-on-soft);
+    font: 600 1.5rem/1 var(--font-serif);
+}
+.account-profile-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.account-profile-identity { min-width: 0; }
+.account-profile-identity h2 { margin: 0; color: var(--color-text-strong); font-size: 1.15rem; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.account-profile-identity p { margin: 4px 0 0; display: flex; align-items: center; gap: 7px; color: var(--color-text-body); font-size: .875rem; overflow-wrap: anywhere; }
+.account-profile-identity p img { width: 14px; height: 14px; }
+.account-profile > button { justify-self: start; white-space: nowrap; }
+
+.account-preferences .settings-card-heading { margin: 0 0 4px; }
+.account-pref-row {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+    gap: 0 14px;
+    align-items: start;
+    padding-block: 20px;
+}
+.account-pref-row + .account-pref-row { border-top: 1px solid var(--color-border-subtle); }
+.account-pref-row:last-child { padding-bottom: 0; }
+.account-pref-icon { margin-top: 3px; color: var(--color-text-muted); }
+.account-pref-copy h3 { margin: 0; font-size: .975rem; font-weight: 600; line-height: 1.45; color: var(--color-text-strong); }
+.account-pref-copy .settings-description { margin: 3px 0 0; }
+.account-pref-detail { grid-column: 2 / -1; min-width: 0; margin-top: 15px; }
+.account-time-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; max-width: 34rem; }
+.account-time-summary { margin: 0; padding: 14px 16px; border-radius: 9px; background: var(--color-surface-canvas); }
+.account-time-summary dt { font-size: .8125rem; color: var(--color-text-muted); }
+.account-time-summary dd { margin: 3px 0 0; font-size: .9375rem; color: var(--color-text-strong); font-weight: 550; }
+.account-time-form { display: grid; justify-items: start; gap: 16px; }
+.account-time-form .account-time-values { width: 100%; }
+.account-time-form input { min-width: 0; }
+
+.account-pref-switch {
+    min-width: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    margin-top: -7px;
+    cursor: pointer;
+    border-radius: 8px;
+}
+.account-switch-track {
+    display: flex;
+    align-items: center;
+    width: 39px;
+    height: 23px;
+    padding: 2px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 100px;
+    background: var(--color-surface-soft);
+}
+.account-switch-track > span { width: 17px; height: 17px; border-radius: inherit; background: var(--color-text-muted); }
+.account-pref-switch[aria-checked='true'] .account-switch-track { border-color: var(--color-brand); background: var(--color-brand); }
+.account-pref-switch[aria-checked='true'] .account-switch-track > span { transform: translateX(16px); background: var(--color-text-on-brand); }
+.account-pref-switch:disabled { cursor: wait; opacity: .6; }
+.account-feedback-error { color: var(--color-error-on-soft); font-size: .84rem; margin: 8px 0 0; }
+.account-feedback-saved { display: inline-flex; gap: 6px; align-items: center; color: var(--color-success-on-soft); font-size: .82rem; margin-top: 8px; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .account-switch-track, .account-switch-track > span { transition: background-color 150ms, transform 150ms; }
+}
+@media (max-width: 560px) {
+    .account-profile { gap: 12px; }
+    .account-profile-photo { width: 44px; }
+    .account-profile > button, .account-pref-row > button:not([role='switch']), .account-time-form > button { min-height: 40px; }
+    .account-pref-row { column-gap: 10px; }
+    .account-pref-detail { grid-column: 1 / -1; }
+    .account-time-values { gap: 12px; }
+}
+@media (max-width: 440px) {
+    .account-profile { grid-template-columns: auto minmax(0, 1fr); }
+    .account-profile > button { grid-column: 2; }
+    .account-time-form .account-time-values { grid-template-columns: 1fr; }
+}

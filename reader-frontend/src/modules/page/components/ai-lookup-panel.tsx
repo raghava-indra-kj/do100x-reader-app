@@ -31,7 +31,7 @@ import {
     Ban
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { settingsPageRoute } from '@boot/routes';
+import { settingsSectionRoute } from '@boot/routes';
 import type { ChatErrorDetails } from '@domain/chat/models/chat-types';
 import '@reader/md-view/md-view.css';
 import '@reader/md-view/md-view-hljs.css';
@@ -154,11 +154,11 @@ function ErrorCard({
                     <Button 
                         size="sm" 
                         variant="outlined" 
-                        onClick={() => navigate(settingsPageRoute)}
+                        onClick={() => navigate(settingsSectionRoute('ai'))}
                         className="flex items-center gap-1.5 text-xs"
                     >
                         <Settings size={13} />
-                        <span>Open settings</span>
+                        <span>AI model settings</span>
                     </Button>
                 )}
 

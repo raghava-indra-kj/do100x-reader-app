@@ -8,7 +8,7 @@
     padding-inline: var(--reader-gutter);
     padding-bottom: 0;
 }
-.reader-document-blocks > * {
+.reader-document-blocks {
     max-inline-size: var(--reader-prose-width);
     margin-inline: auto;
 }
@@ -19,13 +19,6 @@
     margin-bottom: 40px;
 }
 
-/* Let top-level tables grow into the margins of the prose column. */
-.reader-document-blocks > .md-source-block:has(> .md-table-wrap) {
-    inline-size: fit-content;
-    min-inline-size: min(100%, var(--reader-prose-width));
-    max-inline-size: 100%;
-}
-.reader-document-blocks .md-table-wrap { max-inline-size: 100%; }
 .reader-page-layout .reader-reading-surface:has(.reader-block-selection-active) {
     padding-inline-start: max(28px, var(--reader-gutter));
 }

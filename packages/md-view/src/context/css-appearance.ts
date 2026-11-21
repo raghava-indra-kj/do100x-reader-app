@@ -20,7 +20,12 @@ export function isDarkColor(color: string): boolean | undefined {
 
 /** Diagram engines need concrete colors; read them from the same CSS as the prose. */
 export function useCssAppearance(ref: RefObject<HTMLElement | null>) {
-  const [appearance, setAppearance] = useState<{ colors: MdViewColors | null; mermaid: MdViewMermaidTheme; scheme: 'light' | 'dark' }>({ colors: null, mermaid: defaultMermaidTheme, scheme: 'light' });
+  const [appearance, setAppearance] = useState<{
+    colors: MdViewColors | null;
+    mermaid: MdViewMermaidTheme;
+    scheme: 'light' | 'dark';
+    codeScheme: 'light' | 'dark';
+  }>({ colors: null, mermaid: defaultMermaidTheme, scheme: 'light', codeScheme: 'light' });
   useEffect(() => {
     const root = ref.current;
     if (!root) return;
@@ -36,7 +41,12 @@ export function useCssAppearance(ref: RefObject<HTMLElement | null>) {
       const fallback = dark ? { ...light, h1: '#e6edf3', body: '#e6edf3', surfaceBg: '#161b22', codeBlockBg: '#0d1117', border: '#30363d', borderStrong: '#6e7681' } : light;
       const colors = Object.fromEntries(Object.entries(fallback).map(([key, value]) => [key, css.getPropertyValue(`--md-color-${key}`).trim() || value])) as MdViewColors;
       const mermaid = Object.fromEntries(Object.entries(defaultMermaidTheme).map(([key, value]) => [key, css.getPropertyValue(`--md-mermaid-${key}`).trim() || value])) as MdViewMermaidTheme;
-      const next = { colors, mermaid, scheme: dark ? 'dark' as const : 'light' as const };
+      const darkCode = isDarkColor(colors.codeBlockBg) ?? dark;
+      const next = {
+        colors, mermaid,
+        scheme: dark ? 'dark' as const : 'light' as const,
+        codeScheme: darkCode ? 'dark' as const : 'light' as const,
+      };
       setAppearance(previous => JSON.stringify(previous) === JSON.stringify(next) ? previous : next);
     };
     update();

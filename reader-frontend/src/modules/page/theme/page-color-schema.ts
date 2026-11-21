@@ -20,8 +20,8 @@ export class PageColorSchema {
         h6: '#3c3833',
         body: '#3c3833',
         muted: '#6b655b',
-        link: '#d8431a',
-        linkHover: '#b33414',
+        link: '#b33414',
+        linkHover: '#8d2911',
         codeInlineBg: '#ece1cf',
         codeInlineText: '#2a2723',
         codeBlockBg: '#252a30',
@@ -35,7 +35,7 @@ export class PageColorSchema {
         scrollbarThumb: '#ddcfb6',
         scrollbarTrack: '#f4ecdf',
         tableHeaderText: '#1c1a17',
-        tableRowBg: '#ffffff',
+        tableRowBg: '#fdfbf7',
         errorColor: '#c6453f',
     });
 
@@ -47,7 +47,7 @@ export class PageColorSchema {
         h5: '#f4ecdf',
         h6: '#f4ecdf',
         body: '#f4ecdf',
-        muted: '#8a8478',
+        muted: '#a6a097',
         link: '#f79871',
         linkHover: '#fabfa4',
         codeInlineBg: '#16263f',
@@ -91,7 +91,7 @@ export class PageColorSchema {
         scrollbarThumb: '#1b5836',
         scrollbarTrack: '#041f10',
         tableHeaderText: '#ebf7ee',
-        tableRowBg: '#124428',
+        tableRowBg: '#0a331d',
         errorColor: '#f87171',
     });
 

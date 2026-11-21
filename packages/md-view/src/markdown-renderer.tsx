@@ -92,7 +92,8 @@ export function MarkdownRenderer({
       <MdViewMermaidContext.Provider value={appearance.mermaid}>
       <EmbeddedContentContext.Provider value={embeds ?? {}}>
         <MdViewLinkContext.Provider value={onLinkClick ?? null}>
-          <div ref={rootRef} className={`md-view ${className ?? ""}`.trim()} data-md-document={sourceFingerprint(markdown)} data-md-scheme={appearance.scheme} style={style}>
+          <div ref={rootRef} className={`md-view ${className ?? ""}`.trim()} data-md-document={sourceFingerprint(markdown)}
+            data-md-scheme={appearance.scheme} data-md-code-scheme={appearance.codeScheme} style={style}>
             <ErrorBoundary fallback={markdown} resetKey={markdown}>
               <Markdown
                 remarkPlugins={REMARK_PLUGINS}

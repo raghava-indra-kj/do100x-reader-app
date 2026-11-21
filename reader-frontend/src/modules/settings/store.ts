@@ -1,273 +1,161 @@
-import { makeObservable, observable, action, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction } from 'mobx';
+import { isAxiosError } from 'axios';
 import { toast } from '@modules/core/ui/primitives/toast';
 import { getModelConfig, saveModelConfig, getUserModels, createUserModel, updateUserModel, deleteUserModel } from '@domain/settings/services/settings-service';
 import type { UserModel } from '@domain/settings/models/user-model';
+import type { ModelConfig } from '@domain/settings/models/model-config';
+
+const configDefaults = {
+    baseUrl: '', apiKey: '',
+    explanationModelId: '', meaningModelId: '', doubtModelId: '', formatModelId: '',
+    explanationSystemPrompt: '', meaningSystemPrompt: '', doubtSystemPrompt: '', formatSystemPrompt: '',
+};
+
+type ConfigDraft = typeof configDefaults;
+const configKeys = Object.keys(configDefaults) as (keyof ConfigDraft)[];
+const emptyModel = { name: '', modelId: '', baseUrl: '', apiKey: '' };
+export type ModelDraft = typeof emptyModel;
+type SavedModel = Omit<UserModel, 'userId'>;
+
+function configDraft(config?: ModelConfig): ConfigDraft {
+    const draft = { ...configDefaults };
+    if (config) {
+        for (const key of configKeys) draft[key] = config[key] ?? '';
+    }
+    return draft;
+}
 
 export class SettingsStore {
-
-    baseUrlInput: string = '';
-    apiKeyInput: string = '';
-    
-    explanationModelIdInput: string = '';
-    meaningModelIdInput: string = '';
-    doubtModelIdInput: string = '';
-    formatModelIdInput: string = '';
-
-    meaningSystemPromptInput: string = '';
-    explanationSystemPromptInput: string = '';
-    doubtSystemPromptInput: string = '';
-    formatSystemPromptInput: string = '';
-    
-    newModelNameInput: string = '';
-    newModelIdInput: string = '';
-    newModelBaseUrlInput: string = '';
-    newModelApiKeyInput: string = '';
-
-    // Edit model state
+    config = configDraft();
+    savedConfig = configDraft();
+    userModels: SavedModel[] = [];
+    loaded = false;
+    isLoading = false;
+    loadError = '';
+    isSavingConfig = false;
+    modelDraft: ModelDraft | null = null;
     editingModelId: string | null = null;
-    editModelNameInput: string = '';
-    editModelIdInput: string = '';
-    editModelBaseUrlInput: string = '';
-    editModelApiKeyInput: string = '';
-    isUpdatingModel: boolean = false;
-
-    isLoading: boolean = false;
-    isSavingConfig: boolean = false;
-    isAddingModel: boolean = false;
-    deletingModelIds = new Set<string>();
-
-    userModels: UserModel[] = [];
+    isSavingModel = false;
+    deletingModelId: string | null = null;
 
     constructor() {
-        makeObservable(this, {
-            baseUrlInput: observable,
-            apiKeyInput: observable,
-            explanationModelIdInput: observable,
-            meaningModelIdInput: observable,
-            doubtModelIdInput: observable,
-            formatModelIdInput: observable,
-            meaningSystemPromptInput: observable,
-            explanationSystemPromptInput: observable,
-            doubtSystemPromptInput: observable,
-            formatSystemPromptInput: observable,
-            newModelNameInput: observable,
-            newModelIdInput: observable,
-            newModelBaseUrlInput: observable,
-            newModelApiKeyInput: observable,
-            editingModelId: observable,
-            editModelNameInput: observable,
-            editModelIdInput: observable,
-            editModelBaseUrlInput: observable,
-            editModelApiKeyInput: observable,
-            isUpdatingModel: observable,
-            isLoading: observable,
-            isSavingConfig: observable,
-            isAddingModel: observable,
-            deletingModelIds: observable,
-            userModels: observable,
-            
-            setBaseUrlInput: action,
-            setApiKeyInput: action,
-            setExplanationModelIdInput: action,
-            setMeaningModelIdInput: action,
-            setDoubtModelIdInput: action,
-            setFormatModelIdInput: action,
-            setMeaningSystemPromptInput: action,
-            setExplanationSystemPromptInput: action,
-            setDoubtSystemPromptInput: action,
-            setFormatSystemPromptInput: action,
-            setNewModelNameInput: action,
-            setNewModelIdInput: action,
-            setNewModelBaseUrlInput: action,
-            setNewModelApiKeyInput: action,
-            startEditingModel: action,
-            cancelEditingModel: action,
-            setEditModelNameInput: action,
-            setEditModelIdInput: action,
-            setEditModelBaseUrlInput: action,
-            setEditModelApiKeyInput: action,
-            updateModel: action,
-            load: action,
-            saveConfig: action,
-            addModel: action,
-            deleteModel: action,
-        });
+        makeAutoObservable(this, {}, { autoBind: true });
     }
 
-    setBaseUrlInput(val: string) { this.baseUrlInput = val; }
-    setApiKeyInput(val: string) { this.apiKeyInput = val; }
-    setExplanationModelIdInput(val: string) { this.explanationModelIdInput = val; }
-    setMeaningModelIdInput(val: string) { this.meaningModelIdInput = val; }
-    setDoubtModelIdInput(val: string) { this.doubtModelIdInput = val; }
-    setFormatModelIdInput(val: string) { this.formatModelIdInput = val; }
-    setMeaningSystemPromptInput(val: string) { this.meaningSystemPromptInput = val; }
-    setExplanationSystemPromptInput(val: string) { this.explanationSystemPromptInput = val; }
-    setDoubtSystemPromptInput(val: string) { this.doubtSystemPromptInput = val; }
-    setFormatSystemPromptInput(val: string) { this.formatSystemPromptInput = val; }
-    setNewModelNameInput(val: string) { this.newModelNameInput = val; }
-    setNewModelIdInput(val: string) { this.newModelIdInput = val; }
-    setNewModelBaseUrlInput(val: string) { this.newModelBaseUrlInput = val; }
-    setNewModelApiKeyInput(val: string) { this.newModelApiKeyInput = val; }
-
-    startEditingModel(model: UserModel) {
-        this.editingModelId = model.id;
-        this.editModelNameInput = model.name;
-        this.editModelIdInput = model.modelId;
-        this.editModelBaseUrlInput = model.baseUrl ?? '';
-        this.editModelApiKeyInput = model.apiKey ?? '';
+    get configChanged() {
+        return configKeys.some(key => this.config[key] !== this.savedConfig[key]);
     }
 
-    cancelEditingModel() {
-        this.editingModelId = null;
-        this.editModelNameInput = '';
-        this.editModelIdInput = '';
-        this.editModelBaseUrlInput = '';
-        this.editModelApiKeyInput = '';
+    setConfigValue(key: keyof ConfigDraft, value: string) {
+        this.config[key] = value;
     }
-
-    setEditModelNameInput(val: string) { this.editModelNameInput = val; }
-    setEditModelIdInput(val: string) { this.editModelIdInput = val; }
-    setEditModelBaseUrlInput(val: string) { this.editModelBaseUrlInput = val; }
-    setEditModelApiKeyInput(val: string) { this.editModelApiKeyInput = val; }
 
     async load() {
+        if (this.isLoading || this.loaded) return;
         this.isLoading = true;
-        
-        // Load config
-        const configRes = await getModelConfig();
-        runInAction(() => {
-            if (configRes.ok) {
-                this.baseUrlInput = configRes.data.baseUrl;
-                this.apiKeyInput = configRes.data.apiKey;
-                this.explanationModelIdInput = configRes.data.explanationModelId ?? '';
-                this.meaningModelIdInput = configRes.data.meaningModelId ?? '';
-                this.doubtModelIdInput = configRes.data.doubtModelId ?? '';
-                this.formatModelIdInput = configRes.data.formatModelId ?? '';
-                this.meaningSystemPromptInput = configRes.data.meaningSystemPrompt ?? '';
-                this.explanationSystemPromptInput = configRes.data.explanationSystemPrompt ?? '';
-                this.doubtSystemPromptInput = configRes.data.doubtSystemPrompt ?? '';
-                this.formatSystemPromptInput = configRes.data.formatSystemPrompt ?? '';
-            }
-        });
-
-        // Load user models
-        const modelsRes = await getUserModels();
+        this.loadError = '';
+        const [config, models] = await Promise.all([getModelConfig(), getUserModels()]);
         runInAction(() => {
             this.isLoading = false;
-            if (modelsRes.ok) {
-                this.userModels = modelsRes.data;
+            // A new account has no provider record until the first save.
+            if (!config.ok && !(isAxiosError(config.error.cause) && config.error.cause.response?.status === 404)) {
+                this.loadError = config.error.message;
+                return;
             }
+            if (!models.ok) {
+                this.loadError = models.error.message;
+                return;
+            }
+            this.config = configDraft(config.ok ? config.data : undefined);
+            this.savedConfig = { ...this.config };
+            this.userModels = models.data;
+            this.loaded = true;
         });
     }
 
     async saveConfig() {
-        if (!this.baseUrlInput.trim() || !this.apiKeyInput.trim()) {
+        if (this.isSavingConfig || !this.loaded || !this.configChanged) return;
+        if (!this.config.baseUrl.trim() || !this.config.apiKey.trim()) {
             toast.error('Enter a provider URL and API key.');
             return;
         }
         this.isSavingConfig = true;
-        const res = await saveModelConfig({
-            baseUrl: this.baseUrlInput.trim(),
-            apiKey: this.apiKeyInput.trim(),
-            explanationModelId: this.explanationModelIdInput || undefined,
-            meaningModelId: this.meaningModelIdInput || undefined,
-            doubtModelId: this.doubtModelIdInput || undefined,
-            formatModelId: this.formatModelIdInput || undefined,
-            meaningSystemPrompt: this.meaningSystemPromptInput || undefined,
-            explanationSystemPrompt: this.explanationSystemPromptInput || undefined,
-            doubtSystemPrompt: this.doubtSystemPromptInput || undefined,
-            formatSystemPrompt: this.formatSystemPromptInput || undefined,
-        });
+        const submitted = { ...this.config, baseUrl: this.config.baseUrl.trim(), apiKey: this.config.apiKey.trim() };
+        // Explicit empty values clear previously saved model assignments and instructions.
+        const result = await saveModelConfig(submitted);
         runInAction(() => {
             this.isSavingConfig = false;
-            if (res.ok) {
-                toast.success('Settings saved');
-            } else {
-                toast.error(res.error.message);
+            if (!result.ok) {
+                toast.error(result.error.message);
+                return;
             }
+            this.savedConfig = submitted;
+            this.config.baseUrl = submitted.baseUrl;
+            this.config.apiKey = submitted.apiKey;
+            toast.success('AI settings saved');
         });
     }
 
-    async addModel() {
-        if (!this.newModelNameInput.trim() || !this.newModelIdInput.trim()) {
-            toast.error('Enter a display name and model ID.');
-            return;
-        }
-        this.isAddingModel = true;
-        const res = await createUserModel({
-            name: this.newModelNameInput.trim(),
-            modelId: this.newModelIdInput.trim(),
-            baseUrl: this.newModelBaseUrlInput.trim() || undefined,
-            apiKey: this.newModelApiKeyInput.trim() || undefined,
-        });
-        
-        if (res.ok) {
-            // Reload models
-            const modelsRes = await getUserModels();
-            runInAction(() => {
-                this.isAddingModel = false;
-                this.newModelNameInput = '';
-                this.newModelIdInput = '';
-                this.newModelBaseUrlInput = '';
-                this.newModelApiKeyInput = '';
-                if (modelsRes.ok) {
-                    this.userModels = modelsRes.data;
-                }
-                toast.success('Model added');
-            });
-        } else {
-            runInAction(() => { this.isAddingModel = false; });
-            toast.error(res.error.message);
-        }
+    openModelEditor(model?: SavedModel) {
+        this.editingModelId = model?.id ?? null;
+        this.modelDraft = model
+            ? { name: model.name, modelId: model.modelId, baseUrl: model.baseUrl ?? '', apiKey: model.apiKey ?? '' }
+            : { ...emptyModel };
     }
 
-    async updateModel() {
-        if (!this.editingModelId) return;
-        if (!this.editModelNameInput.trim() || !this.editModelIdInput.trim()) {
+    setModelValue(key: keyof ModelDraft, value: string) {
+        if (this.modelDraft) this.modelDraft[key] = value;
+    }
+
+    closeModelEditor() {
+        this.editingModelId = null;
+        this.modelDraft = null;
+    }
+
+    async saveModel() {
+        if (!this.modelDraft || this.isSavingModel) return;
+        const name = this.modelDraft.name.trim();
+        const modelId = this.modelDraft.modelId.trim();
+        if (!name || !modelId) {
             toast.error('Enter a display name and model ID.');
             return;
         }
-        this.isUpdatingModel = true;
-        const res = await updateUserModel({
-            id: this.editingModelId,
-            name: this.editModelNameInput.trim(),
-            modelId: this.editModelIdInput.trim(),
-            baseUrl: this.editModelBaseUrlInput.trim() || null,
-            apiKey: this.editModelApiKeyInput.trim() || null,
+        const baseUrl = this.modelDraft.baseUrl.trim() || null;
+        const apiKey = this.modelDraft.apiKey.trim() || null;
+        const existing = this.userModels.find(model => model.id === this.editingModelId);
+        this.isSavingModel = true;
+        const result = existing
+            ? await updateUserModel({ id: existing.id, name, modelId, baseUrl, apiKey })
+            : await createUserModel({ name, modelId, baseUrl: baseUrl ?? undefined, apiKey: apiKey ?? undefined });
+        runInAction(() => {
+            this.isSavingModel = false;
+            if (!result.ok) {
+                toast.error(result.error.message);
+                return;
+            }
+            const fields = { name, modelId, baseUrl: baseUrl ?? undefined, apiKey: apiKey ?? undefined };
+            if (existing) {
+                this.userModels = this.userModels.map(model => model.id === existing.id ? { id: existing.id, ...fields } : model);
+            } else if (typeof result.data === 'string') {
+                this.userModels.push({ id: result.data, ...fields });
+            }
+            this.closeModelEditor();
+            toast.success(existing ? 'Model updated' : 'Model added');
         });
-
-        if (res.ok) {
-            const modelsRes = await getUserModels();
-            runInAction(() => {
-                this.isUpdatingModel = false;
-                this.editingModelId = null;
-                if (modelsRes.ok) {
-                    this.userModels = modelsRes.data;
-                }
-                toast.success('Model updated');
-            });
-        } else {
-            runInAction(() => { this.isUpdatingModel = false; });
-            toast.error(res.error.message);
-        }
     }
 
     async deleteModel(id: string) {
-        this.deletingModelIds.add(id);
-        const res = await deleteUserModel({ id });
-        if (res.ok) {
-            const modelsRes = await getUserModels();
-            runInAction(() => {
-                this.deletingModelIds.delete(id);
-                if (modelsRes.ok) {
-                    this.userModels = modelsRes.data;
-                }
+        if (this.deletingModelId) return;
+        this.deletingModelId = id;
+        const result = await deleteUserModel({ id });
+        runInAction(() => {
+            this.deletingModelId = null;
+            if (result.ok) {
+                this.userModels = this.userModels.filter(model => model.id !== id);
                 toast.success('Model deleted');
-            });
-        } else {
-            runInAction(() => { this.deletingModelIds.delete(id); });
-            toast.error(res.error.message);
-        }
+            } else {
+                toast.error(result.error.message);
+            }
+        });
     }
 }
-

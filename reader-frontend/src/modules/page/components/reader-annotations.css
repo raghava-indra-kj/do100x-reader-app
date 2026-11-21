@@ -35,8 +35,26 @@
 .reader-block-selector[aria-pressed=true] { border-color: var(--color-brand); background: var(--color-surface-soft); }
 [data-reader-block-selected] { outline: 1px solid var(--color-brand); outline-offset: 3px; }
 [data-reader-comment-focus] { box-shadow: -3px 0 var(--color-brand); }
-::highlight(reader-comments) { background-color: #ffc96440; }
-::highlight(reader-comment-focus) { background-color: #ffb34f80; }
+.reader-reading-surface ::highlight(reader-comments) {
+    background-color: var(--reader-comment-bg);
+}
+.reader-reading-surface ::highlight(reader-comment-focus) {
+    background-color: var(--reader-comment-focus-bg);
+    text-decoration: underline;
+}
+/* Underlines keep the original syntax colors visible on annotated code. */
+.reader-reading-surface :where(.md-code-block) ::highlight(reader-comments) {
+    background-color: transparent;
+    text-decoration: underline dotted;
+}
+.reader-reading-surface :where(.md-code-block) ::highlight(reader-comment-focus) {
+    background-color: transparent;
+    text-decoration: underline double;
+}
+@media (forced-colors: active) {
+    .reader-reading-surface ::highlight(reader-comments) { color: MarkText; background-color: Mark; }
+    .reader-reading-surface ::highlight(reader-comment-focus) { color: HighlightText; background-color: Highlight; }
+}
 .reader-comment-target-warning { font-size: 12px; padding: 8px; border-left: 2px solid var(--color-brand); background: var(--color-surface-soft); }
 .reader-comment-target-warning label { display: flex; align-items: start; gap: 6px; margin-top: 6px; }
 .reader-comment-target-warning button { text-decoration: underline; margin-top: 6px; }
