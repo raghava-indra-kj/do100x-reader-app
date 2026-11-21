@@ -10,7 +10,7 @@ const buttonVariants = cva(
         variants: {
             variant: {
                 primary:
-                    'bg-[var(--color-brand)] text-[var(--color-text-on-brand)] enabled:hover:bg-[var(--color-brand-hover)] enabled:active:bg-[var(--color-brand-active)]',
+                    'bg-[var(--button-primary-bg)] text-[var(--button-primary-text)] enabled:hover:bg-[var(--button-primary-hover-bg)] enabled:active:bg-[var(--button-primary-active-bg)]',
                 secondary:
                     'border border-[var(--color-border-strong)] bg-[var(--color-surface-canvas)] text-[var(--color-text-strong)] enabled:hover:bg-[var(--color-surface-soft)]',
                 outlined:

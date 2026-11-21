@@ -4,6 +4,7 @@ export const DbPageSchema = z.object({
     id: z.string(),
     userId: z.string(),
     parentPageId: z.string().nullable(),
+    ancestors: z.array(z.object({ id: z.string(), title: z.string() })).optional(),
     title: z.string(),
     content: z.string(),
     contentVersion: z.number().int().nonnegative(),

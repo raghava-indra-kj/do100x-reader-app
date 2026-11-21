@@ -3,7 +3,6 @@ import { PageFontSizes } from '@modules/page/theme/page-font-sizes';
 import { PageHeadingLevel } from '@modules/page/theme/page-heading-level';
 import { PageSubpageSort } from '@modules/page/theme/page-subpage-sort';
 import { PageSubpageGroup } from '@modules/page/theme/page-subpage-group';
-import type { PageAnnotationPlacement } from '@domain/page-annotation/models/page-annotation';
 import { action, computed, makeObservable, observable } from 'mobx';
 import { createContext, useContext } from 'react';
 
@@ -20,7 +19,6 @@ interface StoredSettings {
     subpageSortId: string;
     subpageGroupId: string;
     readingWidth: 'comfortable' | 'wide' | 'full';
-    annotationPlacement: PageAnnotationPlacement;
 }
 
 function findById<T extends { id: string }>(items: T[], id: string | undefined, fallback: T): T {
@@ -55,8 +53,6 @@ export class PageUiSettingsStore {
     subpageSort: PageSubpageSort;
     subpageGroup: PageSubpageGroup;
     readingWidth: StoredSettings['readingWidth'];
-    /** Where key takeaways render relative to the section content, unless an item overrides it. */
-    annotationPlacement: PageAnnotationPlacement;
     focusMode = false;
 
     constructor() {
@@ -71,10 +67,7 @@ export class PageUiSettingsStore {
         this.subpageSort = findById(PageSubpageSort.VALUES, stored.subpageSortId, PageSubpageSort.SORT_ORDER);
         this.subpageGroup = findById(PageSubpageGroup.VALUES, stored.subpageGroupId, PageSubpageGroup.NONE);
         this.readingWidth = stored.readingWidth === 'wide' || stored.readingWidth === 'full' ? stored.readingWidth : 'comfortable';
-        this.annotationPlacement = stored.annotationPlacement === 'before' ? 'before' : 'after';
         makeObservable(this, {
-            annotationPlacement: observable,
-            setAnnotationPlacement: action,
             fontSize: observable,
             fontFamilies: observable,
             defaultHeadingLevel: observable,
@@ -110,7 +103,6 @@ export class PageUiSettingsStore {
             subpageSortId: this.subpageSort.id,
             subpageGroupId: this.subpageGroup.id,
             readingWidth: this.readingWidth,
-            annotationPlacement: this.annotationPlacement,
         };
         localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
     }
@@ -122,11 +114,6 @@ export class PageUiSettingsStore {
 
     setReadingWidth(width: StoredSettings['readingWidth']) {
         this.readingWidth = width;
-        this.persist();
-    }
-
-    setAnnotationPlacement(placement: PageAnnotationPlacement) {
-        this.annotationPlacement = placement;
         this.persist();
     }
 

@@ -31,7 +31,7 @@ for (const font of ['lexend','merriweather','jetbrains-mono']) {
   await copyFile(require.resolve(`@fontsource-variable/${font}/LICENSE`),path.join(out,'licenses',`${font}.txt`));
 }
 await Promise.all(['popup.html', 'popup.css', 'reader.html', 'reader.css', 'reader-sandbox.html'].map(name => copyFile(path.join(root, 'src', name), path.join(out, name))));
-await copyFile(path.join(root, '../reader-frontend/public/branding/do100x-wordmark.png'), path.join(out, 'icon.png'));
+await copyFile(path.join(root, '../reader-frontend/public/branding/do100x-mark-128.png'), path.join(out, 'icon.png'));
 await writeFile(path.join(out, 'manifest.json'), JSON.stringify({
   manifest_version: 3, minimum_chrome_version: '123', name: 'do100x Reader', version: require('./package.json').version,
   description: 'Read selections, articles and Markdown locally, with diagrams and math. Send what matters to your do100x inbox.',

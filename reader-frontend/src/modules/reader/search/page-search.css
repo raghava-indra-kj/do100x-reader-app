@@ -17,8 +17,5 @@
 .reader-search-result:focus-visible { outline: 2px solid var(--color-brand); outline-offset: -2px; }
 @media (max-width: 480px) {
     .suite-appbar-actions:has(.reader-search-trigger) { gap: 4px; }
-    .suite-appbar-actions:has(.reader-search-trigger) .suite-appbar-theme { max-width: 72px; padding-inline: 6px; }
     .suite-appbar:has(.reader-search-trigger) { padding-inline: 8px; gap: 6px; }
-    .suite-appbar:has(.reader-search-trigger) .suite-logo-compact img { width: 40px; }
-    .dark .suite-appbar:has(.reader-search-trigger) .suite-logo, .forest-dark .suite-appbar:has(.reader-search-trigger) .suite-logo { padding-inline: 4px; }
 }

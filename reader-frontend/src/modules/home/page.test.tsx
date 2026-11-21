@@ -1,6 +1,9 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import { suiteApps } from '@modules/core/apps/app-catalog';
+import { featureImages } from '@modules/core/branding';
 
 const { auth } = vi.hoisted(() => ({ auth: { status: 'authenticated', isAuthenticated: true, error: null as string | null, bootstrap: vi.fn() } }));
 vi.mock('@modules/auth/provider/store', () => ({ useAuthStore: () => auth }));
@@ -14,59 +17,65 @@ function renderHome() {
 describe('suite home', () => {
     beforeEach(() => { auth.status = 'authenticated'; auth.isAuthenticated = true; auth.error = null; });
 
-    it('offers compact app links and learning/settings shortcuts when signed in', () => {
-        const html = renderHome();
-        expect(html).toContain('suite-home-workspace');
-        expect(html).toContain('Your apps</h1>');
-        expect(html).toContain('aria-label="Quick access"');
-        expect(html).toContain('href="/reader/vocabulary"');
-        expect(html).toContain('Review your saved words.');
-        expect(html).toContain('href="/settings"');
-        expect(html).not.toContain('suite-home-hero');
-        expect(html).not.toContain('suite-home-features');
-        expect(html).not.toContain('Sign in to get started');
-        expect(html).not.toContain('<button');
+    it('keeps the workspace heading for screen readers and groups the secondary destinations', () => {
+        const page = new DOMParser().parseFromString(renderHome(), 'text/html');
+        const heading = page.querySelector('main h1');
+        expect(heading?.textContent).toBe('Workspace');
+        expect(heading?.classList.contains('sr-only')).toBe(true);
+        expect(page.body.textContent).not.toContain('Your apps');
+        const shortcuts = page.querySelectorAll('nav[aria-label="Quick access"] a');
+        expect(Array.from(shortcuts, link => link.getAttribute('href')).sort()).toEqual([
+            '/chrome-extension', '/reader/vocabulary', '/settings',
+        ]);
+        expect(page.querySelector('a[href="/login"]')).toBeNull();
     });
 
     it.each(['authenticated', 'anonymous'])('keeps all five tools as full-card links for %s users', status => {
         auth.status = status;
         auth.isAuthenticated = status === 'authenticated';
-        const html = renderHome();
-        for (const [name, route] of [['Reader', '/reader'], ['Finance', '/finance'], ['Tasks', '/tasks'], ['Calendar', '/calendar'], ['Habits', '/habits']]) {
-            expect(html).toContain(`href="${route}"`);
-            expect(html).toContain(`aria-label="Open ${name}"`);
+        const page = new DOMParser().parseFromString(renderHome(), 'text/html');
+        const launcher = page.querySelector('nav[aria-label="Choose an app"]');
+        expect(page.querySelectorAll('h1')).toHaveLength(1);
+        expect(launcher?.querySelectorAll('a')).toHaveLength(5);
+        for (const app of suiteApps) {
+            const link = launcher?.querySelector(`a[aria-label="Open ${app.name}"]`);
+            expect(link?.getAttribute('href')).toBe(app.route);
+            expect(link?.textContent).toContain(app.name);
+            expect(link?.textContent).toContain(app.description);
+            expect(link?.querySelector('a, button')).toBeNull();
         }
-        expect(html.match(/class="suite-home-card /g)).toHaveLength(5);
-        expect(html.match(/<h1\b/g)).toHaveLength(1);
-        expect(html).toContain('aria-label="Choose an app"');
-        expect(html).toContain('Read and organize your pages.');
-        expect(html).toContain('Track spending and upcoming bills.');
-        expect(html).toContain('Plan tasks and track your time.');
-        // Card contents cannot contain buttons or other links.
-        const cards = html.match(/<a\b[^>]*class="suite-home-card [\s\S]*?<\/a>/g) ?? [];
-        expect(cards).toHaveLength(5);
-        for (const card of cards) {
-            expect(card.match(/<a\b/g)).toHaveLength(1);
-            expect(card).not.toContain('<button');
+    });
+
+    it('pairs each signed-in app link with its own photo and an explicit open action', () => {
+        const page = new DOMParser().parseFromString(renderHome(), 'text/html');
+        const photos = new Set<string | null | undefined>();
+        for (const app of suiteApps) {
+            const link = page.querySelector(`a[aria-label="Open ${app.name}"]`);
+            expect(link?.textContent).toContain(`Open ${app.name}`);
+            const photo = link?.querySelector('img');
+            const source = photo?.getAttribute('src');
+            expect(source).toBe(featureImages[app.id]);
+            expect(photo?.getAttribute('alt')).toBe('');
+            photos.add(source);
         }
+        expect(photos.size).toBe(suiteApps.length);
     });
 
     it('introduces real product benefits and a sign-in link for visitors', () => {
         auth.status = 'anonymous'; auth.isAuthenticated = false;
         const html = renderHome();
         expect(html).toContain('suite-home-marketing');
-        expect(html).toContain('Read better.');
-        expect(html).toContain('Plan your day.');
-        expect(html).toContain('Track your money.');
+        expect(html).toContain('Your day,');
+        expect(html).toContain('in one place.');
+        expect(html).toContain('Save reading notes, plan tasks on your calendar, track spending, and build habits.');
         expect(html).toContain('href="/login"');
-        expect(html).toContain('Sign in to get started');
-        expect(html).toContain('Continue with Google.');
+        expect(html).toContain('Continue with Google');
         expect(html).toContain('href="#home-tools"');
         expect(html).toContain('id="home-tools"');
         expect(html).toContain('href="/chrome-extension"');
-        expect(html).toContain('Download Chrome extension');
-        expect(html).toContain('Example workspace');
-        expect(html.match(/class="suite-home-features"/g)).toHaveLength(5);
+        expect(html).toContain('Chrome extension');
+        expect(html).toContain('Get extension');
+        expect(html).toContain('Explore the apps');
         expect(html).not.toContain('aria-label="Quick access"');
         for (const copy of ['One Google account', 'Built for your everyday', 'Markdown', '100 times better', 'https://reader.do100x.com']) {
             expect(html).not.toContain(copy);
@@ -79,7 +88,7 @@ describe('suite home', () => {
         expect(html).toContain('role="status"');
         expect(html).toContain('Checking sign-in…');
         expect(html).not.toContain('suite-home-hero');
-        expect(html).not.toContain('Sign in to get started');
+        expect(html).not.toContain('Continue with Google');
         expect(html).not.toContain('aria-label="Quick access"');
     });
 

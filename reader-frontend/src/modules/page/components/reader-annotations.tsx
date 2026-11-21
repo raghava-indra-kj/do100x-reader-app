@@ -1,26 +1,29 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { observer } from 'mobx-react-lite';
-import { Check, MessageSquare, X } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { anchorToRanges } from '@reader/md-view';
 import { createBlocksAnchor } from '@reader/md-ast';
 import type { Page } from '@domain/page/models/page';
 import { usePageStore } from '../store';
-import { ReaderActionButton } from './reader-action-button';
 import type { BlockCommentSelection } from './comment-target';
 
 /** Host UI only: the standalone renderer owns neither comments nor application state. */
-export const ReaderAnnotations = observer(function ReaderAnnotations({ page, containerRef, onCompose }: {
+export const ReaderAnnotations = observer(function ReaderAnnotations({ page, enabled, selecting, onEndSelection, containerRef, onCompose, children }: {
     page: Page;
+    enabled: boolean;
+    selecting: boolean;
+    onEndSelection: () => void;
     containerRef: RefObject<HTMLElement | null>;
     onCompose: (selection: BlockCommentSelection) => void;
+    children: ReactNode;
 }) {
     const store = usePageStore();
-    const [selecting, setSelecting] = useState(false);
     const [ids, setIds] = useState<string[]>([]);
     const [measured, setMeasured] = useState<{ scope: string; positions: Array<{ id: string; top: number; left: number; label: string }> }>({ scope: '', positions: [] });
     const lastChosen = useRef<string | null>(null);
-    const composeRef = useRef<HTMLButtonElement>(null);
+    const cancelButton = useRef<HTMLButtonElement>(null);
     const currentSectionId = store.currentSection?.id;
+    const readingWidth = store.uiSettingsStore.readingWidth;
     const scope = `${page.id}:${page.contentVersion}:${currentSectionId ?? ''}`;
     // Never expose last section's controls while the new DOM is being measured.
     const positions = measured.scope === scope ? measured.positions : [];
@@ -28,12 +31,19 @@ export const ReaderAnnotations = observer(function ReaderAnnotations({ page, con
     const focusedId = store.focusedCommentId;
     const focusVersion = store.commentFocusVersion;
 
-    useEffect(() => { setIds([]); setSelecting(false); lastChosen.current = null; }, [page.id, page.contentVersion]);
+    useEffect(() => {
+        if (selecting) {
+            const frame = requestAnimationFrame(() => cancelButton.current?.focus({ preventScroll: true }));
+            return () => cancelAnimationFrame(frame);
+        }
+        lastChosen.current = null;
+        setIds(previous => previous.length ? [] : previous);
+    }, [selecting]);
 
     useEffect(() => {
         const container = containerRef.current;
         const root = container?.querySelector<HTMLElement>('.md-view');
-        if (!container || !root || !page.document) return;
+        if (!enabled || !container || !root || !page.document) return;
         const doc = page.document;
         let frame = 0;
         const update = () => {
@@ -69,6 +79,7 @@ export const ReaderAnnotations = observer(function ReaderAnnotations({ page, con
         update();
         const resize = new ResizeObserver(schedule);
         resize.observe(root);
+        resize.observe(container);
         const mutations = new MutationObserver(schedule);
         mutations.observe(root, { childList: true, subtree: true, characterData: true });
         return () => {
@@ -76,13 +87,13 @@ export const ReaderAnnotations = observer(function ReaderAnnotations({ page, con
             root.querySelectorAll('[data-reader-block-selected],[data-reader-comment-focus]').forEach(element => { element.removeAttribute('data-reader-block-selected'); element.removeAttribute('data-reader-comment-focus'); });
             if (typeof CSS !== 'undefined' && CSS.highlights) { CSS.highlights.delete('reader-comments'); CSS.highlights.delete('reader-comment-focus'); }
         };
-    }, [containerRef, page.document, page.contentVersion, currentSectionId, scope, selecting, ids, comments, focusedId]);
+    }, [enabled, containerRef, page.document, page.contentVersion, readingWidth, currentSectionId, scope, selecting, ids, comments, focusedId]);
 
     useEffect(() => {
-        if (!focusedId) return;
+        if (!enabled || !focusedId) return;
         const frame = requestAnimationFrame(() => containerRef.current?.querySelector('[data-reader-comment-focus]')?.scrollIntoView({ block: 'center', behavior: 'smooth' }));
         return () => cancelAnimationFrame(frame);
-    }, [containerRef, focusedId, focusVersion, currentSectionId]);
+    }, [enabled, containerRef, focusedId, focusVersion, currentSectionId]);
 
     const toggle = (id: string, extend: boolean) => {
         const visible = positions.map(position => position.id);
@@ -93,20 +104,19 @@ export const ReaderAnnotations = observer(function ReaderAnnotations({ page, con
         else setIds(selected => selected.includes(id) ? selected.filter(item => item !== id) : [...selected, id]);
         lastChosen.current = id;
     };
-    if (!page.document) return null;
+    const doc = page.document;
+    const active = enabled && doc !== null;
     return <>
-        <div className={`reader-annotation-toolbar ${selecting ? 'reader-block-selection-active' : ''}`} data-md-ui>
-            <ReaderActionButton tooltip={selecting ? 'Cancel block selection' : 'Comment on one or more blocks'} className="reader-icon-button" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); setIds([]); }}><MessageSquare size={15} /></ReaderActionButton>
-            {selecting && <>
-                <span>Select blocks · Shift-click for a range</span>
-                <button ref={composeRef} disabled={!ids.length} onClick={() => {
-                    onCompose({ anchor: createBlocksAnchor(page.document!, ids), contentVersion: page.contentVersion, rect: composeRef.current!.getBoundingClientRect() });
-                    setSelecting(false);
-                }}>{store.commentToReattach ? 'Attach' : 'Comment'}{ids.length ? ` (${ids.length})` : ''}</button>
-                <ReaderActionButton tooltip="Cancel block selection" className="reader-icon-button" onClick={() => { setSelecting(false); setIds([]); }}><X size={14} /></ReaderActionButton>
-            </>}
-        </div>
-        {store.commentToReattach && <div role="status" className="reader-reattach-banner" data-md-ui><span>Select text or blocks to reattach “{store.commentToReattach.body.slice(0, 70)}”.</span><button onClick={() => store.setCommentToReattach(null)}>Cancel</button></div>}
-        {selecting && positions.map(position => <button key={position.id} className="reader-block-selector" style={{ top: position.top, left: position.left }} aria-label={`Select block: ${position.label}`} aria-pressed={ids.includes(position.id)} data-md-ui onClick={event => toggle(position.id, event.shiftKey)}>{ids.includes(position.id) && <Check size={13} />}</button>)}
+        {active && store.commentToReattach && <div role="status" className="reader-reattach-banner" data-md-ui><span>Select text or blocks to reattach “{store.commentToReattach.body.slice(0, 70)}”.</span><button onClick={() => store.setCommentToReattach(null)}>Cancel</button></div>}
+        {active && selecting && <div className="reader-annotation-toolbar reader-block-selection-active" role="group" aria-label="Block selection" data-md-ui>
+            <span>Select blocks<span className="reader-block-range-hint"> · Shift-click for a range</span></span>
+            <button type="button" ref={cancelButton} aria-label="Cancel block selection" onClick={onEndSelection}>Cancel</button>
+            <button type="button" disabled={!ids.length} onClick={event => {
+                onCompose({ anchor: createBlocksAnchor(doc, ids), contentVersion: page.contentVersion, rect: event.currentTarget.getBoundingClientRect() });
+                onEndSelection();
+            }}>{store.commentToReattach ? 'Attach' : 'Comment'}{ids.length ? ` (${ids.length})` : ''}</button>
+        </div>}
+        {active && selecting && positions.map(position => <button key={position.id} className="reader-block-selector" style={{ top: position.top, left: position.left }} aria-label={`Select block: ${position.label}`} aria-pressed={ids.includes(position.id)} data-md-ui onClick={event => toggle(position.id, event.shiftKey)}>{ids.includes(position.id) && <Check size={13} />}</button>)}
+        {children}
     </>;
 });

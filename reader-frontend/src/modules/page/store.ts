@@ -13,7 +13,6 @@ import { PageReadingState } from './reading-state';
 import { MeaningStore } from './meaning-store';
 import { DoubtStore } from './doubt-store';
 import { ExplanationStore } from './explanation-store';
-import { PageAnnotationStore } from './page-annotation-store';
 import type { Comment } from '@domain/comment/models/comment';
 import { documentMetadata } from '@reader/md-ast';
 import { READER_COMPACT_QUERY } from './reader-layout';
@@ -54,11 +53,9 @@ export class PageStore {
     meaningStore: MeaningStore;
     doubtStore: DoubtStore;
     explanationStore: ExplanationStore;
-    annotationStore: PageAnnotationStore;
     readingState: PageReadingState;
     private _currentPage: Page | null;
     private _currentSectionId: string | null;
-    _parentPageTitle: string | null;
     _motivationQuote: Motivation | null;
     commentsVersion: number;
     vocabVersion: number;
@@ -80,22 +77,19 @@ export class PageStore {
         this.meaningStore = new MeaningStore(this);
         this.doubtStore = new DoubtStore(this);
         this.explanationStore = new ExplanationStore(this);
-        this.annotationStore = new PageAnnotationStore(this);
         this.readingState = new PageReadingState({ pageId });
         this._currentPage = null;
         this._currentSectionId = null;
-        this._parentPageTitle = null;
         this._motivationQuote = null;
         this.commentsVersion = 0;
         this.vocabVersion = 0;
         this.subpagesVersion = 0;
         this.commentsCount = 0;
         this.vocabCount = 0;
-        makeObservable<PageStore, "_currentPage" | "_currentSectionId" | "_parentPageTitle">(this, {
+        makeObservable<PageStore, "_currentPage" | "_currentSectionId">(this, {
             initDataState: observable.ref,
             _currentPage: observable.ref,
             _currentSectionId: observable.ref,
-            _parentPageTitle: observable.ref,
             _motivationQuote: observable.ref,
             commentsVersion: observable,
             vocabVersion: observable,
@@ -117,7 +111,6 @@ export class PageStore {
             currentSection: computed,
             hasPrevSection: computed,
             hasNextSection: computed,
-            parentPageTitle: computed,
             motivationQuote: computed,
             readingProgress: computed,
             headingLevel: computed,
@@ -220,10 +213,6 @@ export class PageStore {
         return this._currentPage?.isPublic ?? false;
     }
 
-    get parentPageTitle(): string | null {
-        return this._parentPageTitle;
-    }
-
     get motivationQuote(): Motivation | null {
         return this._motivationQuote;
     }
@@ -320,6 +309,7 @@ export class PageStore {
                         id: this._currentPage.id,
                         userId: this._currentPage.userId,
                         parentPageId: this._currentPage.parentPageId,
+                        ancestors: this._currentPage.ancestors,
                         title: this._currentPage.title,
                         content: this._currentPage.content,
                         contentVersion: this._currentPage.contentVersion,
@@ -359,12 +349,8 @@ export class PageStore {
                     this.uiSettingsStore.setSidebarPanel('subpages');
                 }
                 this.initDataState = DataState.data(undefined);
-                if (result.data.parentPageId) {
-                    this.loadParentPageTitle(result.data.parentPageId);
-                }
                 this.loadCommentsCount();
                 this.loadVocabCount();
-                this.annotationStore.load();
             } else {
                 this._currentPage = null;
                 this._currentSectionId = null;
@@ -381,12 +367,4 @@ export class PageStore {
         this._motivationQuote = null;
     }
 
-    async loadParentPageTitle(parentPageId: string) {
-        const result = await getPage({ pageId: parentPageId });
-        runInAction(() => {
-            if (result.ok) {
-                this._parentPageTitle = result.data.title;
-            }
-        });
-    }
 }

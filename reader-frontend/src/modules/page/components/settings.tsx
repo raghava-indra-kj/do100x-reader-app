@@ -1,26 +1,32 @@
-import { Tooltip } from '@modules/core/ui/primitives/tooltip';
-import { usePageStore } from '../store';
+import { useId } from 'react';
+import { Link } from 'react-router-dom';
+import { Observer } from 'mobx-react-lite';
+import { Copy, Server, X } from 'lucide-react';
+import { settingsPageRoute } from '@boot/routes';
+import { useAuthStore } from '@modules/auth/provider/store';
+import { FORMAT_LLM_MD_CONTENT } from '@modules/core/constants/format-llm-guide';
 import { ThemeSelector } from '@modules/core/ui/components/theme-selector';
-import { Select } from '@modules/core/ui/primitives/select';
-import { FormLabel } from '@modules/core/ui/primitives/form-label';
-import { Dialog, BaseDialog } from '@modules/core/ui/primitives/dialog';
 import { Button } from '@modules/core/ui/primitives/button';
+import { BaseDialog, Dialog } from '@modules/core/ui/primitives/dialog';
+import { Select } from '@modules/core/ui/primitives/select';
+import { Tooltip } from '@modules/core/ui/primitives/tooltip';
+import { ReaderToolIcon } from '@modules/reader/reader-tool-icon';
+import { usePageStore } from '../store';
 import { PageFontFamilies } from '../theme/page-font-families';
 import { PageFontSizes } from '../theme/page-font-sizes';
 import { PageHeadingLevel } from '../theme/page-heading-level';
-import { Observer } from 'mobx-react-lite';
-import { X, Copy } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { settingsPageRoute } from '@boot/routes';
-import { toast } from 'sonner';
-import { FORMAT_LLM_MD_CONTENT } from '@modules/core/constants/format-llm-guide';
-
-import { useAuthStore } from '@modules/auth/provider/store';
-import { Server } from 'lucide-react';
+import { copyReaderText } from './reader-clipboard';
+import './reading-settings.css';
 
 const fontFamilyItems = Object.fromEntries(PageFontFamilies.VALUES.map(f => [f.id, f.label]));
 const fontSizeItems = Object.fromEntries(PageFontSizes.VALUES.map(s => [s.id, s.label]));
 const headingLevelItems = Object.fromEntries(PageHeadingLevel.VALUES.filter(h => h.value !== null).map(h => [h.id, h.label]));
+
+const readingWidths = [
+    { value: 'comfortable', label: 'Comfortable' },
+    { value: 'wide', label: 'Wide' },
+    { value: 'full', label: 'Full width' },
+] as const;
 
 export interface PageSettingsDialogProps {
     open: boolean;
@@ -28,133 +34,78 @@ export interface PageSettingsDialogProps {
 }
 
 export function PageSettingsDialog({ open, onOpenChange }: PageSettingsDialogProps) {
-    const store = usePageStore();
-    const uiSettings = store.uiSettingsStore;
-    const authStore = useAuthStore();
+    const uiSettings = usePageStore().uiSettingsStore;
+    const auth = useAuthStore();
+    const choicesId = useId();
 
-    const userId = authStore.optCurrentUser?.id || '';
-    const mcpUrl = userId ? `${window.location.origin}/sse/${userId}` : '';
-    const mcpConfigJson = JSON.stringify(
-        {
-            mcpServers: {
-                reader: {
-                    serverUrl: mcpUrl,
-                },
-            },
-        },
-        null,
-        2
-    );
+    const copyConfiguration = () => {
+        const user = auth.optCurrentUser;
+        if (!user) return;
+        const serverUrl = `${window.location.origin}/sse/${user.id}`;
+        void copyReaderText(JSON.stringify({ mcpServers: { reader: { serverUrl } } }, null, 2), 'MCP configuration copied');
+    };
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <div className="flex flex-col gap-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold text-[var(--color-text-strong)]">Reading settings</h2>
-                    <Tooltip content="Close reading settings"><BaseDialog.Close aria-label="Close reading settings" className="cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)]">
-                        <X size={20} />
-                    </BaseDialog.Close></Tooltip>
+    return <Dialog open={open} onOpenChange={onOpenChange} className="reader-settings-dialog" labelledBy={`${choicesId}-title`}>
+        <header className="reader-settings-header">
+            <ReaderToolIcon name="reading-settings" size={21} />
+            <BaseDialog.Title id={`${choicesId}-title`}>Reading settings</BaseDialog.Title>
+            <Tooltip content="Close reading settings"><BaseDialog.Close aria-label="Close reading settings">
+                <X size={18} aria-hidden="true" />
+            </BaseDialog.Close></Tooltip>
+        </header>
+        <Observer>{() => <div className="reader-settings-body">
+            <fieldset className="reader-settings-field reader-settings-span" aria-describedby={`${choicesId}-width-hint`}>
+                <legend>Reading width</legend>
+                <div className="reader-settings-widths">
+                    {readingWidths.map(({ value, label }) => <label key={value} className="reader-width-option">
+                        <input type="radio" name={`${choicesId}-width`} value={value} checked={uiSettings.readingWidth === value}
+                            onChange={() => uiSettings.setReadingWidth(value)} />
+                        <span className={`reader-width-mark is-${value}`} aria-hidden="true"><i /><i /><i /></span>
+                        <span>{label}</span>
+                    </label>)}
                 </div>
-                <div className="flex flex-col gap-2">
-                    <FormLabel>Text size</FormLabel>
-                    <Observer>
-                        {() => (
-                            <Select
-                                value={uiSettings.fontSize.id}
-                                onValueChange={(id) => {
-                                    const size = PageFontSizes.VALUES.find(s => s.id === id);
-                                    if (size) uiSettings.setFontSize(size);
-                                }}
-                                items={fontSizeItems}
-                                placeholder="Text size"
-                            />
-                        )}
-                    </Observer>
-                </div>
-                <div className="flex flex-col gap-2">
-                    <FormLabel>Font</FormLabel>
-                    <Observer>
-                        {() => (
-                            <Select
-                                value={uiSettings.fontFamilies.id}
-                                onValueChange={(id) => {
-                                    const font = PageFontFamilies.VALUES.find(f => f.id === id);
-                                    if (font) uiSettings.setFontFamilies(font);
-                                }}
-                                items={fontFamilyItems}
-                                placeholder="Font"
-                            />
-                        )}
-                    </Observer>
-                </div>
-                <div className="flex flex-col gap-2">
-                    <FormLabel>Reading width</FormLabel>
-                    <Observer>{() => <div className="flex gap-2" role="group" aria-label="Reading width">{(['comfortable', 'wide', 'full'] as const).map(width => <Button key={width} size="sm" variant={uiSettings.readingWidth === width ? 'secondary' : 'outlined'} aria-pressed={uiSettings.readingWidth === width} onClick={() => uiSettings.setReadingWidth(width)}>{width === 'comfortable' ? 'Comfortable' : width === 'wide' ? 'Wide' : 'Full width'}</Button>)}</div>}</Observer>
-                    <p className="text-xs text-[var(--color-text-muted)]">Use shorter lines for prose, or more room for tables and code.</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                    <FormLabel>Key takeaways</FormLabel>
-                    <Observer>{() => <div className="flex gap-2" role="group" aria-label="Key takeaways placement">{(['before', 'after'] as const).map(placement => <Button key={placement} size="sm" variant={uiSettings.annotationPlacement === placement ? 'secondary' : 'outlined'} aria-pressed={uiSettings.annotationPlacement === placement} onClick={() => uiSettings.setAnnotationPlacement(placement)}>{placement === 'before' ? 'Before content' : 'After content'}</Button>)}</div>}</Observer>
-                    <p className="text-xs text-[var(--color-text-muted)]">Show a section’s takeaways above or below its content.</p>
-                </div>
-                <div className="flex flex-col gap-2">
-                    <FormLabel>Default section depth</FormLabel>
-                    <p className="text-xs text-[var(--color-text-muted)]">H1 reads larger chapters; deeper levels split them into smaller sections.</p>
-                    <Observer>
-                        {() => (
-                            <Select
-                                value={uiSettings.defaultHeadingLevel.id}
-                                onValueChange={(id) => {
-                                    const level = PageHeadingLevel.VALUES.find(h => h.id === id);
-                                    if (level) uiSettings.setDefaultHeadingLevel(level);
-                                }}
-                                items={headingLevelItems}
-                                placeholder="Heading"
-                            />
-                        )}
-                    </Observer>
-                </div>
-                <div className="flex flex-col gap-2">
-                    <FormLabel>Theme</FormLabel>
-                    <ThemeSelector />
-                </div>
-                <details className="border-t border-[var(--color-border-subtle)] pt-4">
-                    <summary className="text-sm text-[var(--color-text-muted)] cursor-pointer">Import and integration tools</summary>
-                    <div className="pt-3 flex flex-col gap-2.5">
-                    {authStore.isAuthenticated && (
-                        <Button
-                            variant="outlined"
-                            size="sm"
-                            onClick={() => {
-                                navigator.clipboard.writeText(mcpConfigJson);
-                                toast.success('MCP configuration copied');
-                            }}
-                            className="flex items-center justify-center gap-1.5 text-xs w-full"
-                        >
-                            <Server size={13} className="text-[var(--color-brand)]" />
-                            <span>Copy MCP configuration</span>
-                        </Button>
-                    )}
-                    <Button
-                        variant="outlined"
-                        size="sm"
-                        onClick={() => {
-                            navigator.clipboard.writeText(FORMAT_LLM_MD_CONTENT);
-                            toast.success('Format guide copied');
-                        }}
-                        className="flex items-center justify-center gap-1.5 text-xs w-full"
-                    >
-                        <Copy size={13} />
-                        <span>Copy format guide</span>
-                    </Button>
-                    <div className="flex justify-center">
-                        <Link to={settingsPageRoute} onClick={() => onOpenChange(false)} className="text-xs text-[var(--color-brand)] font-medium hover:underline">
-                            Account settings
-                        </Link>
-                    </div>
-                    </div>
-                </details>
+                <p id={`${choicesId}-width-hint`}>Wide tables can use the space beside the text.</p>
+            </fieldset>
+            <div className="reader-settings-field">
+                <span>Font</span>
+                <Select ariaLabel="Font" value={uiSettings.fontFamilies.id} items={fontFamilyItems}
+                    onValueChange={id => {
+                        const font = PageFontFamilies.VALUES.find(f => f.id === id);
+                        if (font) uiSettings.setFontFamilies(font);
+                    }} />
             </div>
-        </Dialog>
-    );
+            <div className="reader-settings-field">
+                <span>Text size</span>
+                <Select ariaLabel="Text size" value={uiSettings.fontSize.id} items={fontSizeItems}
+                    onValueChange={id => {
+                        const size = PageFontSizes.VALUES.find(s => s.id === id);
+                        if (size) uiSettings.setFontSize(size);
+                    }} />
+            </div>
+            <div className="reader-settings-field">
+                <span>Theme</span>
+                <ThemeSelector />
+            </div>
+            <div className="reader-settings-field">
+                <span>Default section depth</span>
+                <Select ariaLabel="Default section depth" value={uiSettings.defaultHeadingLevel.id} items={headingLevelItems}
+                    onValueChange={id => {
+                        const level = PageHeadingLevel.VALUES.find(h => h.id === id);
+                        if (level) uiSettings.setDefaultHeadingLevel(level);
+                    }} />
+            </div>
+            <details className="reader-settings-integrations reader-settings-span">
+                <summary>Import and integration tools</summary>
+                <div>
+                    {auth.isAuthenticated && <Button variant="outlined" size="sm" onClick={copyConfiguration} startIcon={<Server size={14} />}>
+                        Copy MCP configuration
+                    </Button>}
+                    <Button variant="outlined" size="sm" onClick={() => void copyReaderText(FORMAT_LLM_MD_CONTENT, 'Format guide copied')} startIcon={<Copy size={14} />}>
+                        Copy format guide
+                    </Button>
+                    <Link to={settingsPageRoute} onClick={() => onOpenChange(false)}>Account settings</Link>
+                </div>
+            </details>
+        </div>}</Observer>
+    </Dialog>;
 }

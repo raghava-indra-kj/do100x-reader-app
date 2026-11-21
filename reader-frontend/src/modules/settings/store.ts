@@ -11,13 +11,11 @@ export class SettingsStore {
     explanationModelIdInput: string = '';
     meaningModelIdInput: string = '';
     doubtModelIdInput: string = '';
-    annotationModelIdInput: string = '';
     formatModelIdInput: string = '';
 
     meaningSystemPromptInput: string = '';
     explanationSystemPromptInput: string = '';
     doubtSystemPromptInput: string = '';
-    annotationSystemPromptInput: string = '';
     formatSystemPromptInput: string = '';
     
     newModelNameInput: string = '';
@@ -47,12 +45,10 @@ export class SettingsStore {
             explanationModelIdInput: observable,
             meaningModelIdInput: observable,
             doubtModelIdInput: observable,
-            annotationModelIdInput: observable,
             formatModelIdInput: observable,
             meaningSystemPromptInput: observable,
             explanationSystemPromptInput: observable,
             doubtSystemPromptInput: observable,
-            annotationSystemPromptInput: observable,
             formatSystemPromptInput: observable,
             newModelNameInput: observable,
             newModelIdInput: observable,
@@ -75,12 +71,10 @@ export class SettingsStore {
             setExplanationModelIdInput: action,
             setMeaningModelIdInput: action,
             setDoubtModelIdInput: action,
-            setAnnotationModelIdInput: action,
             setFormatModelIdInput: action,
             setMeaningSystemPromptInput: action,
             setExplanationSystemPromptInput: action,
             setDoubtSystemPromptInput: action,
-            setAnnotationSystemPromptInput: action,
             setFormatSystemPromptInput: action,
             setNewModelNameInput: action,
             setNewModelIdInput: action,
@@ -105,12 +99,10 @@ export class SettingsStore {
     setExplanationModelIdInput(val: string) { this.explanationModelIdInput = val; }
     setMeaningModelIdInput(val: string) { this.meaningModelIdInput = val; }
     setDoubtModelIdInput(val: string) { this.doubtModelIdInput = val; }
-    setAnnotationModelIdInput(val: string) { this.annotationModelIdInput = val; }
     setFormatModelIdInput(val: string) { this.formatModelIdInput = val; }
     setMeaningSystemPromptInput(val: string) { this.meaningSystemPromptInput = val; }
     setExplanationSystemPromptInput(val: string) { this.explanationSystemPromptInput = val; }
     setDoubtSystemPromptInput(val: string) { this.doubtSystemPromptInput = val; }
-    setAnnotationSystemPromptInput(val: string) { this.annotationSystemPromptInput = val; }
     setFormatSystemPromptInput(val: string) { this.formatSystemPromptInput = val; }
     setNewModelNameInput(val: string) { this.newModelNameInput = val; }
     setNewModelIdInput(val: string) { this.newModelIdInput = val; }
@@ -150,12 +142,10 @@ export class SettingsStore {
                 this.explanationModelIdInput = configRes.data.explanationModelId ?? '';
                 this.meaningModelIdInput = configRes.data.meaningModelId ?? '';
                 this.doubtModelIdInput = configRes.data.doubtModelId ?? '';
-                this.annotationModelIdInput = configRes.data.annotationModelId ?? '';
                 this.formatModelIdInput = configRes.data.formatModelId ?? '';
                 this.meaningSystemPromptInput = configRes.data.meaningSystemPrompt ?? '';
                 this.explanationSystemPromptInput = configRes.data.explanationSystemPrompt ?? '';
                 this.doubtSystemPromptInput = configRes.data.doubtSystemPrompt ?? '';
-                this.annotationSystemPromptInput = configRes.data.annotationSystemPrompt ?? '';
                 this.formatSystemPromptInput = configRes.data.formatSystemPrompt ?? '';
             }
         });
@@ -182,12 +172,10 @@ export class SettingsStore {
             explanationModelId: this.explanationModelIdInput || undefined,
             meaningModelId: this.meaningModelIdInput || undefined,
             doubtModelId: this.doubtModelIdInput || undefined,
-            annotationModelId: this.annotationModelIdInput || undefined,
             formatModelId: this.formatModelIdInput || undefined,
             meaningSystemPrompt: this.meaningSystemPromptInput || undefined,
             explanationSystemPrompt: this.explanationSystemPromptInput || undefined,
             doubtSystemPrompt: this.doubtSystemPromptInput || undefined,
-            annotationSystemPrompt: this.annotationSystemPromptInput || undefined,
             formatSystemPrompt: this.formatSystemPromptInput || undefined,
         });
         runInAction(() => {

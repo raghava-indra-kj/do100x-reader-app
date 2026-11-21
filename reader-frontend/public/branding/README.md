@@ -1,10 +1,7 @@
 # Brand assets
 
-`do100x-wordmark.png` is the original do100x wordmark downloaded from
-https://www.do100x.com/branding/logos/do100x-appbar.png on 2026-10-04, at the
-site owner's request. It is served locally; the application does not depend on
-the marketing website being available at runtime.
+Use `@modules/core/branding` in web components. It exports `BrandMark`, `BrandLockup` (mark and wordmark), the app and theme icons, `ReaderExtensionIcon`, and the shared `workspaceImage`. The landing and sign-in pages reference the same image.
 
-Keep the official navy/orange artwork unchanged. Shared headers place it on a
-small light backing in dark themes to retain contrast. Reader remains a separate
-product name; suite navigation uses only the do100x wordmark.
+The header and favicon use `do100x-mark.svg` from this directory. When the mark changes, refresh its square 128 × 128 export, `do100x-mark-128.png`, for the Chrome extension build.
+
+The shared app bar provides `AppsSwitcher` and `ThemeSelector`. Use those same components where a view needs a standalone control. App links and names come from `suiteApps` in `@modules/core/apps/app-catalog`.

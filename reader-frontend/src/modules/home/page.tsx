@@ -1,48 +1,67 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, ArrowUpRight, BookOpen, Check, ListTodo, Settings2, Wallet } from 'lucide-react';
+import { ArrowDown, ArrowRight, ArrowUpRight } from 'lucide-react';
 import { observer } from 'mobx-react-lite';
 import { loginPageRoute, settingsPageRoute, vocabularyPageRoute } from '@boot/routes';
 import { useAuthStore } from '@modules/auth/provider/store';
 import { AppBar } from '@modules/core/ui/components/appbar';
 import { Button } from '@modules/core/ui/primitives/button';
 import { suiteApps } from '@modules/core/apps/app-catalog';
+import { featureImages, ReaderExtensionIcon, SettingsIcon, VocabularyIcon, workspaceImage } from '@modules/core/branding';
 import './home.css';
+import './workspace.css';
 
-const appFeatures = {
-    reader: ['Organize pages and subpages', 'Save words to learn', 'Check your understanding with quizzes'],
-    finance: ['Keep your accounts together', 'Record income and expenses', 'Plan bills and forecast cash flow'],
-    tasks: ['Organize tasks into lists', 'Set priorities and due dates', 'Track time spent on each task'],
-    habits: ['Build habits around your schedule', 'Log progress and personal notes', 'Review streaks and check-in history'],
-    calendar: ['Plan your day, week and month', 'Reserve time for tasks and habits', 'Keep recurring plans together'],
-} satisfies Record<typeof suiteApps[number]['id'], string[]>;
+function ExtensionLink() {
+    return <Link to="/chrome-extension" className="suite-home-extension">
+        <ReaderExtensionIcon />
+        <span className="suite-home-extension-name">
+            <strong>do100x Reader</strong>
+            <span>Chrome extension</span>
+        </span>
+        <span className="suite-home-extension-action">Get extension <ArrowRight size={14} aria-hidden="true" /></span>
+    </Link>;
+}
 
-/** An illustrative preview only, never a summary of the user's private data. */
-function WorkspacePreview() {
-    return <div className="suite-home-preview" aria-hidden="true">
-        <div className="suite-home-preview-heading"><span>do100x</span><span>Example workspace</span></div>
-        <div className="suite-home-preview-body">
-            <div className="suite-home-preview-reader">
-                <div className="suite-home-preview-label"><BookOpen size={15} /> Reader</div>
-                <p className="suite-home-preview-title">Ideas worth keeping</p>
-                <p>Read a little. Make a note. Come back to what matters.</p>
-                <div className="suite-home-preview-lines"><span /><span /></div>
-                <span className="suite-home-preview-word">Save a new word</span>
-            </div>
-            <div className="suite-home-preview-bottom">
-                <div className="suite-home-preview-tasks">
-                    <div className="suite-home-preview-label"><ListTodo size={15} /> Tasks</div>
-                    <div className="suite-home-preview-task"><span className="suite-home-preview-check"><Check size={12} /></span><span>Plan the week</span></div>
-                    <div className="suite-home-preview-task"><span className="suite-home-preview-checkbox" /><span>Make time to read</span></div>
+function AppLinks({ illustrated }: { illustrated: boolean }) {
+    return <nav id="home-tools" className={illustrated ? 'workspace-apps' : 'suite-home-apps'} aria-label="Choose an app">
+        {suiteApps.map(({ id, name, route, icon: Icon, description }) =>
+            illustrated ? <Link key={id} to={route} className="workspace-app" data-app={id} aria-label={`Open ${name}`}>
+                <img className="workspace-app-photo" src={featureImages[id]} alt="" width={1096} height={822}
+                    loading={id === 'reader' ? 'eager' : 'lazy'} />
+                <div className="workspace-app-copy">
+                    <Icon size={34} />
+                    <h2>{name}</h2>
+                    <p>{description}</p>
+                    <span className="workspace-app-open" aria-hidden="true">
+                        <span>Open<span className="workspace-app-open-name"> {name}</span></span>
+                        <ArrowRight size={15} />
+                    </span>
                 </div>
-                <div className="suite-home-preview-finance">
-                    <div className="suite-home-preview-label"><Wallet size={15} /> Finance</div>
-                    <p className="suite-home-preview-title">Upcoming bills</p>
-                    <div className="suite-home-preview-bill"><span>Electricity</span><span>Monthly</span></div>
-                    <div className="suite-home-preview-bill"><span>Phone</span><span>Monthly</span></div>
-                </div>
-            </div>
-        </div>
-    </div>;
+            </Link> : <Link key={id} to={route} className={`suite-home-card suite-home-card-${id}`} aria-label={`Open ${name}`}>
+                <div className="suite-home-card-top"><Icon size={38} /><ArrowUpRight size={19} className="suite-home-arrow" aria-hidden="true" /></div>
+                <h2>{name}</h2>
+                <p className="suite-home-card-description">{description}</p>
+            </Link>)}
+    </nav>;
+}
+
+function WorkspaceShortcuts() {
+    return <nav className="workspace-shortcuts" aria-label="Quick access">
+        <Link to="/chrome-extension">
+            <ReaderExtensionIcon />
+            <span><strong>Reader for Chrome</strong><small>Get the extension</small></span>
+            <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+        <Link to={vocabularyPageRoute}>
+            <VocabularyIcon size={42} />
+            <span><strong>Vocabulary</strong><small>Review your saved words.</small></span>
+            <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+        <Link to={settingsPageRoute}>
+            <SettingsIcon size={42} />
+            <span><strong>Settings</strong><small>Account and preferences</small></span>
+            <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+    </nav>;
 }
 
 export default observer(function HomePage() {
@@ -55,53 +74,29 @@ export default observer(function HomePage() {
             <div className="suite-home-content suite-home-landing-content">
                 {marketing ? <section className="suite-home-hero" aria-labelledby="suite-home-title">
                     <div className="suite-home-hero-copy">
-                        <p className="suite-home-eyebrow">Reader · Finance · Tasks · Habits</p>
-                        <h1 id="suite-home-title">Read better.<br />Plan your day.<br /><span>Track your money.</span></h1>
-                        <p className="suite-home-description">Keep your reading, finances, tasks and daily habits organized—with a clear place for each.</p>
+                        <h1 id="suite-home-title"><span>Your day,</span>{' '}<em>in one place.</em></h1>
+                        <p className="suite-home-description">Save reading notes, plan tasks on your calendar, track spending, and build habits.</p>
                         <div className="suite-home-hero-actions">
-                            <Link to={loginPageRoute} className="suite-home-sign-in">Sign in to get started <ArrowRight size={18} aria-hidden="true" /></Link>
-                            <a href="#home-tools" className="suite-home-explore">Explore tools <ArrowRight size={15} aria-hidden="true" /></a>
+                            <Link to={loginPageRoute} className="suite-home-sign-in">Continue with Google <ArrowRight size={18} aria-hidden="true" /></Link>
+                            <a href="#home-tools" className="suite-home-explore">Explore apps <ArrowDown size={15} aria-hidden="true" /></a>
                         </div>
-                        <p className="suite-home-sign-in-note">Continue with Google.</p>
                     </div>
-                    <WorkspacePreview />
-                </section> : <section className="suite-home-intro" aria-labelledby="suite-home-title">
-                    <h1 id="suite-home-title">Your apps</h1>
+                    <div className="suite-home-visual">
+                        <img src={workspaceImage} alt="" width="1200" height="800" fetchPriority="high" />
+                        <ExtensionLink />
+                    </div>
+                </section> : <>
+                    <h1 className="sr-only">Workspace</h1>
                     {auth.status === 'loading' && <p role="status" className="suite-home-session-status">Checking sign-in…</p>}
                     {auth.status === 'error' && <div className="suite-home-session-error">
                         <p role="alert">{auth.error}</p>
                         <Button variant="outlined" size="sm" onClick={() => void auth.bootstrap()}>Retry sign-in check</Button>
                     </div>}
-                </section>}
+                </>}
 
-                {marketing && <div className="suite-home-apps-heading"><h2>Choose your tool</h2><p>Start with what you need today.</p></div>}
-                <nav id="home-tools" className="suite-home-apps" aria-label="Choose an app">
-                    {suiteApps.map(({ id, name, route, icon: Icon, description }) =>
-                        <Link key={id} to={route} className={`suite-home-card suite-home-card-${id}`} aria-label={`Open ${name}`}>
-                            <div className="suite-home-card-top"><span className="suite-home-icon"><Icon size={23} aria-hidden="true" /></span><ArrowUpRight size={19} className="suite-home-arrow" aria-hidden="true" /></div>
-                            <h2>{name}</h2>
-                            <p className="suite-home-card-description">{description}</p>
-                            {marketing && <ul className="suite-home-features">{appFeatures[id].map(feature => <li key={feature}><Check size={14} aria-hidden="true" />{feature}</li>)}</ul>}
-                            <div className="suite-home-card-footer"><span className="suite-home-open">{marketing ? 'Start with' : 'Open'} {name} <ArrowRight size={15} aria-hidden="true" /></span></div>
-                        </Link>)}
-                </nav>
-
-                <section className="suite-home-extension">
-                    <div><h2>Take Reader with you</h2><p>Open articles and selected text in a focused reading view.</p></div>
-                    <Link to="/chrome-extension" className="suite-home-explore">Download Chrome extension <ArrowRight size={16} aria-hidden="true" /></Link>
-                </section>
-                {auth.isAuthenticated && <nav className="suite-home-shortcuts" aria-label="Quick access">
-                    <Link to={vocabularyPageRoute} className="suite-home-shortcut">
-                        <BookOpen size={19} aria-hidden="true" />
-                        <span><strong>Vocabulary</strong><span>Review your saved words.</span></span>
-                        <ArrowUpRight size={16} aria-hidden="true" />
-                    </Link>
-                    <Link to={settingsPageRoute} className="suite-home-shortcut">
-                        <Settings2 size={19} aria-hidden="true" />
-                        <span><strong>Settings</strong><span>Account, preferences and AI connections.</span></span>
-                        <ArrowUpRight size={16} aria-hidden="true" />
-                    </Link>
-                </nav>}
+                {marketing && <h2 className="suite-home-apps-heading">Explore the apps</h2>}
+                <AppLinks illustrated={auth.isAuthenticated} />
+                {auth.isAuthenticated ? <WorkspaceShortcuts /> : !marketing && <ExtensionLink />}
             </div>
         </main>
     </div>;

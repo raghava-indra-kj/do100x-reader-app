@@ -29,6 +29,18 @@ const statusLabels = { reading: 'Reading file…', ready: 'Ready', importing: 'I
 export const ImportMarkdownAction = observer(function ImportMarkdownAction({ iconOnly = false }: { iconOnly?: boolean }) {
     const store = usePageStore();
     const [open, setOpen] = useState(false);
+    if (!store.isOwner) return null;
+    return <>
+        <Button type="button" variant={iconOnly ? 'ghost' : 'outlined'} size="sm" iconOnly={iconOnly}
+            onClick={() => setOpen(true)} aria-label="Import Markdown" tooltip={iconOnly ? 'Import Markdown' : undefined}>
+            <FileUp size={14} aria-hidden="true" />{!iconOnly && 'Import Markdown'}
+        </Button>
+        <ImportMarkdownDialog open={open} onOpenChange={setOpen} />
+    </>;
+});
+
+export const ImportMarkdownDialog = observer(function ImportMarkdownDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+    const store = usePageStore();
     const [items, setItems] = useState<MarkdownImportItem[]>([]);
     const [busy, setBusy] = useState<'reading' | 'importing' | null>(null);
     const [progress, setProgress] = useState({ done: 0, total: 0 });
@@ -55,7 +67,7 @@ export const ImportMarkdownAction = observer(function ImportMarkdownAction({ ico
 
     function changeOpen(next: boolean) {
         if (busyRef.current) return;
-        setOpen(next);
+        onOpenChange(next);
         if (!next) {
             setItems([]);
             setProgress({ done: 0, total: 0 });
@@ -127,11 +139,7 @@ export const ImportMarkdownAction = observer(function ImportMarkdownAction({ ico
     const needsAttention = items.filter(item => item.status === 'failed' || (item.status === 'ready' && markdownImportTitleError(item.title))).length;
     const retryOnly = pending.length > 0 && pending.every(item => item.status === 'failed');
 
-    return <>
-        <Button type="button" variant={iconOnly ? 'ghost' : 'outlined'} size="sm" iconOnly={iconOnly}
-            onClick={() => changeOpen(true)} aria-label="Import Markdown" tooltip={iconOnly ? 'Import Markdown' : undefined}>
-            <FileUp size={14} aria-hidden="true" />{!iconOnly && 'Import Markdown'}
-        </Button>
+    return (
         <Dialog open={open} onOpenChange={changeOpen} labelledBy={`${dialogId}-title`} describedBy={`${dialogId}-description`}
             className="flex max-h-[85dvh] w-[calc(100vw-2rem)] max-w-2xl flex-col p-0">
             <header className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--color-border-default)] p-4">
@@ -214,5 +222,5 @@ export const ImportMarkdownAction = observer(function ImportMarkdownAction({ ico
                 </div>
             </footer>
         </Dialog>
-    </>;
+    );
 });

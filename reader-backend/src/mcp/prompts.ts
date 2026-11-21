@@ -7,7 +7,7 @@ export function registerPrompts(server: McpServer, userId: string) {
   // 1. Study Guide
   registerPrompt(server,
     "reader_study_guide",
-    "Generate a structured study guide with key takeaways, definitions, and questions for a page and its subpages",
+    "Generate a structured study guide with definitions and review questions for a page and its subpages",
     {
       pageId: z.string().describe("The UUID of the root or target page to summarize"),
     },

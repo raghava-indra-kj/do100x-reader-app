@@ -21,12 +21,10 @@ export class SettingsRepoApi implements ISettingsRepo {
         explanationModelId?: string;
         meaningModelId?: string;
         doubtModelId?: string;
-        annotationModelId?: string;
         formatModelId?: string;
         meaningSystemPrompt?: string;
         explanationSystemPrompt?: string;
         doubtSystemPrompt?: string;
-        annotationSystemPrompt?: string;
         formatSystemPrompt?: string;
     }): AsyncResult<ModelConfigData, AppError> {
         try {

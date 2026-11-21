@@ -1,295 +1,212 @@
-import { Tooltip } from '@modules/core/ui/primitives/tooltip';
-import { readerPageWithIdRouteValue } from '@boot/routes';
+import { useEffect, useRef, useState, type ComponentProps } from 'react';
+import { Link } from 'react-router-dom';
+import { Menu } from '@base-ui/react/menu';
+import { Pencil } from 'lucide-react';
+import { observer } from 'mobx-react-lite';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { homePageRoute, readerPageWithIdRouteValue } from '@boot/routes';
+import { useAuthStore } from '@modules/auth/provider/store';
+import { ReaderIcon } from '@modules/core/branding';
+import { canShowMotivations, useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
 import { AppBarLayout } from '@modules/core/ui/components/appbar/appbar-layout';
 import { AppBarTools } from '@modules/core/ui/components/appbar/appbar-tools';
-import { ReaderPageSearch } from '@modules/reader/search/page-search';
-import { Button } from '@modules/core/ui/primitives/button';
+import { useViewport } from '@modules/core/ui/components/appbar/use-viewport';
+import { MotivationReelsDialog } from '@modules/core/ui/components/motivation-reels';
 import { Select } from '@modules/core/ui/primitives/select';
-import { copyReaderText } from './reader-clipboard';
-import { 
-    Minus, 
-    Plus, 
-    ArrowLeft, 
-    ChevronLeft, 
-    ChevronRight, 
-    Settings, 
-    Copy, 
-    ClipboardList, 
-    BookOpen, 
-    Sparkles, 
-    Share2, 
-    Globe,
-    Inbox,
-    PanelLeftClose,
-    PanelLeftOpen
-} from 'lucide-react';
-import { Observer, observer } from 'mobx-react-lite';
-import { Link, useNavigate } from 'react-router-dom';
-import { useHotkeys } from 'react-hotkeys-hook';
-import { useEffect, useState } from 'react';
+import { Tooltip } from '@modules/core/ui/primitives/tooltip';
+import { ReaderToolIcon } from '@modules/reader/reader-tool-icon';
+import { useReaderPageSearchControl } from '@modules/reader/search/page-search';
+import { shortcutIsInControl } from '../reader-shortcuts';
 import { usePageStore } from '../store';
-import { isDialogConsuming } from '../clipboard-paste';
 import { PageHeadingLevel } from '../theme/page-heading-level';
-import type { Section } from '@domain/page/models/section';
+import { ReaderActionButton } from './reader-action-button';
+import { PageBreadcrumbs } from './page-breadcrumbs';
+import { copyReaderText } from './reader-clipboard';
 import { PageSettingsDialog } from './settings';
 import { ShareDialog } from './share-dialog';
-import { MotivationReelsDialog } from '@modules/core/ui/components/motivation-reels';
-import { useAuthStore } from '@modules/auth/provider/store';
-import { canShowMotivations, useMotivationPreferences } from '@modules/core/preferences/motivation-preferences';
+import './reader-appbar.css';
 
-function collectLevels(sections: Section[]): Set<number> {
-    const levels = new Set<number>();
-    function walk(items: Section[]) {
-        for (const s of items) {
-            levels.add(s.level);
-            walk(s.children);
-        }
-    }
-    walk(sections);
-    return levels;
+type ToolProps = Omit<ComponentProps<typeof ReaderActionButton>, 'tooltip' | 'children'> & {
+    icon: ComponentProps<typeof ReaderToolIcon>['name'];
+    label: string;
+    tooltip?: string;
+    caption?: string;
+};
+
+function Tool({ icon, label, tooltip = label, caption, className = '', ...props }: ToolProps) {
+    return <ReaderActionButton {...props} tooltip={tooltip} aria-label={label} className={`reader-bar-tool ${className}`}>
+        <ReaderToolIcon name={icon} /><span className="reader-tool-caption">{caption ?? label}</span>
+    </ReaderActionButton>;
 }
 
-export const PageAppbar = observer(function PageAppbar() {
+interface SectionActionProps {
+    onEditSection?: () => void;
+    onCommentOnBlocks?: () => void;
+}
+
+const PageAppbar = observer(function PageAppbar({ onEditSection, onCommentOnBlocks }: SectionActionProps) {
     const store = usePageStore();
-    const authStore = useAuthStore();
-    const motivationPreferences = useMotivationPreferences();
-    const uiSettings = store.uiSettingsStore;
-    const navigate = useNavigate();
+    const auth = useAuthStore();
+    const preferences = useMotivationPreferences();
+    const settings = store.uiSettingsStore;
+    const page = store.optCurrentPage;
+    const section = store.currentSection;
+    const hasText = Boolean(page && !page.isEmpty);
+    const inlineFrom = hasText ? 1024 : 760;
+    const inlineTools = useViewport(`(min-width: ${inlineFrom}px)`);
+    const privateLibrary = Boolean(auth.isAuthenticated && page && !page.isPubliclyAccessible);
+    const search = useReaderPageSearchControl(privateLibrary);
+    const moreTrigger = useRef<HTMLButtonElement>(null);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [shareOpen, setShareOpen] = useState(false);
     const [reelsOpen, setReelsOpen] = useState(false);
-    const page = store.optCurrentPage;
     const motivationsAvailable = Boolean(page) && canShowMotivations(
-        authStore.isAuthenticated,
-        motivationPreferences.motivationsEnabled,
-        page?.isPubliclyAccessible,
+        auth.isAuthenticated, preferences.motivationsEnabled, page?.isPubliclyAccessible,
     );
-
     useEffect(() => {
         if (!motivationsAvailable) setReelsOpen(false);
     }, [motivationsAvailable]);
 
-    useHotkeys('-', () => uiSettings.decreaseFontSize(), { useKey: true, preventDefault: true });
-    useHotkeys('+', () => uiSettings.increaseFontSize(), { useKey: true, splitKey: '|', preventDefault: true });
-    useHotkeys('ArrowLeft', () => { if (!isDialogConsuming()) store.goToPrevSection(); }, { preventDefault: true });
-    useHotkeys('ArrowRight', () => { if (!isDialogConsuming()) store.goToNextSection(); }, { preventDefault: true });
-    useHotkeys('alt+b', () => {
-        if (motivationsAvailable) setReelsOpen(prev => !prev);
-    }, { preventDefault: true, enabled: motivationsAvailable }, [motivationsAvailable]);
+    const levels = new Set(store.flatSections.map(item => item.level));
+    const headings = PageHeadingLevel.VALUES.filter(h => h.value !== null && levels.has(h.value));
+    const fallback = headings.some(h => h.id === store.headingLevel.id) ? undefined : headings[0];
+    useEffect(() => {
+        if (fallback) store.setHeadingLevel(fallback);
+    }, [store, fallback, page?.id]);
 
-    return (
-        <>
-            <AppBarLayout app="reader" showApps={Boolean(authStore.isAuthenticated && page && !page.isPubliclyAccessible)}
-                actions={<>{authStore.isAuthenticated && page && !page.isPubliclyAccessible && <Tooltip content="Temporary inbox"><Link to="/reader/captures" aria-label="Temporary inbox" className="inline-flex items-center justify-center h-8 w-8 rounded-md border border-[var(--color-border-default)] text-[var(--color-text-muted)] hover:bg-[var(--color-surface-soft)]"><Inbox size={16} aria-hidden="true" /></Link></Tooltip>}<ReaderPageSearch enabled={Boolean(page && !page.isPubliclyAccessible)} /></>}
-                breadcrumbs={<div className="flex items-center gap-1.5 min-w-0 text-xs leading-tight">
+    const sections = store.navigableSections;
+    const sectionNumber = section ? sections.indexOf(section) + 1 : 0;
+    const hasPager = hasText && sections.length > 1;
+    const readingShortcut = { ignoreEventWhen: shortcutIsInControl, preventDefault: true };
+    useHotkeys('-', () => settings.decreaseFontSize(), { ...readingShortcut, enabled: hasText, useKey: true });
+    useHotkeys('+', () => settings.increaseFontSize(), { ...readingShortcut, enabled: hasText, useKey: true, splitKey: '|' });
+    useHotkeys('ArrowLeft', () => store.goToPrevSection(), { ...readingShortcut, enabled: hasPager });
+    useHotkeys('ArrowRight', () => store.goToNextSection(), { ...readingShortcut, enabled: hasPager });
+    useHotkeys('alt+b', () => setReelsOpen(prev => !prev), {
+        ...readingShortcut, enabled: motivationsAvailable, ignoreEventWhen: event => !reelsOpen && shortcutIsInControl(event),
+    });
 
-                <Observer>
-                    {() => {
-                        const page = store.optCurrentPage;
-                        const section = store.currentSection;
-                        if (!page) {
-                            return (
-                                <div className="flex items-center gap-2 min-w-0">
-                                    <div className="h-4 w-4 rounded bg-[var(--color-surface-raised)] animate-pulse shrink-0" />
-                                    <div className="h-4 w-32 rounded bg-[var(--color-surface-raised)] animate-pulse" />
-                                </div>
-                            );
-                        }
-                        const parentTitle = store.parentPageTitle;
-                        const parentPageId = page.parentPageId;
+    const parentId = page?.ancestors.at(-1)?.id ?? (page?.isOwner ? page.parentPageId : null);
+    const parentPath = parentId ? readerPageWithIdRouteValue(parentId) : null;
+    const breadcrumbs = page && <PageBreadcrumbs key={page.id} page={page} />;
 
-                        return (
-                            <div className="flex items-center gap-1 min-w-0">
-                                {parentPageId ? (
-                                    <>
-                                        <span
-                                            className="truncate max-w-[100px] cursor-pointer text-[var(--color-text-muted)] hover:text-[var(--color-text-strong)] transition-colors"
-                                            onClick={() => navigate(readerPageWithIdRouteValue(parentPageId))}
-                                            title={parentTitle ?? undefined}
-                                        >
-                                            {parentTitle || '\u2026'}
-                                        </span>
-                                        <ChevronRight size={10} className="shrink-0 text-[var(--color-text-muted)]" />
-                                    </>
-                                ) : null}
-                                <span className="truncate font-semibold text-[var(--color-text-strong)] max-w-[160px]" title={page.title}>
-                                    {page.title}
-                                </span>
-                                {page.isPublic && !page.isPubliclyAccessible && (
-                                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-                                        <Globe size={10} />
-                                        <span>Public</span>
-                                    </span>
-                                )}
-                                {section?.title && (
-                                    <>
-                                        <ChevronRight size={10} className="shrink-0 text-[var(--color-text-muted)]" />
-                                        <span className="truncate text-[var(--color-text-muted)] max-w-[200px]" title={section.title}>
-                                            {section.title}
-                                        </span>
-                                    </>
-                                )}
-                            </div>
-                        );
-                    }}
-                </Observer>
+    const sectionCommands = [
+        { label: 'Edit section', icon: <Pencil size={16} aria-hidden="true" />, run: onEditSection },
+        { label: 'Comment on blocks', icon: <ReaderToolIcon name="comments" size={16} />, run: onCommentOnBlocks },
+    ].filter(command => command.run);
+    const hasSectionActions = hasText && Boolean(section) && sectionCommands.length > 0;
+    const sectionOverflowGroup = hasSectionActions && <div className="reader-section-command-group" role="group" aria-label="Current section">
+        <span>Current section</span>
+        {sectionCommands.map(({ label, icon, run }) => <button key={label} type="button" className="reader-section-command" data-appbar-dismiss onClick={run}>
+            {icon}{label}
+        </button>)}
+    </div>;
+    const sectionMenu = hasSectionActions && inlineTools && <Menu.Root>
+        <Menu.Trigger aria-label="Section actions" title="Section actions" className="reader-bar-tool reader-section-menu-trigger"
+            render={(props, state) => <button {...props} aria-expanded={state.open} />}>
+            <ReaderToolIcon name="more" />
+        </Menu.Trigger>
+        <Menu.Portal>
+            <Menu.Positioner align="end" sideOffset={6} className="z-50">
+                <Menu.Popup aria-label="Section actions" className="reader-section-command-popup">
+                    {sectionCommands.map(({ label, icon, run }) => <Menu.Item key={label} className="reader-section-command" onClick={run}>
+                        {icon}{label}
+                    </Menu.Item>)}
+                </Menu.Popup>
+            </Menu.Positioner>
+        </Menu.Portal>
+    </Menu.Root>;
+    const pager = hasPager && <div className="reader-section-pager" role="group" aria-label="Section navigation">
+        <Tool icon="previous" label="Previous section" tooltip="Previous section (←)" disabled={!store.hasPrevSection} onClick={() => store.goToPrevSection()} />
+        <span aria-label={`Section ${sectionNumber} of ${sections.length}`}>{sectionNumber} / {sections.length}</span>
+        <Tool icon="next" label="Next section" tooltip="Next section (→)" disabled={!store.hasNextSection} onClick={() => store.goToNextSection()} />
+    </div>;
+    const fontSize = hasText && <div className="reader-font-stepper" role="group" aria-label="Text size">
+        <Tool icon="text-smaller" label="Decrease font size" tooltip="Smaller text (−)" disabled={!settings.isFontSizeDecreasable} onClick={() => settings.decreaseFontSize()} />
+        <Tool icon="text-larger" label="Increase font size" tooltip="Larger text (+)" disabled={!settings.isFontSizeIncreasable} onClick={() => settings.increaseFontSize()} />
+    </div>;
+    const focus = <Tool icon={settings.focusMode ? 'exit-focus' : 'focus'} label={settings.focusMode ? 'Exit focus mode' : 'Enter focus mode'}
+        caption={settings.focusMode ? 'Exit focus' : 'Focus'} className="reader-key-tool reader-focus-tool" aria-pressed={settings.focusMode}
+        data-appbar-dismiss onClick={() => settings.setFocusMode(!settings.focusMode)} />;
+    const display = <Tool icon="reading-settings" label="Reading settings" caption="Display" className="reader-key-tool"
+        aria-haspopup="dialog" data-appbar-dismiss onClick={() => setSettingsOpen(true)} />;
+    const headingDepth = hasText && headings.length > 0 && <Select
+        ariaLabel="Heading level" tooltip="Section depth" className="reader-depth-select"
+        value={fallback?.id ?? store.headingLevel.id} items={Object.fromEntries(headings.map(h => [h.id, h.label]))}
+        onValueChange={id => {
+            const level = headings.find(h => h.id === id);
+            if (level) store.setHeadingLevel(level);
+        }} />;
+
+    const documentTools = <div className="reader-bar-group reader-document-tools" role="group" aria-label="Page tools">
+        {hasText && section && <Tool icon="copy-section" label="Copy section" data-appbar-dismiss onClick={() => void copyReaderText(section.fullMarkdown, 'Section copied')} />}
+        {hasText && page && <Tool icon="copy-page" label="Copy page" data-appbar-dismiss onClick={() => void copyReaderText(page.content, 'Page copied')} />}
+        <Tool icon="dictionary" label={store.dictionaryStore.isOpen ? 'Close dictionary' : 'Open dictionary'} caption="Dictionary"
+            aria-pressed={store.dictionaryStore.isOpen} data-appbar-dismiss onClick={() => {
+                if (store.dictionaryStore.isOpen) store.dictionaryStore.close();
+                else {
+                    settings.setFocusMode(false);
+                    store.dictionaryStore.open();
+                }
+            }} />
+        {store.isOwner && page && !page.captureExpiresAt && <Tool icon="share"
+            label={store.isPublic ? 'Manage page sharing' : 'Share page and subpages'} caption="Share page"
+            aria-haspopup="dialog" data-appbar-dismiss onClick={() => setShareOpen(true)} />}
+        {motivationsAvailable && <Tool icon="break" label="Take a break" tooltip="Take a break (Alt+B)"
+            aria-haspopup="dialog" data-appbar-dismiss onClick={() => setReelsOpen(true)} />}
+    </div>;
+
+    const libraryTools = privateLibrary && <div className="reader-bar-group reader-library-tools" role="group" aria-label="Reader library">
+        <Tooltip content="Temporary inbox"><Link to="/reader/captures" className="reader-bar-tool" aria-label="Temporary inbox" data-appbar-dismiss>
+            <ReaderToolIcon name="inbox" /><span className="reader-tool-caption">Temporary inbox</span>
+        </Link></Tooltip>
+        <Tool icon="search" label="Find a page" caption="Find page" tooltip="Find a page (Ctrl+K / ⌘K)"
+            className="reader-key-tool reader-search-tool" aria-keyshortcuts="Control+k Meta+k" aria-haspopup="dialog" data-appbar-dismiss
+            onClick={event => search.openSearch(event.currentTarget, moreTrigger.current)} />
+    </div>;
+
+    const backTo = page?.captureExpiresAt ? '/reader/captures' : parentPath ?? homePageRoute;
+    const backLabel = page?.captureExpiresAt ? 'Back to temporary inbox' : backTo === homePageRoute ? 'Back to home' : 'Back to parent page';
+    const compactLeading = <div className="reader-compact-identity">
+        <Tooltip content={backLabel}><Link to={backTo} aria-label={backLabel} className="reader-bar-tool"><ReaderToolIcon name="previous" /></Link></Tooltip>
+        <span role="img" aria-label="Reader"><ReaderIcon size={26} /></span>
+    </div>;
+
+    return <>
+        <AppBarLayout app="reader" showApps={privateLibrary} breadcrumbs={breadcrumbs}
+            actions={libraryTools}
+            tools={<div className="reader-bar-controls" data-has-text={hasText || undefined}>
+                {focus}
+                <AppBarTools label="Reading tools" primary={<>{pager}{sectionMenu}{display}</>}
+                    inlineFrom={inlineFrom} overflowIcon={<ReaderToolIcon name="more" />}>
+                    {!inlineTools && sectionOverflowGroup}
+                    {hasText && <div className="reader-bar-group reader-display-tools" role="group" aria-label="Reading display">
+                        {fontSize}{headingDepth && <div className="reader-menu-depth"><span>Section depth</span>{headingDepth}</div>}
+                    </div>}
+                    {documentTools}
+                </AppBarTools>
             </div>}
-                tools={<><Button variant={uiSettings.focusMode ? 'secondary' : 'outlined'} size="sm" iconOnly aria-label={uiSettings.focusMode ? 'Exit focus mode' : 'Enter focus mode'} aria-pressed={uiSettings.focusMode} tooltip={uiSettings.focusMode ? 'Exit focus mode' : 'Focus on reading'} onClick={() => uiSettings.setFocusMode(!uiSettings.focusMode)}>{uiSettings.focusMode ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</Button><AppBarTools label="Reading tools" primary={<>
-                {page?.parentPageId && <Button variant="outlined" size="sm" iconOnly
-                    aria-label="Back to parent page" tooltip="Back to parent page"
-                    onClick={() => navigate(readerPageWithIdRouteValue(page.parentPageId!))}>
-                    <ArrowLeft size={16} />
-                </Button>}
-                <Observer>
-                    {() => {
-                        const section = store.currentSection;
-                        const page = store.optCurrentPage;
-                        const navigable = store.navigableSections;
-                        const total = navigable.length;
-                        const currentIndex = section ? navigable.indexOf(section) + 1 : 0;
-                        return (
-                            <>
-                                <Button variant="outlined" size="sm" iconOnly aria-label="Previous section" onClick={() => store.goToPrevSection()} disabled={!store.hasPrevSection} tooltip="Previous section (←)">
-                                    <ChevronLeft size={16} />
-                                </Button>
-                                {page && total > 0 && (
-                                    <span className="text-xs font-semibold text-[var(--color-text-muted)] min-w-[3rem] text-center select-none font-mono">
-                                        {currentIndex} / {total}
-                                    </span>
-                                )}
-                                <Button variant="outlined" size="sm" iconOnly aria-label="Next section" onClick={() => store.goToNextSection()} disabled={!store.hasNextSection} tooltip="Next section (→)">
-                                    <ChevronRight size={16} />
-                                </Button>
-                            </>
-                        );
-                    }}
-                </Observer>
-                <Button variant="outlined" size="sm" iconOnly aria-label="Reading settings" onClick={() => setSettingsOpen(true)} tooltip="Reading settings">
-                    <Settings size={16} />
-                </Button>
-                </>}>
-                <Observer>
-                    {() => {
-                        const section = store.currentSection;
-                        const page = store.optCurrentPage;
-                        return (<>
-                                {section && (
-                                    <Button variant="outlined" size="sm" iconOnly aria-label="Copy section" onClick={() => void copyReaderText(section.fullMarkdown, 'Section copied')} tooltip="Copy section">
-                                        <Copy size={16} />
-                                    </Button>
-                                )}
-                                {page && (
-                                    <Button variant="outlined" size="sm" iconOnly aria-label="Copy page" onClick={() => void copyReaderText(page.content, 'Page copied')} tooltip="Copy page">
-                                        <ClipboardList size={16} />
-                                    </Button>
-                                )}
-                            </>
-                        );
-                    }}
-                </Observer>
-                <Observer>
-                    {() => (
-                        <>
-                            <Button variant="outlined" size="sm" iconOnly aria-label="Decrease font size" onClick={() => uiSettings.decreaseFontSize()} disabled={!uiSettings.isFontSizeDecreasable} tooltip="Decrease font size (−)">
-                                <Minus size={16} />
-                            </Button>
-                            <Button variant="outlined" size="sm" iconOnly aria-label="Increase font size" onClick={() => uiSettings.increaseFontSize()} disabled={!uiSettings.isFontSizeIncreasable} tooltip="Increase font size (+)">
-                                <Plus size={16} />
-                            </Button>
-                        </>
-                    )}
-                </Observer>
-                <Observer>
-                    {() => {
-                        const page = store.optCurrentPage;
-                        const availableLevels = page
-                            ? collectLevels(page.sections)
-                            : new Set<number>();
-                        const availableHeadings = PageHeadingLevel.VALUES.filter(
-                            (h) => h.value !== null && availableLevels.has(h.value),
-                        );
-                        const currentId = store.headingLevel.id;
-                        const isCurrentAvailable = availableHeadings.some((h) => h.id === currentId);
-                        if (!isCurrentAvailable && availableHeadings.length > 0) {
-                            store.setHeadingLevel(availableHeadings[0]);
-                        }
-                        const headingLevelItems = Object.fromEntries(
-                            availableHeadings.map((h) => [h.id, h.label]),
-                        );
-                        if (Object.keys(headingLevelItems).length === 0) return null;
-                        return (
-                            <Select
-                                value={store.headingLevel.id}
-                                onValueChange={(id) => {
-                                    const level = PageHeadingLevel.VALUES.find(h => h.id === id);
-                                    if (level) store.setHeadingLevel(level);
-                                }}
-                                items={headingLevelItems}
-                                placeholder="Heading"
-                                className="h-8 py-0 text-xs"
-                                tooltip="Heading level"
-                            />
-                        );
-                    }}
-                </Observer>
-                <Observer>
-                    {() => {
-                        const isOpen = store.dictionaryStore.isOpen;
-                        return (
-                            <Button
-                                variant={isOpen ? 'secondary' : 'outlined'}
-                                size="sm"
-                                iconOnly
-                                aria-label={isOpen ? 'Close dictionary' : 'Open dictionary'}
-                                onClick={() => {
-                                    if (isOpen) {
-                                        store.dictionaryStore.close();
-                                    } else {
-                                        uiSettings.setFocusMode(false);
-                                        store.dictionaryStore.open();
-                                    }
-                                }}
-                                tooltip={isOpen ? 'Close dictionary' : 'Open dictionary'}
-                            >
-                                <BookOpen size={16} />
-                            </Button>
-                        );
-                    }}
-                </Observer>
-                <Observer>
-                    {() => {
-                        const isOwner = store.isOwner;
-                        if (!isOwner || store.optCurrentPage?.captureExpiresAt) return null;
-                        return (
-                            <Button 
-                                variant={store.isPublic ? 'secondary' : 'outlined'}
-                                size="sm" 
-                                iconOnly
-                                aria-label={store.isPublic ? 'Manage page sharing' : 'Share page and subpages'}
-                                onClick={() => setShareOpen(true)} 
-                                tooltip="Share page and subpages"
-                            >
-                                <Share2 size={16} aria-hidden="true" className={store.isPublic ? 'text-emerald-500' : ''} />
-                            </Button>
-                        );
-                    }}
-                </Observer>
-                {motivationsAvailable && <Button
-                    variant="outlined" 
-                    size="sm" 
-                    onClick={() => setReelsOpen(true)} 
-                    tooltip="Take a break (Alt+B)"
-                    className="flex items-center gap-1.5 px-2.5 text-xs text-[var(--color-brand)] border-[var(--color-brand)]/40 hover:border-[var(--color-brand)] hover:bg-[var(--color-brand-soft)]/50"
-                >
-                    <Sparkles size={14} className="text-[var(--color-brand)] animate-pulse shrink-0" />
-                    <span className="hidden sm:inline font-medium">Take a break</span>
-                </Button>}
-
-                </AppBarTools></>}
-            />
-                <PageSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-                <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />
-                {motivationsAvailable && <MotivationReelsDialog open={reelsOpen} onOpenChange={setReelsOpen} />}
-        </>
-    );
+            compact={{
+                overflowTriggerRef: moreTrigger,
+                leading: compactLeading,
+                actions: fontSize,
+                menu: <div className="reader-bar-menu">
+                    {page && <PageBreadcrumbs key={page.id} page={page} compact />}
+                    {pager}
+                    {sectionOverflowGroup}
+                    <div className="reader-bar-group" role="group" aria-label="Reading display">{focus}{display}
+                        {headingDepth && <div className="reader-menu-depth"><span>Section depth</span>{headingDepth}</div>}
+                    </div>
+                    {documentTools}
+                    {libraryTools}
+                </div>,
+            }}
+        />
+        {search.dialog}
+        <PageSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+        <ShareDialog open={shareOpen} onOpenChange={setShareOpen} />
+        {motivationsAvailable && <MotivationReelsDialog open={reelsOpen} onOpenChange={setReelsOpen} />}
+    </>;
 });
+
+export { PageAppbar };

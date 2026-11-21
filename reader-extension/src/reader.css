@@ -1,6 +1,5 @@
 body { margin:0; height:100dvh; display:flex; flex-direction:column; overflow:hidden; }
 .reader-bar { position:relative; z-index:10; display:flex; align-items:center; gap:18px; min-height:58px; padding:10px 20px; background:var(--panel); border-bottom:1px solid var(--line); }
-.brand { display:flex; align-items:center; gap:12px; white-space:nowrap; font-size:14px; }.brand img { width:67px; height:auto; }.brand strong { border-left:1px solid var(--line); padding-left:12px; }
 .capture-name { min-width:0; flex:1; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; }
 nav { display:flex; align-items:center; gap:8px; margin-left:auto; }.tool-group { display:flex; align-items:center; gap:2px; border-right:1px solid var(--line); padding-right:8px; }.text-size .icon-button { font-size:13px; }.text-size output { width:20px; text-align:center; font-size:11px; color:var(--muted); }
 #save { height:34px; padding:0 11px; font-size:12px; white-space:nowrap; }#save .icon { width:16px; height:16px; }#remove:hover { color:#d65b48; }

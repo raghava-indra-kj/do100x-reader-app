@@ -19,6 +19,7 @@ export function GoogleSignIn() {
     useEffect(() => {
         let disposed = false;
         let submitting = false;
+        let sizeObserver: ResizeObserver | undefined;
         const element = container.current!;
         const initialize = async () => {
             setStatus('loading');
@@ -43,15 +44,26 @@ export function GoogleSignIn() {
                         else { setError(result.error.message); setStatus('error'); }
                     },
                 });
-                element.replaceChildren();
-                google.renderButton(element, { type: 'standard', theme: 'outline', size: 'large', text: 'signin_with', shape: 'rectangular', width: Math.min(320, element.clientWidth || 280) });
+                // Google fixes its iframe width at render time. Resize just the
+                // button when the card changes width, reusing the same challenge.
+                let renderedWidth = 0;
+                const renderButton = () => {
+                    const width = Math.min(400, element.clientWidth);
+                    if (disposed || submitting || !width || width === renderedWidth) return;
+                    renderedWidth = width;
+                    element.replaceChildren();
+                    google.renderButton(element, { type: 'standard', theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill', width });
+                };
+                renderButton();
+                sizeObserver = new ResizeObserver(renderButton);
+                sizeObserver.observe(element);
                 setStatus('ready');
             } catch (cause) {
                 if (!disposed) { setError(getApiErrorMessage(cause, cause instanceof Error ? cause.message : 'Google sign-in unavailable')); setStatus('error'); }
             }
         };
         void initialize();
-        return () => { disposed = true; element.replaceChildren(); };
+        return () => { disposed = true; sizeObserver?.disconnect(); element.replaceChildren(); };
     }, [attempt, auth]);
 
     return <div className="space-y-4">

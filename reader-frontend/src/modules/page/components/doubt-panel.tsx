@@ -7,12 +7,20 @@ import type { AiDoubtEntry, DoubtStore } from '../doubt-store';
 
 export const SaveQuestionComment = observer(function SaveQuestionComment({ entry, store }: { entry: AiDoubtEntry; store: DoubtStore }) {
     const state = store.questionCommentState(entry);
-    return <ReaderActionButton tooltip={state === 'saved' ? 'Question saved to comments' : state === 'saving' ? 'Saving question…' : entry.attachment ? 'Save question as comment' : 'Save question as page note'} disabled={state !== 'idle'} className="reader-icon-button disabled:opacity-50" onClick={() => void store.saveQuestionAsComment(entry.id)}>{state === 'saved' ? <Check size={14} /> : <StickyNote size={14} />}</ReaderActionButton>;
+    const isCheck = entry.intent === 'check-understanding';
+    const subject = isCheck ? 'explanation' : 'question';
+    const tooltip = {
+        saved: isCheck ? 'Explanation saved to comments' : 'Question saved to comments',
+        saving: `Saving ${subject}…`,
+        idle: `Save ${subject} as ${entry.attachment ? 'comment' : 'page note'}`,
+    }[state];
+    return <ReaderActionButton tooltip={tooltip} disabled={state !== 'idle'} className="reader-icon-button disabled:opacity-50" onClick={() => void store.saveQuestionAsComment(entry.id)}>{state === 'saved' ? <Check size={14} /> : <StickyNote size={14} />}</ReaderActionButton>;
 });
 
 export const PageDoubtPanel = observer(function PageDoubtPanel() {
     const store = usePageStore();
     const doubtStore = store.doubtStore;
+    const isCheck = doubtStore.activeEntry?.intent === 'check-understanding';
 
     const renderHeaderActions = (activeEntry: AiDoubtEntry) => {
         return (
@@ -44,11 +52,13 @@ export const PageDoubtPanel = observer(function PageDoubtPanel() {
             startLabel="Ask AI"
             startPlaceholder="Ask about this section…"
             storeInstance={store.doubtStore}
-            queryLabel="Question"
-            rephraseLabel="Edit your question"
-            rephrasePlaceholder="Edit the question to generate a replacement answer…"
+            historyLabel={(entry: AiDoubtEntry) => entry.intent === 'check-understanding' ? `Understanding check · ${entry.searchTerm}` : entry.searchTerm}
+            queryLabel={isCheck ? 'Your explanation' : 'Question'}
+            rephraseLabel={isCheck ? 'Revise your explanation' : 'Edit your question'}
+            rephrasePlaceholder={isCheck ? 'Write your revised explanation…' : 'Edit the question to generate a replacement answer…'}
+            reaskLabel={isCheck ? 'Check again' : 'Update answer'}
             emptyStateLabel="Select a passage and choose “Ask or comment”, or ask AI from a saved comment."
-            loadingLabel="Getting an answer…"
+            loadingLabel={isCheck ? 'Checking your understanding…' : 'Getting an answer…'}
             extraHeaderActions={renderHeaderActions}
         />
     );

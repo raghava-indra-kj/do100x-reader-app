@@ -4,8 +4,10 @@ import type { DbPage } from '../models/db-page';
 import type { DbPageListItem } from '../models/db-page-list-item';
 import type { SectionEditSnapshot, SectionEditParams } from '../models/section-edit';
 import type { PageSearchResponse } from '../models/page-search';
+import type { PageNavigation } from '../models/page-navigation';
 
 export interface IPagesRepo {
+    getPageNavigation(pageId: string, signal?: AbortSignal): AsyncResult<PageNavigation, AppError>;
     searchPages(params: { q: string; limit?: number; signal?: AbortSignal }): AsyncResult<PageSearchResponse, AppError>;
     getSectionEditSnapshot(pageId: string): AsyncResult<SectionEditSnapshot, AppError>;
     editSectionBody(params: SectionEditParams): AsyncResult<{ content: string; contentVersion: number }, AppError>;
@@ -43,6 +45,7 @@ export interface IPagesRepo {
     queryPages(params: {
         parentPageId?: string | null;
         searchQuery?: string | null;
+        signal?: AbortSignal;
     }): AsyncResult<DbPageListItem[], AppError>;
 
     swapSortOrder(params: {

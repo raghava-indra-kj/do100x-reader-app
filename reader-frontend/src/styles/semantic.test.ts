@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const primitives = readFileSync(new URL('./primitives.css', import.meta.url), 'utf8');
 const semantic = readFileSync(new URL('./semantic.css', import.meta.url), 'utf8');
+const components = readFileSync(new URL('./components.css', import.meta.url), 'utf8');
 
 function declarations(css: string, selector: string): Record<string, string> {
     const block = css.split(`${selector} {`)[1]?.split('}')[0];
@@ -14,7 +15,9 @@ function palette(theme: string) {
     const tokens = {
         ...declarations(primitives, ':root'),
         ...declarations(semantic, ':root'),
+        ...declarations(components, ':root'),
         ...(theme === ':root' ? {} : declarations(semantic, theme)),
+        ...(theme === '.dark' || theme === '.forest-dark' ? declarations(components, theme) : {}),
     };
     return (name: string) => {
         let value = tokens[name];
@@ -46,6 +49,9 @@ describe('semantic theme readability', () => {
         const color = palette(theme);
         for (const state of ['--color-brand', '--color-brand-hover', '--color-brand-active']) {
             expect(contrast(color('--color-text-on-brand'), color(state)), state).toBeGreaterThanOrEqual(4.5);
+        }
+        for (const state of ['--button-primary-bg', '--button-primary-hover-bg', '--button-primary-active-bg']) {
+            expect(contrast(color('--button-primary-text'), color(state)), state).toBeGreaterThanOrEqual(4.5);
         }
     });
 

@@ -58,6 +58,8 @@ interface PageAiLookupPanelProps {
     queryLabel: string;
     rephraseLabel: string;
     rephrasePlaceholder: string;
+    reaskLabel?: string;
+    historyLabel?: (entry: any) => string;
     emptyStateLabel: string;
     loadingLabel: string;
     onStart: (text: string, context: AiLookupContext) => void;
@@ -262,7 +264,7 @@ function RawResponseViewer({ rawResponse }: { rawResponse: any }) {
 }
 
 export const PageAiLookupPanel = observer(function PageAiLookupPanel({
-    title, storeInstance, queryLabel, rephraseLabel, rephrasePlaceholder,
+    title, storeInstance, queryLabel, rephraseLabel, rephrasePlaceholder, reaskLabel = 'Update answer', historyLabel,
     emptyStateLabel, loadingLabel, extraHeaderActions, onStart, startLabel, startPlaceholder, useSection,
 }: PageAiLookupPanelProps) {
     const pageStore = usePageStore();
@@ -321,7 +323,7 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
             <ReaderActionButton tooltip="Return to contents" className="reader-icon-button" onClick={close}><X size={15} /></ReaderActionButton>
         </>} />
         {storeInstance.history.length > 0 && <div className="reader-panel-toolbar reader-ai-history-row">
-            <Select ariaLabel={`${title} history`} tooltip="Recent lookups" value={storeInstance.activeEntryId} onValueChange={id => { if (id) { storeInstance.setActiveEntry(id); drafts.setComposing(false); } }} className="reader-ai-history" items={Object.fromEntries([...storeInstance.history].reverse().map(entry => [entry.id, `${entry.isLoading ? 'Loading: ' : entry.error ? 'Retry: ' : ''}${label(entry).slice(0, 100)}`]))} />
+            <Select ariaLabel={`${title} history`} tooltip="Recent lookups" value={storeInstance.activeEntryId} onValueChange={id => { if (id) { storeInstance.setActiveEntry(id); drafts.setComposing(false); } }} className="reader-ai-history" items={Object.fromEntries([...storeInstance.history].reverse().map(entry => [entry.id, `${entry.isLoading ? 'Loading: ' : entry.error ? 'Retry: ' : ''}${(historyLabel ?? label)(entry).slice(0, 100)}`]))} />
             {activeEntry && <ReaderActionButton tooltip="Remove current lookup" className="reader-icon-button" onClick={() => storeInstance.removeEntry(activeEntry.id)}><X size={13} /></ReaderActionButton>}
         </div>}
         <div className="reader-panel-scroll">
@@ -354,7 +356,7 @@ export const PageAiLookupPanel = observer(function PageAiLookupPanel({
                 {!activeEntry.isLoading && <div className="reader-ai-compose reader-ai-followup">
                     <label htmlFor={editId}>{rephraseLabel}</label>
                     <textarea id={editId} data-ai-focus="edit-text" value={rephraseText} onChange={event => drafts.edit(activeEntry.id, event.target.value)} placeholder={rephrasePlaceholder} onKeyDown={event => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); reask(); } }} />
-                    <div className="reader-ai-compose-footer flex-wrap"><span>Replaces this response when successful</span><Button size="sm" variant="outlined" disabled={!rephraseText.trim()} onClick={reask}>Update answer</Button></div>
+                    <div className="reader-ai-compose-footer flex-wrap"><span>Replaces this response when successful</span><Button size="sm" variant="outlined" disabled={!rephraseText.trim()} onClick={reask}>{reaskLabel}</Button></div>
                 </div>}
             </div>}
         </div>

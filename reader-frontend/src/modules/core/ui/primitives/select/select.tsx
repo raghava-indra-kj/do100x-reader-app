@@ -15,6 +15,7 @@ export interface SelectProps<Value = string> {
     className?: string;
     style?: CSSProperties;
     popupClassName?: string;
+    alignItemWithTrigger?: boolean;
     tooltip?: ReactNode;
     ariaLabel?: string;
 }
@@ -30,6 +31,7 @@ export function Select<Value = string>({
     className,
     style,
     popupClassName,
+    alignItemWithTrigger,
     tooltip,
     ariaLabel,
 }: SelectProps<Value>) {
@@ -59,7 +61,7 @@ export function Select<Value = string>({
                 </BaseSelect.Trigger>
             </Tooltip>
             <BaseSelect.Portal>
-                <BaseSelect.Positioner sideOffset={4} className="z-50">
+                <BaseSelect.Positioner sideOffset={4} alignItemWithTrigger={alignItemWithTrigger} className="z-50">
                     <BaseSelect.Popup
                         className={cn(
                             'origin-(--transform-origin) min-w-[var(--anchor-width)] rounded-[var(--radius-lg)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-raised)] p-1 text-sm text-[var(--color-text-body)] shadow-lg outline-none transition-[opacity,transform] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0',

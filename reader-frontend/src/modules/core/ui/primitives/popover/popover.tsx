@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from 'react';
 import { Popover as BasePopover } from '@base-ui/react/popover';
+import { cn } from '@lib/utils/cn';
 
 export interface PopoverProps {
     content: ReactNode;
@@ -10,6 +11,7 @@ export interface PopoverProps {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
     defaultOpen?: boolean;
+    popupClassName?: string;
 }
 
 export function Popover({
@@ -21,13 +23,14 @@ export function Popover({
     open,
     onOpenChange,
     defaultOpen,
+    popupClassName,
 }: PopoverProps) {
     return (
         <BasePopover.Root open={open} onOpenChange={onOpenChange} defaultOpen={defaultOpen}>
             <BasePopover.Trigger render={children} />
             <BasePopover.Portal>
                 <BasePopover.Positioner side={side} sideOffset={sideOffset} align={align} className="z-50">
-                    <BasePopover.Popup className="origin-(--transform-origin) min-w-48 rounded-lg bg-(--color-surface-raised) p-3 text-sm text-(--color-text-body) shadow-lg outline-none ring-1 ring-(--color-border-subtle) transition-[opacity,transform] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0">
+                    <BasePopover.Popup className={cn('origin-(--transform-origin) min-w-48 rounded-lg bg-(--color-surface-raised) p-3 text-sm text-(--color-text-body) shadow-lg outline-none ring-1 ring-(--color-border-subtle) transition-[opacity,transform] duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0', popupClassName)}>
                         {content}
                     </BasePopover.Popup>
                 </BasePopover.Positioner>

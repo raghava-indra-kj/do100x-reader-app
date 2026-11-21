@@ -29,12 +29,10 @@ router.post("/", async (req, res) => {
     explanationModelId,
     meaningModelId,
     doubtModelId,
-    annotationModelId,
     formatModelId,
     meaningSystemPrompt,
     explanationSystemPrompt,
     doubtSystemPrompt,
-    annotationSystemPrompt,
     formatSystemPrompt,
   } = req.body as {
     baseUrl: string;
@@ -42,12 +40,10 @@ router.post("/", async (req, res) => {
     explanationModelId?: string;
     meaningModelId?: string;
     doubtModelId?: string;
-    annotationModelId?: string;
     formatModelId?: string;
     meaningSystemPrompt?: string;
     explanationSystemPrompt?: string;
     doubtSystemPrompt?: string;
-    annotationSystemPrompt?: string;
     formatSystemPrompt?: string;
   };
 
@@ -66,12 +62,10 @@ router.post("/", async (req, res) => {
       explanationModelId,
       meaningModelId,
       doubtModelId,
-      annotationModelId,
     formatModelId,
       meaningSystemPrompt,
       explanationSystemPrompt,
       doubtSystemPrompt,
-      annotationSystemPrompt,
     formatSystemPrompt,
     },
     create: {
@@ -81,12 +75,10 @@ router.post("/", async (req, res) => {
       explanationModelId,
       meaningModelId,
       doubtModelId,
-      annotationModelId,
     formatModelId,
       meaningSystemPrompt,
       explanationSystemPrompt,
       doubtSystemPrompt,
-      annotationSystemPrompt,
     formatSystemPrompt,
     },
   });

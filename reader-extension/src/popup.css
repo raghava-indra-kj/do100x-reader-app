@@ -5,9 +5,6 @@ html { width:380px; min-width:380px; overflow-x:hidden; }
 body { width:100%; max-height:600px; margin:0; overflow-x:hidden; overflow-y:auto; font:400 13px/1.45 var(--font-ui); background:var(--panel); }
 
 .popup-header { display:flex; align-items:center; justify-content:space-between; min-height:48px; padding:6px 16px; border-bottom:1px solid var(--line); }
-.brand { display:flex; align-items:center; gap:10px; min-width:0; }
-.brand img { width:62px; height:auto; }
-.brand strong { padding-left:10px; border-left:1px solid var(--line); font-size:13px; font-weight:600; }
 main { padding:14px 16px 0; }
 .intro h1 { font-size:15px; line-height:1.4; font-weight:600; margin:0 0 4px; }
 .intro p { color:var(--muted); font-size:11px; margin:0 0 13px; }

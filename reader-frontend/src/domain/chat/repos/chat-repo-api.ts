@@ -15,7 +15,7 @@ export class ChatRepoApi implements IChatRepo {
         systemPrompt: string;
         userPrompt: string;
         pageId?: string;
-        actionType?: 'meaning' | 'explanation' | 'doubt' | 'annotation' | 'format';
+        actionType?: 'meaning' | 'explanation' | 'doubt' | 'format';
         signal?: AbortSignal;
     }): AsyncResult<ChatCompletionResult, ChatAppError> {
         const { signal, ...body } = params;

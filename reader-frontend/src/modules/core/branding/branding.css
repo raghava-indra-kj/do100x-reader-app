@@ -1,0 +1,18 @@
+.brand-lockup { display: inline-flex; align-items: center; gap: 7px; }
+.brand-lockup img { display: block; height: auto; }
+.suite-wordmark { font: 700 20px/1 var(--font-sans); letter-spacing: -.07em; color: var(--color-text-strong); }
+.suite-wordmark > span { color: var(--color-brand-on-soft); }
+
+.brand-reader-extension { position: relative; display: inline-flex; }
+.brand-reader-extension::after {
+    content: '';
+    position: absolute;
+    right: -3px;
+    bottom: -2px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--color-surface-raised);
+    border-radius: 50%;
+    background: radial-gradient(circle, #4285f4 0 28%, white 29% 34%, transparent 35%),
+        conic-gradient(from -30deg, #ea4335 0 120deg, #fbbc04 120deg 240deg, #34a853 240deg);
+}

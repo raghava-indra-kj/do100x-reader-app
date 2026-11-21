@@ -96,7 +96,7 @@ export function UpsertPageDialog({
 
         if (page) {
             setTitle(page.title);
-            setContent(page.content ?? "");
+            setContent(initialContent ?? page.content ?? "");
             setContentVersion(page.contentVersion);
             setCategory(page.category);
             setMeaningSystemPrompt(page.meaningSystemPrompt ?? "");

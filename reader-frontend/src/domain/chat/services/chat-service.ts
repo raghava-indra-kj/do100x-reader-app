@@ -9,7 +9,7 @@ export async function getChatCompletion(params: {
     systemPrompt: string;
     userPrompt: string;
     pageId?: string;
-    actionType?: 'meaning' | 'explanation' | 'doubt' | 'annotation' | 'format';
+    actionType?: 'meaning' | 'explanation' | 'doubt' | 'format';
     signal?: AbortSignal;
 }): AsyncResult<ChatCompletionResult, AppError> {
     const repo = container.get<IChatRepo>(TYPES.IChatRepo);

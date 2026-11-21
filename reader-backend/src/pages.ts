@@ -65,25 +65,63 @@ router.patch("/:pageId/section-body", async (req, res) => {
   }
 });
 
-/**
- * Recursively checks if a page or any of its ancestors is marked as public.
- */
-async function isPagePubliclyAccessible(page: { id: string; isPublic: boolean; parentId: string | null }): Promise<boolean> {
-  if (page.isPublic) return true;
-  if (!page.parentId) return false;
+type PageLink = { id: string; userId: string; parentId: string | null; isPublic: boolean };
+type Ancestor = { id: string; title: string; parentId: string | null; isPublic: boolean };
 
-  let currentParentId: string | null = page.parentId;
-  while (currentParentId) {
-    const parent: { id: string; isPublic: boolean; parentId: string | null } | null = await prisma.page.findFirst({
-      where: { id: currentParentId, deletedAt: null },
-      select: { id: true, isPublic: true, parentId: true },
+async function* walkPageParents(page: PageLink) {
+  const visited = new Set([page.id]);
+  let id = page.parentId;
+  while (id && !visited.has(id)) {
+    const parent: Ancestor | null = await prisma.page.findFirst({
+      where: { id, userId: page.userId, deletedAt: null, captureExpiresAt: null },
+      select: { id: true, title: true, parentId: true, isPublic: true },
     });
-    if (!parent) return false;
+    if (!parent) break;
+    yield parent;
+    visited.add(id);
+    id = parent.parentId;
+  }
+}
+
+async function isPagePubliclyAccessible(page: PageLink): Promise<boolean> {
+  if (page.isPublic) return true;
+  for await (const parent of walkPageParents(page)) {
     if (parent.isPublic) return true;
-    currentParentId = parent.parentId;
   }
   return false;
 }
+
+async function pageAccess(page: PageLink & { captureExpiresAt: Date | null }, sessionUserId: string | undefined) {
+  const isOwner = page.userId === sessionUserId;
+  const parents: Ancestor[] = [];
+  if (!page.captureExpiresAt) {
+    for await (const parent of walkPageParents(page)) parents.push(parent);
+  }
+  parents.reverse();
+  const firstShared = parents.findIndex(parent => parent.isPublic);
+  const isPublic = !page.captureExpiresAt && (page.isPublic || firstShared !== -1);
+  const visibleParents = isOwner ? parents : firstShared === -1 ? [] : parents.slice(firstShared);
+  return { isOwner, isPublic, visibleParents };
+}
+
+// Load only the open path and one level beside it, without downloading page bodies.
+router.get("/:pageId/navigation", async (req, res) => {
+  res.setHeader("Cache-Control", "private, no-store");
+  const page = await prisma.page.findFirst({
+    where: { id: req.params.pageId, deletedAt: null, captureExpiresAt: null },
+    select: { id: true, title: true, userId: true, parentId: true, isPublic: true, captureExpiresAt: true },
+  });
+  if (!page) { res.status(404).json({ message: "Page not found" }); return; }
+  const { isOwner, isPublic, visibleParents } = await pageAccess(page, readSession(req));
+  if (!isOwner && !isPublic) { res.status(404).json({ message: "Page not found" }); return; }
+  const path = [...visibleParents, page].map(({ id, title }) => ({ id, title }));
+  const children = await prisma.page.findMany({
+    where: { parentId: { in: path.map(node => node.id) }, userId: page.userId, deletedAt: null, captureExpiresAt: null },
+    select: { id: true, title: true, parentId: true, childrenCount: true },
+    orderBy: [{ sortOrder: "asc" }, { id: "asc" }],
+  });
+  res.json({ path, children: children.map(({ id, title, parentId, childrenCount }) => ({ id, title, parentPageId: parentId, childrenCount })) });
+});
 
 // GET /pages/:pageId
 router.get("/:pageId", async (req, res) => {
@@ -119,8 +157,7 @@ router.get("/:pageId", async (req, res) => {
     return;
   }
 
-  const isOwner = Boolean(reqUserId && page.userId === reqUserId);
-  const isPublic = await isPagePubliclyAccessible(page);
+  const { isOwner, isPublic, visibleParents } = await pageAccess(page, reqUserId);
 
   // If not owner and not public, deny access
   if (!isOwner && !isPublic) {
@@ -128,10 +165,12 @@ router.get("/:pageId", async (req, res) => {
     return;
   }
 
+  res.setHeader("Cache-Control", "private, no-store");
   res.json({
     id: page.id,
     userId: page.userId,
-    parentPageId: page.parentId,
+    parentPageId: visibleParents.at(-1)?.id ?? null,
+    ancestors: visibleParents.map(({ id, title }) => ({ id, title })),
     title: page.title,
     content: page.content ?? "",
     contentVersion: page.contentVersion,
@@ -161,9 +200,10 @@ router.get("/", async (req, res) => {
   const reqUserId = readSession(req);
 
   // If parentPageId is specified, ensure it is accessible
+  let parentOwnerId: string | undefined;
   if (parentPageId && parentPageId !== "null") {
     const parentPage = await prisma.page.findFirst({
-      where: { id: parentPageId, deletedAt: null },
+      where: { id: parentPageId, deletedAt: null, captureExpiresAt: null },
       select: { id: true, userId: true, isPublic: true, parentId: true },
     });
     if (!parentPage) {
@@ -176,11 +216,13 @@ router.get("/", async (req, res) => {
       res.status(404).json({ message: "Parent page not found" });
       return;
     }
+    parentOwnerId = parentPage.userId;
   }
 
   const pages = await prisma.page.findMany({
     where: {
       deletedAt: null,
+      ...(parentOwnerId ? { userId: parentOwnerId, captureExpiresAt: null } : {}),
       ...(parentPageId !== undefined
         ? { parentId: parentPageId === "null" ? null : parentPageId }
         : {}),

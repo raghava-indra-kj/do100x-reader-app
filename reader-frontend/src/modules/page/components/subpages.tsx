@@ -15,7 +15,7 @@ import { DndContext, closestCenter } from '@dnd-kit/core';
 import { useSubpageReorder } from '../hooks/use-subpage-reorder';
 import { sortSubpages, groupSubpages } from '../subpage-order';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { Plus } from 'lucide-react';
+import { FolderOpen, Plus } from 'lucide-react';
 import { PageSubpageSort, PageSubpageGroup } from '../theme';
 
 const SORT_ITEMS = Object.fromEntries(PageSubpageSort.VALUES.map(s => [s.id, s.label]));
@@ -123,7 +123,15 @@ export const PageSubpages = observer(function PageSubpages() {
                     ),
                     loaded: () => {
                         if (sorted.length === 0) {
-                            return hasSearch ? <SidebarEmpty title="No matching subpages"><button onClick={() => setSearch('')}>Clear search</button></SidebarEmpty> : <SidebarEmpty title="Keep related reading together">Create a subpage or import a Markdown file using the tools above.</SidebarEmpty>;
+                            if (hasSearch) {
+                                return <SidebarEmpty title="No matching subpages"><button onClick={() => setSearch('')}>Clear search</button></SidebarEmpty>;
+                            }
+                            return (
+                                <p className="flex items-center justify-center gap-2 px-3 py-6 text-sm text-[var(--color-text-muted)]">
+                                    <FolderOpen size={16} aria-hidden="true" />
+                                    No subpages yet
+                                </p>
+                            );
                         }
 
                         if (isGrouped && grouped) {

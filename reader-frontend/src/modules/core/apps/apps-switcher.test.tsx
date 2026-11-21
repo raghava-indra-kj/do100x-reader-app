@@ -35,7 +35,7 @@ describe('suite navigation', () => {
         const html = renderToStaticMarkup(<MemoryRouter><AppBarLogo compact /></MemoryRouter>);
         expect(html).toContain('href="/"');
         expect(html).toContain('aria-label="do100x home"');
-        expect(html).toContain('src="/branding/do100x-wordmark.png"');
+        expect(html).toContain('src="/branding/do100x-mark.svg"');
         expect(html).toContain('suite-logo-compact');
         expect(html).not.toContain('onClick');
     });

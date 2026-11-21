@@ -1,6 +1,7 @@
 export class PageListItem {
     readonly id: string;
     readonly parentPageId: string | null;
+    readonly childrenCount: number;
     readonly title: string;
     readonly category: string | null;
     readonly sortOrder: number;
@@ -11,6 +12,7 @@ export class PageListItem {
     constructor(params: {
         id: string;
         parentPageId: string | null;
+        childrenCount?: number;
         title: string;
         category: string | null;
         sortOrder: number;
@@ -21,6 +23,7 @@ export class PageListItem {
     ) {
         this.id = params.id;
         this.parentPageId = params.parentPageId;
+        this.childrenCount = params.childrenCount ?? 0;
         this.title = params.title;
         this.category = params.category;
         this.sortOrder = params.sortOrder;

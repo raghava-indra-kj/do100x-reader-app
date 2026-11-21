@@ -10,11 +10,11 @@ router.use(requireSession);
 async function resolveSystemPrompt(
   userId: string,
   pageId: string | undefined,
-  actionType: 'meaning' | 'explanation' | 'doubt' | 'annotation' | 'format' | undefined,
+  actionType: 'meaning' | 'explanation' | 'doubt' | 'format' | undefined,
   defaultSystemPrompt: string
 ): Promise<string> {
-  // 1. Resolve from page hierarchy (annotations and formatting have no per-page prompt)
-  if (pageId && actionType && actionType !== 'annotation' && actionType !== 'format') {
+  // 1. Resolve from page hierarchy (formatting has no per-page prompt)
+  if (pageId && actionType && actionType !== 'format') {
     let currentPageId: string | null = pageId;
     while (currentPageId) {
       const pageRow: {
@@ -52,7 +52,6 @@ async function resolveSystemPrompt(
       const globalPrompt = 
         actionType === 'meaning' ? config.meaningSystemPrompt :
         actionType === 'explanation' ? config.explanationSystemPrompt :
-        actionType === 'annotation' ? config.annotationSystemPrompt :
         actionType === 'format' ? config.formatSystemPrompt :
         config.doubtSystemPrompt;
 
@@ -74,10 +73,14 @@ router.post("/", async (req, res) => {
     systemPrompt: string;
     userPrompt: string;
     pageId?: string;
-    actionType?: 'meaning' | 'explanation' | 'doubt' | 'annotation' | 'format';
+    actionType?: 'meaning' | 'explanation' | 'doubt' | 'format';
   };
 
   // 1. Validate inputs
+  if (actionType !== undefined && !['meaning', 'explanation', 'doubt', 'format'].includes(actionType)) {
+    res.status(400).json({ message: "Unknown reading action." });
+    return;
+  }
   if (!modelId || !systemPrompt || !userPrompt) {
     res.status(400).json({
       error: {

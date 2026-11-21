@@ -12,6 +12,7 @@ export function toPageListItem(db: DbPageListItem): PageListItem {
     return new PageListItem({
         id: db.id,
         parentPageId: db.parentPageId,
+        childrenCount: db.childrenCount,
         title: db.title,
         category: db.category,
         sortOrder: db.sortOrder,
@@ -42,6 +43,7 @@ export function toPage(dbPage: DbPage): Result<Page, AppError> {
         id: dbPage.id,
         userId: dbPage.userId,
         parentPageId: dbPage.parentPageId,
+        ancestors: dbPage.ancestors,
         title: dbPage.title,
         content: dbPage.content,
         contentVersion: dbPage.contentVersion,

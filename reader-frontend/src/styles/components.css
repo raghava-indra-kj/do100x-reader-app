@@ -1,6 +1,6 @@
 :root {
-    --button-primary-bg: var(--color-brand);
-    --button-primary-text: var(--color-text-on-brand);
+    --button-primary-bg: var(--coral-700);
+    --button-primary-text: var(--sand-50);
     --button-primary-font: var(--font-sans);
     --button-primary-font-size: 14px;
     --button-primary-font-weight: 600;
@@ -8,8 +8,8 @@
     --button-primary-padding: 0 var(--space-5);
     --button-primary-height: 40px;
     --button-primary-radius: var(--radius-md);
-    --button-primary-hover-bg: var(--color-brand-hover);
-    --button-primary-active-bg: var(--color-brand-active);
+    --button-primary-hover-bg: var(--coral-800);
+    --button-primary-active-bg: var(--coral-900);
 
     --button-secondary-bg: var(--color-surface-canvas);
     --button-secondary-text: var(--color-text-strong);
@@ -74,4 +74,18 @@
     --dialog-bg: var(--color-surface-raised);
     --dialog-radius: var(--radius-xl);
     --dialog-padding: var(--space-8);
+}
+
+.dark {
+    --button-primary-bg: var(--coral-300);
+    --button-primary-text: var(--stone-950);
+    --button-primary-hover-bg: var(--coral-200);
+    --button-primary-active-bg: var(--coral-400);
+}
+
+.forest-dark {
+    --button-primary-bg: var(--green-400);
+    --button-primary-text: var(--green-950);
+    --button-primary-hover-bg: var(--green-300);
+    --button-primary-active-bg: var(--green-200);
 }

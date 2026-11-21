@@ -1,5 +1,5 @@
 import { observer } from 'mobx-react-lite';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'react';
 import type { Page } from '@domain/page/models/page';
 import type { MarkdownSectionRange } from '@reader/md-ast';
 import { SectionEditDialog } from './section-edit-dialog';
@@ -13,30 +13,44 @@ import { Button } from '@modules/core/ui/primitives/button';
 import { SelectionPopover } from './selection-popover';
 import { EmptyPagePlaceholder } from './empty-page-placeholder';
 import { ReaderAnnotations } from './reader-annotations';
-import { PageAnnotationControls, PageAnnotationSlot } from './page-annotations';
-import { annotationTargetFor } from '../page-annotation-target';
 import type { BlockCommentSelection } from './comment-target';
 import '@reader/md-view/md-view.css';
 import '@reader/md-view/md-view-hljs.css';
 import './reader-experience.css';
 import './reader-annotations.css';
+import './reading-width.css';
 
-export const PageMain = observer(function PageMain() {
+export interface ReaderSectionActions {
+    editSection(): void;
+    commentOnBlocks(): void;
+}
+
+export const PageMain = observer(function PageMain({ ref }: { ref?: Ref<ReaderSectionActions> }) {
     const store = usePageStore();
     const themeStore = useThemeStore();
+    const currentPage = store.optCurrentPage;
+    const section = store.currentSection;
+    const maxLevel = store.headingLevel.value ?? 6;
     const contentRef = useRef<HTMLDivElement>(null);
+    const clickedRange = useRef<MarkdownSectionRange | null>(null);
+    const [selectingVersion, setSelectingVersion] = useState<number | null>(null);
     const [blockSelection, setBlockSelection] = useState<BlockCommentSelection | null>(null);
     // Pin the snapshot outside the keyed reader so a refresh never destroys an
     // open draft. The server will reject a stale snapshot at save time.
     const [editing, setEditing] = useState<{ page: Page; range: MarkdownSectionRange } | null>(null);
+    // Heading offsets belong to the section and revision in which they were picked.
+    useEffect(() => { clickedRange.current = null; }, [currentPage, section, maxLevel]);
+    useImperativeHandle(ref, () => ({
+        editSection() {
+            if (currentPage?.isOwner && section?.sourceRange) {
+                setEditing({ page: currentPage, range: clickedRange.current ?? section.sourceRange });
+            }
+        },
+        commentOnBlocks() {
+            if (currentPage?.document && section) setSelectingVersion(currentPage.contentVersion);
+        },
+    }), [currentPage, section]);
     const editor = editing && <SectionEditDialog page={editing.page} range={editing.range} onClose={() => setEditing(null)} />;
-    const annotationPage = store.optCurrentPage;
-    const annotationSection = store.currentSection;
-    const annotationTarget = useMemo(
-        () => annotationPage && annotationSection ? annotationTargetFor(annotationPage, annotationSection.sourceRange) : null,
-        [annotationPage, annotationSection],
-    );
-
     if (store.initDataState.isError) {
         return (
             <><div className="flex h-full items-center justify-center p-6">
@@ -68,40 +82,32 @@ export const PageMain = observer(function PageMain() {
     }
 
     const page = store.optCurrentPage;
-    const section = store.currentSection;
     if (!section || page.isEmpty) {
         return <><EmptyPagePlaceholder page={page} />{editor}</>;
     }
 
     const uiSettings = store.uiSettingsStore;
-    const maxLevel = store.headingLevel.value ?? 6;
     const schema = PageColorSchema.VALUES.find(s => s.id === themeStore.theme.value) || PageColorSchema.LIGHT;
     const colors = schema.value;
     const currentIndex = store.navigableSections.indexOf(section);
     const previous = store.navigableSections[currentIndex - 1];
     const next = store.navigableSections[currentIndex + 1];
-
-    const maxWidth = uiSettings.readingWidth === 'full' ? '100%' : uiSettings.readingWidth === 'wide' ? 1200 : 860;
     const theme = { colors, fontSizes: uiSettings.fontSize.value, fonts: uiSettings.fontFamilies.value };
 
-    // Key takeaways render in their own lanes: the reading container below is scanned for the
-    // page's Markdown (comment targets, highlights), so extra rendered Markdown must stay outside it.
     return (
-        <>
-            <div className="reader-takeaways-lane is-before" style={{ maxWidth }}>
-                {annotationTarget && <PageAnnotationSlot target={annotationTarget} slot="before" {...theme} />}
-            </div>
-            <div ref={contentRef} tabIndex={-1} role="region" aria-label="Reading content" className="reader-reading-surface" style={{ maxWidth, paddingBottom: 0 }}>
-                {!editing && <ReaderAnnotations page={page} containerRef={contentRef} onCompose={setBlockSelection} />}
-                <SectionReader
-                    key={`${section.id}:${page.contentVersion}`}
-                    page={page}
-                    section={section}
-                    maxLevel={maxLevel}
-                    {...theme}
-                    onEdit={(range) => setEditing({ page, range })}
-                    actions={page.isOwner && annotationTarget ? <PageAnnotationControls target={annotationTarget} sectionTitle={section.title} /> : undefined}
-                />
+        <div className="reader-page-layout" data-reading-width={uiSettings.readingWidth}>
+            <div ref={contentRef} role="region" aria-label="Reading content" className="reader-reading-surface">
+                <ReaderAnnotations key={`${page.id}:${page.contentVersion}`} enabled={!editing} page={page} containerRef={contentRef}
+                    selecting={selectingVersion === page.contentVersion} onEndSelection={() => setSelectingVersion(null)} onCompose={setBlockSelection}>
+                    <SectionReader
+                        key={section.id}
+                        page={page}
+                        section={section}
+                        maxLevel={maxLevel}
+                        {...theme}
+                        onSelectRange={range => { clickedRange.current = range; }}
+                    />
+                </ReaderAnnotations>
                 {!editing && <SelectionPopover
                     containerRef={contentRef}
                     page={page}
@@ -110,12 +116,17 @@ export const PageMain = observer(function PageMain() {
                     onClearBlocks={() => setBlockSelection(null)}
                 />}
             </div>
-            <div className="reader-takeaways-lane is-end" style={{ maxWidth }}>
-                {annotationTarget && <PageAnnotationSlot target={annotationTarget} slot="after" {...theme} />}
-                <nav className="reader-section-navigation" aria-label="Section navigation">
-                    {previous ? <button type="button" onClick={() => store.goToPrevSection()}><ArrowLeft size={16} aria-hidden="true" /><span><small>Previous section</small><strong>{previous.title ?? 'Introduction'}</strong></span></button> : <span />}
-                    {next ? <button type="button" onClick={() => store.goToNextSection()}><span><small>Next section</small><strong>{next.title ?? 'Introduction'}</strong></span><ArrowRight size={16} aria-hidden="true" /></button> : <span className="reader-section-end">End of this page · {store.navigableSections.length} sections</span>}
-                </nav>
-            </div>{editor}</>
+            {(previous || next) && <nav className="reader-section-navigation" aria-label="Section navigation">
+                {previous && <button type="button" className="reader-section-step" onClick={() => store.goToPrevSection()}>
+                    <span className="reader-step-arrow"><ArrowLeft size={17} aria-hidden="true" /></span>
+                    <span className="reader-step-destination"><small>Previous section</small><strong>{previous.title || 'Introduction'}</strong></span>
+                </button>}
+                {next && <button type="button" className="reader-section-step is-next" onClick={() => store.goToNextSection()}>
+                    <span className="reader-step-destination"><small>Next section</small><strong>{next.title || 'Introduction'}</strong></span>
+                    <span className="reader-step-arrow"><ArrowRight size={17} aria-hidden="true" /></span>
+                </button>}
+            </nav>}
+            {editor}
+        </div>
     );
 });

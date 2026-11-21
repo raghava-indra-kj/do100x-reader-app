@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { runInAction } from 'mobx';
+import { createDocument, createTextAnchor } from '@reader/md-ast';
 import type { PageStore } from './store';
 
-const fixture = vi.hoisted(() => ({ config: vi.fn(), chat: vi.fn(), createPage: vi.fn() }));
+const fixture = vi.hoisted(() => ({ config: vi.fn(), chat: vi.fn(), createPage: vi.fn(), createComment: vi.fn() }));
 vi.mock('@domain/settings/services/settings-service', () => ({ getModelConfig: fixture.config }));
 vi.mock('@domain/chat/services/chat-service', () => ({ getChatCompletion: fixture.chat }));
 vi.mock('@domain/page/services/pages-service', () => ({ createPage: fixture.createPage }));
-vi.mock('@domain/comment/services/comments-service', () => ({ createComment: vi.fn() }));
+vi.mock('@domain/comment/services/comments-service', () => ({ createComment: fixture.createComment }));
 vi.mock('@modules/core/ui/primitives/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 import { MeaningStore } from './meaning-store';
 import { ExplanationStore } from './explanation-store';
@@ -15,12 +16,66 @@ import { DoubtStore } from './doubt-store';
 const tick = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(r => { resolve = r; }); return { promise, resolve }; }
 const success = (response: string) => ({ ok: true, data: { response, rawResponse: { model: 'fixture' } } });
-const page = () => ({ pageId: 'page-a', uiSettingsStore: { setSidebarPanel: vi.fn() }, bumpSubpagesVersion: vi.fn() }) as unknown as PageStore;
+const page = () => ({ pageId: 'page-a', uiSettingsStore: { setSidebarPanel: vi.fn() }, bumpSubpagesVersion: vi.fn(), bumpCommentsVersion: vi.fn() }) as unknown as PageStore;
 
 beforeEach(() => {
     fixture.config.mockReset().mockResolvedValue({ ok: true, data: { meaningModelId: 'm', explanationModelId: 'm', doubtModelId: 'm' } });
     fixture.chat.mockReset().mockResolvedValue(success('Original answer'));
     fixture.createPage.mockReset().mockResolvedValue({ ok: true, data: 'new-subpage' });
+    fixture.createComment.mockReset().mockResolvedValue({ ok: true, data: 'comment' });
+});
+
+it('distinguishes checking an explanation from asking about identical text and preserves the original comment attachment', async () => {
+    const passage = 'A triangle has three sides.';
+    const text = 'I think it has three equal sides.';
+    const document = createDocument(passage);
+    const attachment = { anchor: createTextAnchor(document, { start: 0, end: passage.length }), contentVersion: 2 };
+    const store = new DoubtStore(page());
+
+    store.open(text, passage, 'Geometry', 'Shapes', attachment);
+    await tick();
+    store.open(text, passage, 'Geometry', 'Shapes', attachment, 'check-understanding');
+    await tick();
+    const check = store.activeEntry!;
+    store.open(text, passage, 'Geometry', 'Shapes', attachment, 'check-understanding');
+
+    expect(store.history).toHaveLength(2);
+    expect(fixture.chat).toHaveBeenCalledTimes(2);
+    const [questionRequest, checkRequest] = fixture.chat.mock.calls.map(([request]) => request);
+    expect(questionRequest.userPrompt).toContain('directly answer my doubt');
+    expect(checkRequest).toMatchObject({ actionType: 'doubt', modelId: 'm', pageId: 'page-a' });
+    for (const phrase of [passage, text, 'understood correctly', 'gap or misconception', 'what is uncertain']) {
+        expect(checkRequest.userPrompt).toContain(phrase);
+    }
+    expect(check.searchTerm).toBe(text);
+    expect(fixture.createComment).not.toHaveBeenCalled();
+    expect(fixture.createPage).not.toHaveBeenCalled();
+    await store.saveQuestionAsComment(check.id);
+    expect(fixture.createComment).toHaveBeenCalledWith(expect.objectContaining({ body: text, selectedText: passage, ...attachment }));
+});
+
+it('checks a revised explanation against the same passage across a failed request, retry and explicit subpage save', async () => {
+    const store = new DoubtStore(page());
+    store.open('Original explanation', 'Source passage', 'Page', 'Section', undefined, 'check-understanding');
+    await tick();
+    const entry = store.activeEntry!;
+    fixture.chat.mockResolvedValueOnce({ ok: false, error: new Error('Offline') });
+    store.reask(entry.id, 'Revised explanation');
+    await tick();
+    expect(entry.searchTerm).toBe('Original explanation');
+    store.retry(entry.id);
+    await tick();
+    expect(entry.searchTerm).toBe('Revised explanation');
+    const retryPrompt = fixture.chat.mock.lastCall![0].userPrompt;
+    expect(retryPrompt).toBe(fixture.chat.mock.calls[1][0].userPrompt);
+    expect(retryPrompt).toContain('Source passage');
+    expect(retryPrompt).toContain('Revised explanation');
+    expect(retryPrompt).toContain('Check my understanding');
+    await store.saveAsSubPage(entry.id);
+    expect(fixture.createPage).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Understanding check: Revised explanation',
+        content: expect.stringContaining('### My explanation\n\nRevised explanation\n\n### Feedback\n\nOriginal answer'),
+    }));
 });
 
 it('does not mark a replacement answer saved when an older answer save completes', async () => {

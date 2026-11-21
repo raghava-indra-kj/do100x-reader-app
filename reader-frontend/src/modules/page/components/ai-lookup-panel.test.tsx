@@ -19,6 +19,7 @@ vi.mock('@modules/core/ui/primitives/button', () => ({ Button: ({ size, variant,
 vi.mock('@modules/core/ui/primitives/select', () => ({ Select: ({ ariaLabel, value, onValueChange, items }: any) => <select aria-label={ariaLabel} value={value ?? ''} onChange={e => onValueChange(e.target.value)}>{Object.entries(items).map(([id, label]) => <option key={id} value={id}>{label as string}</option>)}</select> }));
 import { DoubtStore } from '../doubt-store';
 import { PageAiLookupPanel } from './ai-lookup-panel';
+import { PageDoubtPanel } from './doubt-panel';
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 let root: ReturnType<typeof createRoot>;
@@ -43,6 +44,23 @@ function answered() {
     store.open('Original question', 'Original source', 'Page A', 'Section A');
     return store.activeEntry!;
 }
+
+it('labels an understanding check, its editable explanation and the corresponding history option', async () => {
+    fixture.page.doubtStore = store;
+    const question = answered();
+    store.open('My own explanation', 'Original source', 'Page A', 'Section A', undefined, 'check-understanding');
+    await act(async () => root.render(<MemoryRouter><PageDoubtPanel /></MemoryRouter>));
+    expect(host.querySelector('.reader-ai-query')?.textContent).toBe('Your explanationMy own explanation');
+    expect(host.querySelector('option:checked')?.textContent).toContain('Understanding check · My own explanation');
+    expect(button('Save explanation as page note')).toBeDefined();
+    expect(host.querySelector('label')?.textContent).toBe('Revise your explanation');
+    await type('Second attempt');
+    await act(async () => button('Check again').click());
+    expect(store.activeEntry).toMatchObject({ intent: 'check-understanding', pendingText: 'Second attempt' });
+    await act(async () => store.setActiveEntry(question.id));
+    expect(host.querySelector('.reader-ai-query')?.textContent).toBe('QuestionOriginal question');
+    expect(button('Update answer')).toBeDefined();
+});
 
 it('preserves a new question and its original section across sidebar, focus, expanded and compact remounts', async () => {
     await render(); await type('How does this apply?');

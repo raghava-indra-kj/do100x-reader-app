@@ -16,7 +16,7 @@ import { PageVocabulary } from './components/vocabulary-panel';
 import { PageMeaningPanel } from './components/meaning-panel';
 import { PageDoubtPanel } from './components/doubt-panel';
 import { PageExplanationPanel } from './components/explanation-panel';
-import { PageMain } from './components/main-content';
+import { PageMain, type ReaderSectionActions } from './components/main-content';
 import { DictionaryPanel } from './components/dictionary-panel';
 import { UpsertPageDialog } from './components/upsert-page';
 import { Dialog, BaseDialog } from '@modules/core/ui/primitives/dialog';
@@ -29,6 +29,7 @@ import { canShowMotivations, useMotivationPreferences } from '@modules/core/pref
 import { X } from 'lucide-react';
 import './components/reader-experience.css';
 import { READER_COMPACT_QUERY } from './reader-layout';
+import { shortcutIsInControl } from './reader-shortcuts';
 
 const SCROLL_STEP = 80;
 
@@ -45,7 +46,6 @@ export const PageProvider = observer(function PageProvider({ pageId, children }:
             window.removeEventListener('focus', refreshCollection);
             store.meaningStore.dispose();
             store.explanationStore.dispose();
-            store.annotationStore.dispose();
             store.doubtStore.dispose();
         };
     }, [store]);
@@ -107,6 +107,7 @@ const PageContent = observer(function PageContent() {
     );
     const contentPanelRef = usePanelRef();
     const scrollRef = useRef<HTMLElement>(null);
+    const sectionActions = useRef<ReaderSectionActions>(null);
     const isOpen = uiSettings.sidebarPanelOpen && !uiSettings.focusMode;
     const expandedAi = isOpen && (
         (uiSettings.sidebarPanel === 'meaning' && store.meaningStore.isExpanded) ||
@@ -138,8 +139,9 @@ const PageContent = observer(function PageContent() {
         scrollRef.current?.scrollTo({ top: 0 });
     }, [currentSectionId]);
 
-    useHotkeys('ArrowUp', () => scrollRef.current?.scrollBy({ top: -SCROLL_STEP }), { preventDefault: true, enableOnFormTags: false });
-    useHotkeys('ArrowDown', () => scrollRef.current?.scrollBy({ top: SCROLL_STEP }), { preventDefault: true, enableOnFormTags: false });
+    const scrollShortcut = { preventDefault: true, enableOnFormTags: false, ignoreEventWhen: shortcutIsInControl };
+    useHotkeys('ArrowUp', () => scrollRef.current?.scrollBy({ top: -SCROLL_STEP }), scrollShortcut);
+    useHotkeys('ArrowDown', () => scrollRef.current?.scrollBy({ top: SCROLL_STEP }), scrollShortcut);
     useHotkeys('mod+\\', () => uiSettings.setSidebarPanelOpen(!uiSettings.sidebarPanelOpen), { preventDefault: true, enableOnFormTags: false });
     useHotkeys('alt+c', () => {
         if (uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === 'contents') {
@@ -264,20 +266,27 @@ const PageContent = observer(function PageContent() {
         prevProgressRef.current = progress;
     });
 
+    const activeSection = store.currentSection;
+    const hasArticle = currentPage && !currentPage.isEmpty && activeSection && !store.initDataState.isLoading && !store.initDataState.isError;
+    const startBlockSelection = () => {
+        if (expandedAi || (compact && isOpen)) uiSettings.setSidebarPanelOpen(false);
+        if (compact && store.dictionaryStore.isOpen) store.dictionaryStore.close();
+        sectionActions.current?.commentOnBlocks();
+    };
+    const sections = store.optCurrentPage && !store.optCurrentPage.isEmpty ? store.navigableSections : [];
+    const position = activeSection ? sections.indexOf(activeSection) + 1 : 0;
     return (
         <div className="flex h-screen flex-col bg-[var(--color-surface-canvas)]">
-            <PageAppbar />
+            <PageAppbar
+                onEditSection={hasArticle && currentPage.isOwner && activeSection.sourceRange ? () => sectionActions.current?.editSection() : undefined}
+                onCommentOnBlocks={hasArticle && currentPage.document ? startBlockSelection : undefined}
+            />
+            {position > 0 && sections.length > 1 && <progress
+                className="reader-page-progress" aria-label="Page section progress"
+                aria-valuetext={`Section ${position} of ${sections.length}`}
+                value={position} max={sections.length}
+            />}
             <CaptureBanner />
-            <div className="h-1 shrink-0" style={{ backgroundColor: 'var(--color-border-default)', opacity: 0.25 }}>
-                <Observer>
-                    {() => (
-                        <div
-                            className="h-full transition-all duration-500 ease-out"
-                            style={{ width: `${store.readingProgress}%`, backgroundColor: 'var(--color-brand)' }}
-                        />
-                    )}
-                </Observer>
-            </div>
             <div className="flex-1 overflow-hidden">
                 <div className="flex h-full relative">
                     {!uiSettings.focusMode && <NavRail />}
@@ -304,7 +313,7 @@ const PageContent = observer(function PageContent() {
                         </Separator>}
                         <Panel>
                             <main ref={scrollRef} className="h-full overflow-y-auto">
-                                <PageMain />
+                                <PageMain ref={sectionActions} />
                             </main>
                         </Panel>
                     </Group>

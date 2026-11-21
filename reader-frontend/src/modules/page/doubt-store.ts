@@ -10,10 +10,12 @@ import type { PageStore } from './store';
 import type { AnnotationAnchor } from '@reader/md-ast';
 
 export type DoubtAttachment = { anchor: AnnotationAnchor; contentVersion: number };
+export type DoubtIntent = 'question' | 'check-understanding';
 
 export interface AiDoubtEntry {
     id: string;
     pageId: string;
+    intent: DoubtIntent;
     attachment?: DoubtAttachment;
     searchTerm: string;
     selectedText: string;
@@ -116,7 +118,7 @@ export class DoubtStore {
         this.fetchDoubt(entryId);
     }
 
-    open(doubtText: string, selectedText: string, pageTitle: string, sectionTitle: string, attachment?: DoubtAttachment) {
+    open(doubtText: string, selectedText: string, pageTitle: string, sectionTitle: string, attachment?: DoubtAttachment, intent: DoubtIntent = 'question') {
         const query = doubtText.trim();
         const passage = selectedText.trim();
         const page = pageTitle.trim();
@@ -129,7 +131,7 @@ export class DoubtStore {
 
         // Check if matching entry already exists in history
         const existing = this.history.find(
-            e => e.pageId === pageId && e.sectionTitle === sec && e.searchTerm.toLowerCase() === query.toLowerCase() &&
+            e => e.pageId === pageId && e.intent === intent && e.sectionTitle === sec && e.searchTerm.toLowerCase() === query.toLowerCase() &&
                  e.selectedText.toLowerCase() === passage.toLowerCase() && JSON.stringify(e.attachment ?? null) === targetKey
         );
 
@@ -140,6 +142,7 @@ export class DoubtStore {
             const newEntry: AiDoubtEntry = {
                 id,
                 pageId,
+                intent,
                 attachment: target,
                 searchTerm: query,
                 selectedText: passage,
@@ -244,14 +247,20 @@ export class DoubtStore {
                 return;
             }
 
-            const userPrompt = `I am reading a page titled "${entry.pageTitle}" under the section "${entry.sectionTitle}".
+            const context = `I am reading a page titled "${entry.pageTitle}" under the section "${entry.sectionTitle}".
 
 Here is the passage I am studying:
 """
 ${entry.selectedText}
+"""`;
+
+            const checking = entry.intent === 'check-understanding';
+            const request = checking ? `My explanation in my own words:
+"""
+${requestedText}
 """
 
-My doubt/question is:
+Check my understanding against the passage. Briefly identify what I understood correctly. Point out any meaningful gap or misconception, explain it with evidence from the passage, and suggest a precise correction. If my explanation is accurate, say so. If the passage does not settle a claim, say what is uncertain.` : `My doubt/question is:
 "${requestedText}"
 
 Please help me understand this and directly answer my doubt.`;
@@ -259,8 +268,10 @@ Please help me understand this and directly answer my doubt.`;
             // 2. Query chat endpoint
             const chatRes = await getChatCompletion({
                 modelId,
-                systemPrompt: 'You are a learning assistant. The user is studying a passage and has a question/doubt about it. Provide a clear, detailed, and helpful answer. Format your response cleanly in Markdown.',
-                userPrompt,
+                systemPrompt: checking
+                    ? 'You are a supportive reading tutor. Review the reader’s explanation using the supplied passage as evidence. Give concise, constructive feedback in Markdown.'
+                    : 'You are a learning assistant. The user is studying a passage and has a question/doubt about it. Provide a clear, detailed, and helpful answer. Format your response cleanly in Markdown.',
+                userPrompt: `${context}\n\n${request}`,
                 pageId: entry.pageId,
                 actionType: 'doubt',
                 signal: controller.signal,
@@ -345,7 +356,7 @@ Please help me understand this and directly answer my doubt.`;
                 this.questionCommentSaves.set(key, 'saved');
                 if (lifetime === this.lifetime) {
                     this.pageStore.bumpCommentsVersion();
-                    toast.success('Question saved to comments');
+                    toast.success(entry.intent === 'check-understanding' ? 'Explanation saved to comments' : 'Question saved to comments');
                 }
             });
         } catch (error) {
@@ -364,10 +375,14 @@ Please help me understand this and directly answer my doubt.`;
         if (this.answerSaves.has(key)) return;
         const lifetime = this.lifetime;
         const answer = { question: entry.searchTerm, response: entry.responseMarkdown };
+        const checking = entry.intent === 'check-understanding';
+        const exchange = checking
+            ? ['### My explanation', answer.question, '### Feedback']
+            : ['### Question', `*${answer.question}*`, '### Answer'];
         const payload = {
             parentPageId: entry.pageId,
-            title: `Question: ${answer.question}`,
-            content: `### Context\n\n> ${entry.selectedText.split('\n').join('\n> ')}\n\n### Question\n\n*${answer.question}*\n\n### Answer\n\n${answer.response}`,
+            title: `${checking ? 'Understanding check' : 'Question'}: ${answer.question}`,
+            content: ['### Context', `> ${entry.selectedText.split('\n').join('\n> ')}`, ...exchange, answer.response].join('\n\n'),
             category: null,
         };
         this.answerSaves.set(key, { status: 'saving', ...answer });

@@ -7,8 +7,17 @@ import { DbPageListItemSchema, type DbPageListItem } from '../models/db-page-lis
 import type { IPagesRepo } from './pages-repo';
 import { SectionEditSnapshotSchema, type SectionEditSnapshot, type SectionEditParams } from '../models/section-edit';
 import { PageSearchResponseSchema, type PageSearchResponse } from '../models/page-search';
+import { PageNavigationSchema, type PageNavigation } from '../models/page-navigation';
 
 export class PageRepoApi implements IPagesRepo {
+    async getPageNavigation(pageId: string, signal?: AbortSignal): AsyncResult<PageNavigation, AppError> {
+        try {
+            const { data } = await apiClient.get(`/pages/${pageId}/navigation`, { signal });
+            return ok(PageNavigationSchema.parse(data));
+        } catch (cause) {
+            return err(new AppError({ message: 'Couldn’t load the page tree.', cause }));
+        }
+    }
     async searchPages({ q, limit = 20, signal }: { q: string; limit?: number; signal?: AbortSignal }): AsyncResult<PageSearchResponse, AppError> {
         try {
             const { data } = await apiClient.get('/pages/search', { params: { q, limit }, signal });
@@ -108,6 +117,7 @@ export class PageRepoApi implements IPagesRepo {
     async queryPages(params: {
         parentPageId?: string | null;
         searchQuery?: string | null;
+        signal?: AbortSignal;
     }): AsyncResult<DbPageListItem[], AppError> {
         try {
             const query: Record<string, string> = {};
@@ -117,7 +127,7 @@ export class PageRepoApi implements IPagesRepo {
             if (params.searchQuery) {
                 query['searchQuery'] = params.searchQuery;
             }
-            const { data } = await apiClient.get('/pages', { params: query });
+            const { data } = await apiClient.get('/pages', { params: query, signal: params.signal });
             return ok((data as unknown[]).map((item) => DbPageListItemSchema.parse(item)));
         } catch (error) {
             return err(new AppError({ message: getApiErrorMessage(error, 'Couldn’t load pages. Try again.'), cause: error }));

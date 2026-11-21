@@ -7,7 +7,6 @@ import type { ISettingsRepo } from '@domain/settings/repos/settings-repo';
 import type { IChatRepo } from '@domain/chat/repos/chat-repo';
 import type { ITaskRepo } from '@domain/tasks/repos/task-repo';
 import type { IFinanceRepo } from '@domain/finance/repos/finance-repo';
-import type { IPageAnnotationRepo } from '@domain/page-annotation/repos/page-annotation-repo';
 
 export const TYPES = {
     IAuthRepo: Symbol.for('IAuthRepo') as ServiceIdentifier<IAuthRepo>,
@@ -18,5 +17,4 @@ export const TYPES = {
     IChatRepo: Symbol.for('IChatRepo') as ServiceIdentifier<IChatRepo>,
     ITaskRepo: Symbol.for('ITaskRepo') as ServiceIdentifier<ITaskRepo>,
     IFinanceRepo: Symbol.for('IFinanceRepo') as ServiceIdentifier<IFinanceRepo>,
-    IPageAnnotationRepo: Symbol.for('IPageAnnotationRepo') as ServiceIdentifier<IPageAnnotationRepo>,
 };

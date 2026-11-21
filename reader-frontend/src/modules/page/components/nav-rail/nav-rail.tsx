@@ -1,18 +1,18 @@
 import { usePageStore } from '../../store';
 import type { SidebarPanelId } from '../../ui-settings-store';
-import { List, FileText, ClipboardList, MessageSquare, NotebookPen, Sparkles, HelpCircle, Compass } from 'lucide-react';
+import { ReaderToolIcon } from '@modules/reader/reader-tool-icon';
 import { Observer } from 'mobx-react-lite';
 import { Tooltip } from '@modules/core/ui/primitives/tooltip';
 
-const panels: { id: SidebarPanelId; label: string; shortcut: string; icon: typeof List }[] = [
-    { id: 'contents', label: 'Contents', shortcut: 'Alt+C', icon: List },
-    { id: 'subpages', label: 'Subpages', shortcut: 'Alt+S', icon: FileText },
-    { id: 'quizzes', label: 'Quizzes', shortcut: 'Alt+Q', icon: ClipboardList },
-    { id: 'comments', label: 'Comments', shortcut: 'Alt+M', icon: MessageSquare },
-    { id: 'vocabulary', label: 'Saved words', shortcut: 'Alt+V', icon: NotebookPen },
-    { id: 'meaning', label: 'Word meanings', shortcut: 'Alt+A', icon: Sparkles },
-    { id: 'explanation', label: 'Explanations', shortcut: 'Alt+E', icon: Compass },
-    { id: 'doubt', label: 'Questions', shortcut: 'Alt+D', icon: HelpCircle },
+const panels: { id: SidebarPanelId; label: string; shortcut: string }[] = [
+    { id: 'contents', label: 'Contents', shortcut: 'Alt+C' },
+    { id: 'subpages', label: 'Subpages', shortcut: 'Alt+S' },
+    { id: 'quizzes', label: 'Quizzes', shortcut: 'Alt+Q' },
+    { id: 'comments', label: 'Comments', shortcut: 'Alt+M' },
+    { id: 'vocabulary', label: 'Saved words', shortcut: 'Alt+V' },
+    { id: 'meaning', label: 'Word meanings', shortcut: 'Alt+A' },
+    { id: 'explanation', label: 'Explanations', shortcut: 'Alt+E' },
+    { id: 'doubt', label: 'Questions', shortcut: 'Alt+D' },
 ];
 
 export function NavRail() {
@@ -45,8 +45,8 @@ export function NavRail() {
                 };
 
                 return (
-                    <nav className="flex flex-col items-center gap-1 border-r border-[var(--color-border-default)] bg-[var(--color-surface-raised)] py-3 px-1.5 w-12 shrink-0">
-                        {panels.map(({ id, label, shortcut, icon: Icon }) => {
+                    <nav aria-label="Reader panels" className="flex flex-col items-center gap-1 border-r border-[var(--color-border-default)] bg-[var(--color-surface-raised)] py-3 px-1.5 w-12 shrink-0">
+                        {panels.map(({ id, label, shortcut }) => {
                             const isActive = uiSettings.sidebarPanelOpen && uiSettings.sidebarPanel === id;
                             const count = getCount(id);
 
@@ -69,9 +69,10 @@ export function NavRail() {
                                             }
                                         `}
                                         aria-label={label}
+                                        aria-keyshortcuts={shortcut}
                                         aria-pressed={isActive}
                                     >
-                                        <Icon size={18} />
+                                        <ReaderToolIcon name={id} size={20} />
                                         {count > 0 && (
                                             <span
                                                 className={`

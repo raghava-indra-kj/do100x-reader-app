@@ -18,4 +18,6 @@ button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,t
 .tooltip-end[data-tooltip]::after { left:auto; right:0; transform:none; }
 .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; } }
-:root[data-theme=dark] .brand img { filter:brightness(1.7) saturate(.85); }
+.brand { display:flex; align-items:center; gap:9px; min-width:0; white-space:nowrap; }
+.brand img { width:28px; height:28px; flex-shrink:0; }
+.brand strong { font-size:14px; font-weight:650; }

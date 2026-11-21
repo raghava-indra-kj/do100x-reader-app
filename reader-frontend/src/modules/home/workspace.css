@@ -1,0 +1,214 @@
+.workspace-apps {
+    display: grid;
+    grid-template-columns: minmax(0, 1.12fr) repeat(2, minmax(0, 1fr));
+    gap: clamp(12px, 1.35vw, 20px);
+}
+
+.workspace-app {
+    --photo-width: 40%;
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    overflow: hidden;
+    isolation: isolate;
+    border: 1px solid var(--color-border-default);
+    border-radius: 16px;
+    background: var(--color-surface-raised);
+    cursor: pointer;
+}
+.workspace-app:is(:hover, :focus-visible) {
+    border-color: var(--color-brand-on-soft);
+    box-shadow: 0 5px 18px color-mix(in srgb, var(--color-text-strong) 12%, transparent);
+}
+.workspace-app-photo {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: var(--photo-width);
+    height: 100%;
+    object-fit: cover;
+}
+.workspace-app-copy {
+    display: grid;
+    align-content: center;
+    width: calc(100% - var(--photo-width));
+    min-height: clamp(158px, 13.8vw, 200px);
+    padding: clamp(16px, 1.65vw, 26px);
+}
+.workspace-app-copy h2 {
+    margin: 12px 0 5px;
+    font: 500 clamp(24px, 2vw, 30px)/1.1 var(--font-serif);
+    letter-spacing: -.045em;
+}
+.workspace-app-copy p {
+    color: var(--color-text-muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+.workspace-app-open {
+    display: inline-flex;
+    align-items: center;
+    justify-self: start;
+    gap: 8px;
+    margin-top: 14px;
+    padding: 7px 11px;
+    border-radius: 7px;
+    background: var(--color-surface-inverse);
+    color: var(--color-surface-canvas);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+.workspace-app[data-app='reader'] .workspace-app-open {
+    background: #fffcf4;
+    color: #29271f;
+}
+.workspace-app:is(:hover, :focus-visible) .workspace-app-open > span {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+.workspace-app[data-app='reader'] {
+    grid-row: span 2;
+    --photo-width: 100%;
+    background: #332b24;
+}
+.workspace-app[data-app='reader'] .workspace-app-copy {
+    position: relative;
+    align-content: end;
+    width: 100%;
+    padding: clamp(20px, 2.3vw, 36px);
+    color: #fff;
+    background: linear-gradient(0deg, rgb(25 21 18 / 93%), rgb(25 21 18 / 68%) 24%, transparent 64%);
+}
+.workspace-app[data-app='reader'] h2 { font-size: clamp(34px, 3.2vw, 48px); }
+.workspace-app[data-app='reader'] p { color: #fff; }
+.workspace-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: clamp(18px, 2.2vw, 34px);
+}
+.workspace-shortcuts a {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 8px 12px;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border-default);
+    border-radius: 10px;
+    cursor: pointer;
+}
+.workspace-shortcuts a:is(:hover, :focus-visible) {
+    background: var(--color-surface-soft);
+    border-color: var(--color-brand-on-soft);
+}
+.workspace-shortcuts strong, .workspace-shortcuts small { display: block; }
+.workspace-shortcuts strong { font-size: 14px; }
+.workspace-shortcuts small { margin-top: 2px; font-size: 12px; color: var(--color-text-muted); }
+.workspace-shortcuts a > svg:last-child { color: var(--color-brand-on-soft); }
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .workspace-app, .workspace-shortcuts a { transition: border-color 150ms, box-shadow 150ms, transform 150ms; }
+    .workspace-app:hover, .workspace-shortcuts a:hover { transform: translateY(-2px); }
+    .workspace-app:active, .workspace-shortcuts a:active { transform: translateY(0); }
+}
+
+@media (min-width: 601px) and (max-width: 990px) {
+    .workspace-apps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .workspace-app[data-app='reader'] { grid-column: 1 / -1; grid-row: auto; min-height: 190px; }
+    .workspace-app[data-app='reader'] .workspace-app-photo { object-position: 50% 46%; }
+    .workspace-app[data-app='reader'] .workspace-app-copy {
+        background: linear-gradient(90deg, rgb(25 21 18 / 84%), transparent 80%);
+    }
+    .workspace-shortcuts a { gap: 8px; padding-inline: 10px; }
+}
+@media (max-width: 600px) {
+    .suite-home-workspace .suite-home-landing-main { padding: 14px 12px 24px; }
+    .workspace-apps {
+        grid-template-columns: 1fr;
+        gap: 0;
+        border: 1px solid var(--color-border-default);
+        border-radius: 16px;
+        background: var(--color-surface-raised);
+    }
+    .workspace-app {
+        border: 0;
+        border-radius: 0;
+        border-bottom: 1px solid var(--color-border-subtle);
+    }
+    .workspace-app:last-child {
+        border-bottom: 0;
+        border-radius: 0 0 15px 15px;
+    }
+    .workspace-app:is(:hover, :focus-visible) { background: var(--color-surface-soft); }
+    .workspace-apps .workspace-app:focus-visible { outline-offset: -3px; }
+    .workspace-app-copy {
+        width: 100%;
+        min-height: 72px;
+        padding: 11px 12px;
+        grid-template-columns: 38px minmax(0, 1fr) auto;
+        grid-template-areas: 'icon title action' 'icon description action';
+        align-items: center;
+        gap: 3px 10px;
+    }
+    .workspace-app-copy > svg { grid-area: icon; width: 38px; height: 38px; }
+    .workspace-app-copy h2 {
+        grid-area: title;
+        margin: 0;
+        font: 650 16px/1.3 var(--font-sans);
+        letter-spacing: -.025em;
+    }
+    .workspace-app-copy p { grid-area: description; font-size: 12px; line-height: 1.4; }
+    .workspace-app-open {
+        grid-area: action;
+        margin: 0;
+        gap: 4px;
+        padding: 6px 0;
+        color: var(--color-brand-on-soft);
+        background: transparent;
+    }
+    .workspace-app-open-name { display: none; }
+    .workspace-app:not([data-app='reader']) .workspace-app-photo { display: none; }
+    .workspace-app[data-app='reader'] {
+        grid-row: auto;
+        border-radius: 15px 15px 0 0;
+    }
+    .workspace-app[data-app='reader'] .workspace-app-photo { object-position: center 43%; }
+    .workspace-app[data-app='reader'] .workspace-app-copy {
+        min-height: clamp(148px, 38vw, 184px);
+        padding: 16px 12px;
+        grid-template-areas: 'icon title action' 'description description action';
+        grid-template-columns: 28px minmax(0, 1fr) auto;
+        background: linear-gradient(0deg, rgb(25 21 18 / 91%), rgb(25 21 18 / 68%) 33%, transparent 87%);
+    }
+    .workspace-app[data-app='reader'] .workspace-app-copy > svg { width: 28px; height: 28px; }
+    .workspace-app[data-app='reader'] h2 { font: 500 29px/1.1 var(--font-serif); }
+    .workspace-app[data-app='reader'] .workspace-app-open { align-self: end; padding: 7px 10px; }
+    .workspace-shortcuts {
+        grid-template-columns: 1fr;
+        gap: 0;
+        margin-top: 14px;
+        border: 1px solid var(--color-border-default);
+        border-radius: 14px;
+        background: var(--color-surface-raised);
+    }
+    .workspace-shortcuts a {
+        grid-template-columns: 38px minmax(0, 1fr) auto;
+        min-height: 57px;
+        gap: 10px;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+    .workspace-shortcuts a + a { border-top: 1px solid var(--color-border-subtle); }
+    .workspace-shortcuts a:first-child { border-radius: 13px 13px 0 0; }
+    .workspace-shortcuts a:last-child { border-radius: 0 0 13px 13px; }
+    .workspace-shortcuts a > svg:first-child, .workspace-shortcuts .brand-reader-extension svg {
+        width: 34px;
+        height: 34px;
+    }
+    .workspace-shortcuts .brand-reader-extension { justify-self: start; }
+}

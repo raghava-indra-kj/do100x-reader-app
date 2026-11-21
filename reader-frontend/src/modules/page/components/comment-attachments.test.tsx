@@ -49,10 +49,16 @@ async function mount(page = makePage()) {
     await act(async () => render(page));
     return { page, content, range, render, root };
 }
-async function click(label: string) {
+function buttonNamed(label: string) {
     const button = [...document.querySelectorAll('button')].find(node => node.textContent === label || node.getAttribute('aria-label') === label);
     expect(button, label).toBeTruthy();
-    await act(async () => button!.click());
+    return button!;
+}
+async function click(label: string) {
+    await act(async () => buttonNamed(label).click());
+}
+async function pressEnter(target: HTMLElement, modifiers: KeyboardEventInit = {}) {
+    await act(async () => target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...modifiers })));
 }
 async function typeDraft(value: string) {
     const textarea = document.querySelector('textarea')!;
@@ -63,6 +69,40 @@ async function typeDraft(value: string) {
 }
 
 describe('Reader attachments', () => {
+    it('copies the selected passage with its original page and section context from the labeled icon', async () => {
+        await mount();
+        const writeText = vi.fn().mockResolvedValue(undefined);
+        vi.stubGlobal('navigator', { clipboard: { writeText } });
+        const copy = document.querySelector<HTMLButtonElement>('button[aria-label="Copy selection"]');
+        expect(copy).toBeTruthy();
+        await act(async () => copy!.click());
+        expect(writeText).toHaveBeenCalledWith('Page: Page\nSection: Heading\n\nthis sentence\n\n');
+    });
+    it('keeps both external providers available and applies their URL limits in each view', async () => {
+        function providerButtons(groupName: string) {
+            const buttons = [...document.querySelectorAll<HTMLButtonElement>(`[role="group"][aria-label="${groupName}"] button`)];
+            const find = (brand: RegExp) => {
+                const button = buttons.find(item => brand.test(item.getAttribute('aria-label') || item.textContent || ''));
+                expect(button).toBeDefined();
+                return button!;
+            };
+            return { google: find(/google/i), duck: find(/duck/i) };
+        }
+        const passage = 'x'.repeat(2200);
+        await mount(makePage(`# Heading\n\n**First passage**\n\n**${passage}**`));
+        const menu = providerButtons('Explain elsewhere');
+        expect(menu.google.disabled).toBe(true);
+        expect(menu.duck.disabled).toBe(false);
+        await click('Ask or comment');
+        const composer = providerButtons('Ask elsewhere');
+        expect(composer.google.disabled).toBe(true);
+        expect(composer.duck.disabled).toBe(true);
+        await typeDraft('Why?');
+        expect(composer.google.disabled).toBe(true);
+        expect(composer.duck.disabled).toBe(false);
+        await typeDraft('x'.repeat(2200));
+        expect(composer.duck.disabled).toBe(true);
+    });
     it('captures the second identical passage, not the first quote match', async () => {
         const { page, content, range } = await mount();
         const target = captureCommentTarget(content.querySelector('.md-view'), page.document, 3, range);
@@ -85,7 +125,47 @@ describe('Reader attachments', () => {
         await click('Ask or comment'); await typeDraft('Explain this sentence');
         await act(async () => render(makePage('Changed content', 4)));
         await click('Ask AI');
-        expect(fixture.store.doubtStore.open).toHaveBeenCalledWith('Explain this sentence', 'this sentence', 'Page', 'Heading', expect.objectContaining({ contentVersion: 3, anchor: expect.objectContaining({ segments: [expect.objectContaining({ blockId: page.document!.blocks[2].id })] }) }));
+        expect(fixture.store.doubtStore.open).toHaveBeenCalledWith('Explain this sentence', 'this sentence', 'Page', 'Heading', expect.objectContaining({ contentVersion: 3, anchor: expect.objectContaining({ segments: [expect.objectContaining({ blockId: page.document!.blocks[2].id })] }) }), 'question');
+    });
+    it.each(['ctrlKey', 'metaKey'] as const)('saves with %s+Enter and can then ask about the same comment with Shift', async modifier => {
+        await mount();
+        await click('Ask or comment');
+        expect(buttonNamed('Save comment').disabled).toBe(true);
+        await typeDraft('What does this mean?');
+        const editor = document.querySelector('textarea')!;
+        await pressEnter(editor);
+        expect(fixture.create).not.toHaveBeenCalled();
+        expect(fixture.store.doubtStore.open).not.toHaveBeenCalled();
+        await pressEnter(editor, { [modifier]: true });
+        expect(fixture.create).toHaveBeenCalledTimes(1);
+        expect(fixture.create.mock.calls[0][0]).toMatchObject({ body: 'What does this mean?', selectedText: 'this sentence' });
+        expect(fixture.store.doubtStore.open).not.toHaveBeenCalled();
+        expect(buttonNamed('Comment saved').disabled).toBe(true);
+        expect(editor.value).toBe('What does this mean?');
+        await pressEnter(editor, { [modifier]: true, shiftKey: true });
+        expect(fixture.store.doubtStore.open).toHaveBeenCalledWith('What does this mean?', 'this sentence', 'Page', 'Heading', expect.objectContaining({ anchor: fixture.create.mock.calls[0][0].anchor, contentVersion: 3 }), 'question');
+        expect(fixture.create).toHaveBeenCalledTimes(1);
+    });
+    it('checks the written explanation against its original passage and can still save that draft', async () => {
+        const { page, render } = await mount();
+        await click('Ask or comment');
+        await typeDraft('  ');
+        expect(buttonNamed('Save comment').disabled).toBe(true);
+        expect(buttonNamed('Ask AI').disabled).toBe(true);
+        expect(buttonNamed('Check understanding').disabled).toBe(true);
+        const interpretation = 'I think this means the two terms are equivalent.';
+        await typeDraft(interpretation);
+        await act(async () => render(makePage('New page version', 4)));
+        await click('Check understanding');
+        expect(fixture.store.doubtStore.open).toHaveBeenCalledWith(interpretation, 'this sentence', 'Page', 'Heading', expect.objectContaining({
+            contentVersion: 3, anchor: expect.objectContaining({ segments: [expect.objectContaining({ blockId: page.document!.blocks[2].id })] }),
+        }), 'check-understanding');
+        expect(fixture.create).not.toHaveBeenCalled();
+        await click('Resume comment');
+        expect(document.querySelector('textarea')?.value).toBe(interpretation);
+        await click('Save comment');
+        expect(fixture.create).toHaveBeenCalledTimes(1);
+        expect(fixture.create.mock.calls[0][0]).toMatchObject({ body: interpretation, contentVersion: 3 });
     });
     it('starts a new draft for identical text selected at a different location', async () => {
         const { content, page, render } = await mount();
@@ -108,15 +188,40 @@ describe('Reader attachments', () => {
         expect(fixture.edit).toHaveBeenCalledWith(expect.objectContaining({ commentId: 'old', contentVersion: 3, anchor: expect.any(Object) }));
         expect(fixture.edit.mock.calls[0][0]).not.toHaveProperty('body');
     });
+    it('previews math and changes comment options without sending the draft', async () => {
+        await mount();
+        await click('Ask or comment');
+        const draft = 'Is $x^2$ always positive?';
+        await typeDraft(draft);
+        await click('Preview Markdown & math');
+        const preview = document.querySelector<HTMLElement>('.reader-comment-preview')!;
+        expect(preview.querySelector('.katex')).toBeTruthy();
+        await pressEnter(preview, { ctrlKey: true });
+        await click('Write');
+        await click('Comment options');
+        const includeInExplanations = document.querySelector<HTMLInputElement>('[aria-label="Add comment"] input[type="checkbox"]')!;
+        expect(includeInExplanations).toBeTruthy();
+        await act(async () => includeInExplanations.click());
+        await pressEnter(includeInExplanations, { metaKey: true, shiftKey: true });
+        await click('Comment options');
+        expect(document.querySelector('textarea')?.value).toBe(draft);
+        expect(fixture.store.doubtStore.open).not.toHaveBeenCalled();
+        expect(fixture.create).not.toHaveBeenCalled();
+        await click('Save comment');
+        expect(fixture.create.mock.calls[0][0]).toMatchObject({ body: draft, isExplanation: true });
+    });
     it('parks on Escape, returns focus to reading, and resumes the same occurrence and revision', async () => {
         const { page, content, render } = await mount();
         await click('Ask or comment'); await typeDraft('Keep the second occurrence');
         await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
         expect(document.querySelector('textarea')).toBeNull();
-        expect(document.activeElement).toBe(content);
+        const passage = content.querySelectorAll('strong')[1].closest('[data-md-block-id]');
+        expect(document.activeElement).toBe(passage);
+        expect(content.hasAttribute('tabindex')).toBe(false);
         fixture.selection = null;
         await act(async () => render(makePage('Updated page content', 4)));
         await click('Resume comment');
+        expect(passage?.hasAttribute('tabindex')).toBe(false);
         expect(document.querySelector('textarea')?.value).toBe('Keep the second occurrence');
         expect(document.querySelector('textarea')).toBe(document.activeElement);
         await click('Save comment');
@@ -135,6 +240,7 @@ describe('Reader attachments', () => {
         expect(entries).toHaveLength(2);
         await act(async () => (entries[0] as HTMLButtonElement).click());
         expect(document.querySelector('textarea')?.value).toBe('Second occurrence');
+        await click('Comment options');
         await click('Discard draft');
         await click('Resume comment');
         expect(document.querySelector('textarea')?.value).toBe('First occurrence');

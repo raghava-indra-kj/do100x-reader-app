@@ -1,6 +1,6 @@
 export interface GoogleIdentityApi {
     initialize(options: { client_id: string; nonce: string; callback: (response: { credential: string }) => void; ux_mode: 'popup'; auto_select: false; use_fedcm_for_button: boolean }): void;
-    renderButton(element: HTMLElement, options: { type: 'standard'; theme: 'outline' | 'filled_black'; size: 'large'; text: 'signin_with'; shape: 'rectangular'; width: number }): void;
+    renderButton(element: HTMLElement, options: { type: 'standard'; theme: 'outline' | 'filled_black' | 'filled_blue'; size: 'large'; text: 'signin_with'; shape: 'rectangular' | 'pill'; width: number }): void;
     disableAutoSelect(): void;
 }
 

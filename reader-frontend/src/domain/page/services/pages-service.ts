@@ -9,6 +9,11 @@ import { container, TYPES } from '@di/container';
 import { toPage, toPageListItem } from './page-mapper';
 import type { SectionEditParams, SectionEditSnapshot } from '../models/section-edit';
 import type { PageSearchResponse } from '../models/page-search';
+import type { PageNavigation } from '../models/page-navigation';
+
+export function getPageNavigation(pageId: string, signal?: AbortSignal): AsyncResult<PageNavigation, AppError> {
+    return container.get<IPagesRepo>(TYPES.IPagesRepo).getPageNavigation(pageId, signal);
+}
 
 export function searchPages(params: { q: string; limit?: number; signal?: AbortSignal }): AsyncResult<PageSearchResponse, AppError> {
     return container.get<IPagesRepo>(TYPES.IPagesRepo).searchPages(params);
@@ -91,7 +96,7 @@ export async function deletePage(
 }
 
 export async function queryPages(
-    params: { parentPageId: string | null; searchQuery?: string | null }
+    params: { parentPageId: string | null; searchQuery?: string | null; signal?: AbortSignal }
 ): AsyncResult<PageListItem[], AppError> {
     const repo = container.get<IPagesRepo>(TYPES.IPagesRepo);
     const result = await repo.queryPages(params);

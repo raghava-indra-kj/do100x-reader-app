@@ -1324,7 +1324,7 @@ export function registerPageTools(server: McpServer, userId: string) {
 
       if (!page) {
         isNew = true;
-        const initialContent = `---\ntitle: "${title}"\ncategory: "${category}"\n---\n\n# ${title}\n\n${templateHeading ? `## ${templateHeading}\n\n` : "## Key Takeaways\n\n- \n\n## Tasks / Notes\n\n- [ ] \n"}`;
+        const initialContent = `---\ntitle: "${title}"\ncategory: "${category}"\n---\n\n# ${title}\n\n${templateHeading ? `## ${templateHeading}\n\n` : "## Tasks / Notes\n\n- [ ] \n"}`;
 
         page = await prisma.page.create({
           data: {

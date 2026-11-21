@@ -7,6 +7,7 @@ export class Page {
     readonly id: string;
     readonly userId: string;
     readonly parentPageId: string | null;
+    readonly ancestors: ReadonlyArray<{ id: string; title: string }>;
     readonly title: string;
     readonly content: string;
     readonly contentVersion: number;
@@ -29,6 +30,7 @@ export class Page {
         id: string;
         userId?: string;
         parentPageId: string | null;
+        ancestors?: ReadonlyArray<{ id: string; title: string }>;
         title: string;
         content: string;
         contentVersion: number;
@@ -50,6 +52,7 @@ export class Page {
         this.id = params.id;
         this.userId = params.userId ?? '';
         this.parentPageId = params.parentPageId;
+        this.ancestors = params.ancestors ?? [];
         this.title = params.title;
         this.content = params.content;
         this.contentVersion = params.contentVersion;

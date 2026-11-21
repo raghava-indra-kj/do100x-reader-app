@@ -454,26 +454,6 @@ export default function SettingsPage() {
                                 />
                               </div>
                             </div>
-                            <div className="settings-feature" role="group" aria-label="Key takeaways">
-                              <h4 className="text-sm font-semibold text-[var(--color-text-strong)]">Key takeaways</h4>
-                              <div className="space-y-2">
-                                <FormLabel>Model</FormLabel>
-                                <Select value={store.annotationModelIdInput}
-                                  onValueChange={(v) => store.setAnnotationModelIdInput(v || '')}
-                                  items={{ '': 'None', ...Object.fromEntries(store.userModels.map((m) => [m.modelId, m.name])) }}
-                                  placeholder="Select model" tooltip="Key takeaways model" className="w-full min-w-0"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <FormLabel htmlFor="settings-annotation-instructions">Custom instructions (optional)</FormLabel>
-                                <textarea id="settings-annotation-instructions" aria-label="Key takeaway instructions"
-                                  value={store.annotationSystemPromptInput}
-                                  onChange={(e) => store.setAnnotationSystemPromptInput(e.target.value)}
-                                  placeholder="How should key takeaways be written?"
-                                  className="settings-instructions"
-                                />
-                              </div>
-                            </div>
                             <div className="settings-feature" role="group" aria-label="Formatting">
                               <h4 className="text-sm font-semibold text-[var(--color-text-strong)]">Formatting</h4>
                               <div className="space-y-2">

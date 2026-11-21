@@ -480,7 +480,6 @@ export function MotivationReelsDialog({ open, onOpenChange }: MotivationReelsDia
                                                     </div>
                                                 </div>
 
-                                                {/* Practical Takeaway (Clean & Professional) */}
                                                 <div className="p-4 rounded-2xl bg-[var(--color-surface-soft)]/90 border border-[var(--color-border-subtle)] backdrop-blur-sm space-y-1.5 shadow-sm">
                                                     <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--color-brand)] uppercase tracking-wider">
                                                         <Lightbulb size={13} />
