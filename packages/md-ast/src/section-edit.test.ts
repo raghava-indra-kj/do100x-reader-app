@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { editableSectionBody, locateSections, replaceSectionBody, sectionBodyTarget } from './section-edit';
+import { editableSectionBody, locateSections, parseSourceTree, replaceSectionBody, sectionBodyTarget } from './section-edit';
 
 const edit = (source: string, index: number, newBody: string) => replaceSectionBody({ source, target: sectionBodyTarget(source, locateSections(source)[index]), newBody });
 
@@ -24,6 +24,19 @@ describe('source-scoped section editing', () => {
     it('ignores headings in code, blockquotes, math, and frontmatter', () => {
         const source = '---\ntitle: "# Metadata"\n---\n\n# Real\n\n```d2\n# comment\nx -> y\n```\n\n> ## quote\n\n$$\n# formula\n$$\n\n## Next\n\nbody';
         expect(locateSections(source).map((range) => range.title)).toEqual(['Real', 'Next']);
+    });
+    it('keeps the original offsets of currency and inline math in headings', () => {
+        const source = '# $100 to **$400** and $2 + 2$\r\n\r\nBody';
+        const [heading] = parseSourceTree(source).children;
+        expect(heading).toMatchObject({
+            type: 'heading',
+            children: [
+                { type: 'text', value: '$100 to ' },
+                { type: 'strong', children: [{ type: 'text', value: '$400' }] },
+                { type: 'text', value: ' and ' },
+                { type: 'inlineMath', value: '2 + 2', position: { start: { offset: 23 }, end: { offset: 30 } } },
+            ],
+        });
     });
     it('edits preamble or a heading-free page while preserving frontmatter', () => {
         const source = '---\ntitle: metadata\n---\n\nintro\n\n## Start\n\nbody';

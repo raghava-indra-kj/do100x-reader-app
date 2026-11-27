@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { JSDOM } from 'jsdom';
 import { createDocument } from '@reader/md-ast';
 import { MarkdownRenderer } from './markdown-renderer';
 
@@ -26,6 +27,21 @@ describe('standalone Markdown renderer', () => {
     expect(html).toMatch(/class="katex-html" aria-hidden="true"/);
     expect(html).toContain('<msup>'); expect(html).toContain('<mfrac>');
     expect(html).toContain('\\unknown');
+  });
+
+  it('renders unescaped dollar amounts and surrounding bold text', () => {
+    const html = render('A customer orders 10 units at $100 each. Six units have shipped and four are still open. The **open quantity is 4 units**, and the **backlog value is $400**.');
+    const paragraph = JSDOM.fragment(html).querySelector('p');
+    expect(paragraph?.textContent).toBe('A customer orders 10 units at $100 each. Six units have shipped and four are still open. The open quantity is 4 units, and the backlog value is $400.');
+    expect(Array.from(paragraph!.querySelectorAll('strong'), node => node.textContent)).toEqual(['open quantity is 4 units', 'backlog value is $400']);
+    expect(paragraph?.querySelector('math')).toBeNull();
+  });
+
+  it('keeps prices and formulas distinct in the same paragraph', () => {
+    const html = render('Prices range from $1,000.50 to **$23.24M**, with credits of $-5 or **$.50**. Use **$x^2$** or $2 + 2$.');
+    const paragraph = JSDOM.fragment(html).querySelector('p');
+    expect(paragraph?.textContent).toContain('Prices range from $1,000.50 to $23.24M, with credits of $-5 or $.50.');
+    expect(Array.from(paragraph!.querySelectorAll('math annotation'), node => node.textContent)).toEqual(['x^2', '2 + 2']);
   });
 
   it('keeps a standalone inline formula attached to its source block', () => {

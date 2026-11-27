@@ -20,6 +20,7 @@ export { reuseIds } from "./reuse-ids";
 /* Exact source ranges for safe, section-scoped editing. */
 export { editableSectionBody, locateSections, parseSourceTree, replaceSectionBody, sectionBodyTarget } from "./section-edit";
 export type { MarkdownSectionRange, SectionBodyTarget } from "./section-edit";
+export { remarkCurrencyMath } from "./internal/remark-currency-math";
 
 export { createDocument, serializeDocument, hydrateDocument, reconcileDocument, applySourceEdits, replaceBlock, createBlockAnchor, resolveBlockAnchor } from './document';
 export type { MarkdownDocument, MarkdownBlock, SourceRange, SourceEdit, BlockAnchor, AnchorResolution } from './document';

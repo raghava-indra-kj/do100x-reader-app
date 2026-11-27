@@ -1,6 +1,6 @@
 import remarkFrontmatter from "remark-frontmatter";
 import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
+import { remarkCurrencyMath } from "@reader/md-ast";
 import type { PluggableList } from "unified";
 import remarkDisplayMath from "./remark-display-math";
 
@@ -8,6 +8,6 @@ import remarkDisplayMath from "./remark-display-math";
 export const REMARK_PLUGINS: PluggableList = [
   remarkFrontmatter,
   remarkGfm,
-  remarkMath,
+  remarkCurrencyMath,
   remarkDisplayMath,
 ];
